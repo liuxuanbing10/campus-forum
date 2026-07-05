@@ -15,29 +15,25 @@
 
 | 层级 | 技术 |
 |------|------|
-| 前端 | React 19 + TypeScript + Vite + Tailwind CSS |
-| 后端 | Node.js + TypeScript + Fastify |
+| 前端 | React 19 + TypeScript + Vite 6 + Tailwind CSS 3.4 |
+| 后端 | Node.js + TypeScript + Fastify 5 |
 | 数据库 | SQLite (sql.js) |
-| 状态管理 | Zustand |
-| 路由 | React Router v7 |
-| 插件系统 | 自研轻量级 IoC 容器 |
+| 状态管理 | Zustand 5 |
+| 路由 | React Router 7 |
+| 插件系统 | 自研轻量级 IoC 容器 (PluginManager + EventBus) |
 
 ## 📁 项目结构
 
 ```
 campus-forum/
 ├── packages/
-│   ├── core/          # 插件系统核心
-│   ├── database/      # 数据库层
-│   ├── server/        # Fastify 后端
-│   └── client/        # React 前端
+│   ├── core/          # 插件系统核心（类型定义 + PluginManager + EventBus）
+│   ├── database/      # 数据库层（sql.js 适配器 + Schema + Seed）
+│   ├── server/        # Fastify 后端 API
+│   └── client/        # React 前端 SPA
 ├── plugins/
-│   ├── auth/          # 认证插件
-│   ├── posts/         # 帖子插件
-│   ├── comments/      # 评论插件
-│   ├── boards/        # 板块插件
-│   └── votes/         # 投票插件
-├── package.json       # Monorepo 配置
+│   └── auth/          # 认证插件（注册/登录/登出/获取当前用户）
+├── package.json       # Monorepo 配置（npm workspaces）
 └── tsconfig.base.json # TypeScript 基础配置
 ```
 
@@ -58,19 +54,27 @@ cd campus-forum
 # 安装依赖
 npm install
 
-# 初始化数据库
-npm run db:migrate
-
-# 启动开发服务器
+# 启动开发服务器（前端 + 后端同时启动）
 npm run dev
 ```
 
-访问 http://localhost:5173
+前端访问 http://localhost:5173，后端 API 运行在 http://localhost:3001。
 
 ### 默认账号
 
 - 用户名：`admin`
 - 密码：`admin123`
+
+### 可用脚本
+
+| 命令 | 说明 |
+|------|------|
+| `npm run dev` | 同时启动前后端开发服务器 |
+| `npm run dev:server` | 只启动后端 |
+| `npm run dev:client` | 只启动前端 |
+| `npm run build` | 构建所有包 |
+| `npm run lint` | ESLint 检查 |
+| `npm run format` | Prettier 格式化 |
 
 ## 📝 开发指南
 
@@ -96,7 +100,7 @@ export const myPlugin: Plugin = {
     author: 'your-name',
   },
   apply(ctx) {
-    // Fastify 路由
+    // 注册 Fastify 路由
     ctx.app.get('/api/my-endpoint', async () => {
       return { message: 'Hello from plugin!' };
     });
@@ -109,7 +113,7 @@ export default myPlugin;
 ## 🎯 路线图
 
 - [x] 项目骨架
-- [ ] 用户认证系统
+- [x] 用户认证系统（auth 插件）
 - [ ] 板块管理
 - [ ] 帖子 CRUD
 - [ ] 评论系统
@@ -121,4 +125,4 @@ export default myPlugin;
 
 ## 📄 License
 
-MIT
+MIT — 详见 [LICENSE](./LICENSE)
