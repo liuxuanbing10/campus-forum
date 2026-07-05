@@ -1,0 +1,29 @@
+{
+  "name": "@campus-forum/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@campus-forum/core": "*",
+    "@campus-forum/database": "*",
+    "@campus-forum/plugin-auth": "*",
+    "@fastify/cookie": "^11.0.0",
+    "@fastify/cors": "^11.0.0",
+    "@fastify/session": "^11.0.0",
+    "@fastify/static": "^9.1.3",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.0",
+    "fastify": "^5.3.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
