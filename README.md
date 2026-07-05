@@ -16,8 +16,8 @@
 | 层级 | 技术 |
 |------|------|
 | 前端 | React 19 + TypeScript + Vite + Tailwind CSS |
-| 后端 | Node.js + TypeScript + Express |
-| 数据库 | SQLite (better-sqlite3) |
+| 后端 | Node.js + TypeScript + Fastify |
+| 数据库 | SQLite (sql.js) |
 | 状态管理 | Zustand |
 | 路由 | React Router v7 |
 | 插件系统 | 自研轻量级 IoC 容器 |
@@ -29,7 +29,7 @@ campus-forum/
 ├── packages/
 │   ├── core/          # 插件系统核心
 │   ├── database/      # 数据库层
-│   ├── server/        # Express 后端
+│   ├── server/        # Fastify 后端
 │   └── client/        # React 前端
 ├── plugins/
 │   ├── auth/          # 认证插件
@@ -96,9 +96,9 @@ export const myPlugin: Plugin = {
     author: 'your-name',
   },
   apply(ctx) {
-    // 添加路由
-    ctx.app.get('/api/my-endpoint', (req, res) => {
-      res.json({ message: 'Hello from plugin!' });
+    // Fastify 路由
+    ctx.app.get('/api/my-endpoint', async () => {
+      return { message: 'Hello from plugin!' };
     });
   },
 };

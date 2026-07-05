@@ -1,4 +1,4 @@
-import { Express, Request, Response, NextFunction } from 'express';
+import type { FastifyInstance } from 'fastify';
 
 // Plugin lifecycle states
 export type PluginState = 'pending' | 'loading' | 'active' | 'failed' | 'disabled';
@@ -14,8 +14,8 @@ export interface PluginManifest {
 
 // Plugin context - injected into plugin's apply function
 export interface PluginContext {
-  // Express app for adding routes
-  app: Express;
+  // Fastify instance for adding routes
+  app: FastifyInstance;
 
   // Database access
   db: DatabaseAdapter;
