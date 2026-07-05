@@ -9,8 +9,8 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@campus-forum/core": "workspace:*",
-    "@campus-forum/database": "workspace:*",
+    "@campus-forum/core": "*",
+    "@campus-forum/database": "*",
     "express": "^5.0.0",
     "express-session": "^1.18.0",
     "cors": "^2.8.5",

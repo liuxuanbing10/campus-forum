@@ -11,10 +11,11 @@
     "migrate": "node dist/migrate.js"
   },
   "dependencies": {
-    "better-sqlite3": "^11.7.0"
+    "bcryptjs": "^2.4.3",
+    "sql.js": "^1.11.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.12",
+    "@types/bcryptjs": "^2.4.6",
     "typescript": "^5.7.0"
   }
 }

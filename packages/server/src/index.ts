@@ -33,7 +33,7 @@ async function main() {
 
   // Initialize database
   const dbPath = path.join(__dirname, '../../data/forum.db');
-  const db = createDatabase(dbPath);
+  const db = await createDatabase(dbPath);
   initializeSchema(db);
   await seedData(db);
 
