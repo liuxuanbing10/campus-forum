@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { PluginManager, SimpleEventBus, PluginContext, Logger } from '@campus-forum/core';
 import { createDatabase, initializeSchema, seedData } from '@campus-forum/database';
+import { authPlugin } from '@campus-forum/plugin-auth';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -21,7 +22,7 @@ async function main() {
   });
   await app.register(cookie);
   await app.register(session, {
-    secret: process.env.SESSION_SECRET || 'campus-forum-secret-dev',
+    secret: process.env.SESSION_SECRET || 'campus-forum-secret-dev-0123456789',
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
@@ -30,7 +31,7 @@ async function main() {
   });
 
   // Initialize database
-  const dbPath = path.join(__dirname, '../../data/forum.db');
+  const dbPath = path.join(__dirname, '../data/forum.db');
   const db = await createDatabase(dbPath);
   initializeSchema(db);
   await seedData(db);
@@ -58,6 +59,9 @@ async function main() {
 
   // Plugin manager
   const pluginManager = new PluginManager(pluginCtx);
+
+  // Register auth plugin
+  await pluginManager.register(authPlugin);
 
   // Health check
   app.get('/api/health', async () => {
