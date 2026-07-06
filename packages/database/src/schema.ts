@@ -84,11 +84,27 @@ export function initializeSchema(db: DatabaseAdapter): void {
       PRIMARY KEY (post_id, tag_id)
     );
 
-    -- Sessions (for express-session)
+    -- Sessions (for @fastify/session)
     CREATE TABLE IF NOT EXISTS sessions (
       sid TEXT PRIMARY KEY,
       sess TEXT NOT NULL,
       expired TEXT NOT NULL
     );
   `);
+
+  // --- Auto-migrations for schema changes ---
+  runMigrations(db);
+}
+
+/** Handle ALTER TABLE migrations between versions (e.g. old DB without device_code) */
+function runMigrations(db: DatabaseAdapter): void {
+  // Check users table for missing columns
+  const usersCols = db.all<{ name: string }>("PRAGMA table_info('users')");
+  const userColNames = usersCols.map(c => c.name);
+
+  // v0.1 → v0.2: email was replaced with device_code
+  if (!userColNames.includes('device_code')) {
+    console.log('📦 Migration: adding device_code column to users table');
+    db.exec("ALTER TABLE users ADD COLUMN device_code TEXT UNIQUE");
+  }
 }
