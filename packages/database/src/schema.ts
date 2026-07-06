@@ -36,6 +36,7 @@ export function initializeSchema(db: DatabaseAdapter): void {
       board_id INTEGER NOT NULL REFERENCES boards(id),
       is_anonymous INTEGER DEFAULT 0,
       view_count INTEGER DEFAULT 0,
+      images TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );

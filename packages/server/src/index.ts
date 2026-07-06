@@ -4,6 +4,7 @@ import cookie from '@fastify/cookie';
 import session from '@fastify/session';
 import fastifyStatic from '@fastify/static';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { PluginManager, SimpleEventBus, PluginContext, Logger } from '@campus-forum/core';
 import { createDatabase, initializeSchema, seedData } from '@campus-forum/database';
@@ -36,7 +37,15 @@ async function main() {
   const dbPath = path.join(__dirname, '../data/forum.db');
   const db = await createDatabase(dbPath);
   initializeSchema(db);
+
+  // Migration: add images column for existing databases
+  try { db.exec('ALTER TABLE posts ADD COLUMN images TEXT'); } catch {}
+
   await seedData(db);
+
+  // Ensure uploads directory exists
+  const uploadsDir = path.join(__dirname, '../../uploads');
+  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
   // Create plugin context
   const logger: Logger = {
@@ -70,6 +79,13 @@ async function main() {
 
   // Register search plugin
   await pluginManager.register(searchPlugin);
+
+  // Serve uploaded files
+  await app.register(fastifyStatic, {
+    root: uploadsDir,
+    prefix: '/uploads/',
+    decorateReply: false,
+  });
 
   // Health check
   app.get('/api/health', async () => {
