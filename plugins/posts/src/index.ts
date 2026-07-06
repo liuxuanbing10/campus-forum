@@ -174,6 +174,23 @@ export const postsPlugin: Plugin = {
     });
 
     // ========================================
+    // 置顶/取消置顶帖子（管理员）
+    // ========================================
+    app.put('/api/posts/:id/pin', async (request, reply) => {
+      const userId = getUserId(request);
+      if (!userId) return reply.status(401).send({ error: '请先登录' });
+      if (!isAdmin(ctx, userId)) return reply.status(403).send({ error: '仅管理员可操作' });
+
+      const { id } = request.params as { id: string };
+      const post = db.get<any>('SELECT id, is_pinned FROM posts WHERE id = ?', Number(id));
+      if (!post) return reply.status(404).send({ error: '帖子不存在' });
+
+      const newVal = post.is_pinned ? 0 : 1;
+      db.run('UPDATE posts SET is_pinned = ? WHERE id = ?', newVal, Number(id));
+      return { success: true, isPinned: newVal === 1, message: newVal ? '已置顶' : '已取消置顶' };
+    });
+
+    // ========================================
     // 删除帖子（本人或管理员）
     // ========================================
     app.delete('/api/posts/:id', async (request, reply) => {
@@ -212,11 +229,11 @@ export const postsPlugin: Plugin = {
       const where = boardId ? 'WHERE p.board_id = ?' : '';
       const params: unknown[] = boardId ? [boardId] : [];
       const orderBy = sort === 'hot'
-        ? 'ORDER BY (p.view_count + v.like_count * 5) DESC, p.created_at DESC'
-        : 'ORDER BY p.created_at DESC';
+        ? 'ORDER BY p.is_pinned DESC, (p.view_count + v.like_count * 5) DESC, p.created_at DESC'
+        : 'ORDER BY p.is_pinned DESC, p.created_at DESC';
 
       const sql = `
-        SELECT p.id, p.title, p.board_id, p.is_anonymous, p.images, p.created_at,
+        SELECT p.id, p.title, p.board_id, p.is_anonymous, p.is_pinned, p.images, p.created_at,
                CASE WHEN p.is_anonymous = 1 THEN '匿名用户'
                     ELSE u.username END as author_name,
                b.name as board_name,
@@ -249,7 +266,7 @@ export const postsPlugin: Plugin = {
       const postId = Number(id);
 
       const post = db.get<any>(
-        `SELECT p.id, p.title, p.content, p.board_id, p.is_anonymous, p.images, p.created_at, p.updated_at,
+        `SELECT p.id, p.title, p.content, p.board_id, p.is_anonymous, p.is_pinned, p.images, p.created_at, p.updated_at,
                 CASE WHEN p.is_anonymous = 1 THEN '匿名用户'
                      ELSE u.username END as author_name,
                 u.id as author_id,
@@ -374,6 +391,40 @@ export const postsPlugin: Plugin = {
       );
 
       const comment = db.get<any>('SELECT id, content, post_id, parent_id, is_anonymous, created_at FROM comments ORDER BY id DESC LIMIT 1');
+
+      // 发送通知
+      try {
+        const notify = (ctx as any).createNotification;
+        if (notify) {
+          // 通知帖子作者
+          const postAuthor = db.get<any>('SELECT author_id FROM posts WHERE id = ?', Number(id));
+          if (postAuthor && postAuthor.author_id !== userId) {
+            notify(
+              postAuthor.author_id,
+              'comment',
+              `有人评论了你的帖子`,
+              Number(id),
+              comment?.id,
+              userId,
+            );
+          }
+          // 如果是回复，通知被回复的评论作者
+          if (parentId) {
+            const parentAuthor = db.get<any>('SELECT author_id FROM comments WHERE id = ?', parentId);
+            if (parentAuthor && parentAuthor.author_id !== userId && parentAuthor.author_id !== postAuthor?.author_id) {
+              notify(
+                parentAuthor.author_id,
+                'reply',
+                `有人回复了你的评论`,
+                Number(id),
+                comment?.id,
+                userId,
+              );
+            }
+          }
+        }
+      } catch {}
+
       return { success: true, comment };
     });
 

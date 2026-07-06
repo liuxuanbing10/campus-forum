@@ -11,6 +11,8 @@ import { createDatabase, initializeSchema, seedData } from '@campus-forum/databa
 import { authPlugin } from '@campus-forum/plugin-auth';
 import { postsPlugin } from '@campus-forum/plugin-posts';
 import { searchPlugin } from '@campus-forum/plugin-search';
+import { adminPlugin } from '@campus-forum/plugin-admin';
+import { notificationsPlugin } from '@campus-forum/plugin-notifications';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -38,8 +40,24 @@ async function main() {
   const db = await createDatabase(dbPath);
   initializeSchema(db);
 
-  // Migration: add images column for existing databases
+  // Migration: add columns for existing databases
   try { db.exec('ALTER TABLE posts ADD COLUMN images TEXT'); } catch {}
+  try { db.exec('ALTER TABLE posts ADD COLUMN is_pinned INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN role TEXT DEFAULT \'user\''); } catch {}
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      type TEXT NOT NULL,
+      message TEXT NOT NULL,
+      related_post_id INTEGER REFERENCES posts(id),
+      related_comment_id INTEGER REFERENCES comments(id),
+      from_user_id INTEGER REFERENCES users(id),
+      is_read INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`);
+  } catch {}
 
   await seedData(db);
 
@@ -79,6 +97,12 @@ async function main() {
 
   // Register search plugin
   await pluginManager.register(searchPlugin);
+
+  // Register admin plugin
+  await pluginManager.register(adminPlugin);
+
+  // Register notifications plugin (must be before posts for the hook to work)
+  await pluginManager.register(notificationsPlugin);
 
   // Serve uploaded files
   await app.register(fastifyStatic, {

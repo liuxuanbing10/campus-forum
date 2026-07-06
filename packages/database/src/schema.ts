@@ -11,6 +11,8 @@ export function initializeSchema(db: DatabaseAdapter): void {
       avatar_url TEXT,
       device_code TEXT UNIQUE,
       is_admin INTEGER DEFAULT 0,
+      is_banned INTEGER DEFAULT 0,
+      role TEXT DEFAULT 'user',
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
@@ -35,6 +37,7 @@ export function initializeSchema(db: DatabaseAdapter): void {
       author_id INTEGER NOT NULL REFERENCES users(id),
       board_id INTEGER NOT NULL REFERENCES boards(id),
       is_anonymous INTEGER DEFAULT 0,
+      is_pinned INTEGER DEFAULT 0,
       view_count INTEGER DEFAULT 0,
       images TEXT,
       created_at TEXT DEFAULT (datetime('now')),
@@ -71,6 +74,19 @@ export function initializeSchema(db: DatabaseAdapter): void {
       post_id INTEGER NOT NULL REFERENCES posts(id),
       created_at TEXT DEFAULT (datetime('now')),
       UNIQUE(user_id, post_id)
+    );
+
+    -- Notifications
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      type TEXT NOT NULL,
+      message TEXT NOT NULL,
+      related_post_id INTEGER REFERENCES posts(id),
+      related_comment_id INTEGER REFERENCES comments(id),
+      from_user_id INTEGER REFERENCES users(id),
+      is_read INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
     );
 
     -- Tags
