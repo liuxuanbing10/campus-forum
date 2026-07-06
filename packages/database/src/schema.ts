@@ -34,8 +34,8 @@ export function initializeSchema(db: DatabaseAdapter): void {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
       content TEXT NOT NULL,
-      author_id INTEGER NOT NULL REFERENCES users(id),
-      board_id INTEGER NOT NULL REFERENCES boards(id),
+      author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
       is_anonymous INTEGER DEFAULT 0,
       is_pinned INTEGER DEFAULT 0,
       view_count INTEGER DEFAULT 0,
@@ -48,9 +48,9 @@ export function initializeSchema(db: DatabaseAdapter): void {
     CREATE TABLE IF NOT EXISTS comments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       content TEXT NOT NULL,
-      author_id INTEGER NOT NULL REFERENCES users(id),
-      post_id INTEGER NOT NULL REFERENCES posts(id),
-      parent_id INTEGER REFERENCES comments(id),
+      author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      parent_id INTEGER REFERENCES comments(id) ON DELETE CASCADE,
       is_anonymous INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     );
@@ -58,9 +58,9 @@ export function initializeSchema(db: DatabaseAdapter): void {
     -- Votes (up/down)
     CREATE TABLE IF NOT EXISTS votes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL REFERENCES users(id),
-      post_id INTEGER REFERENCES posts(id),
-      comment_id INTEGER REFERENCES comments(id),
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+      comment_id INTEGER REFERENCES comments(id) ON DELETE CASCADE,
       value INTEGER NOT NULL CHECK(value IN (-1, 1)),
       created_at TEXT DEFAULT (datetime('now')),
       UNIQUE(user_id, post_id),
@@ -70,8 +70,8 @@ export function initializeSchema(db: DatabaseAdapter): void {
     -- Favorites
     CREATE TABLE IF NOT EXISTS favorites (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL REFERENCES users(id),
-      post_id INTEGER NOT NULL REFERENCES posts(id),
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
       created_at TEXT DEFAULT (datetime('now')),
       UNIQUE(user_id, post_id)
     );
@@ -79,7 +79,7 @@ export function initializeSchema(db: DatabaseAdapter): void {
     -- Notifications
     CREATE TABLE IF NOT EXISTS notifications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL REFERENCES users(id),
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       type TEXT NOT NULL,
       message TEXT NOT NULL,
       related_post_id INTEGER REFERENCES posts(id),
@@ -108,4 +108,30 @@ export function initializeSchema(db: DatabaseAdapter): void {
       expired TEXT NOT NULL
     );
   `);
+}
+
+/** 可重复执行的迁移 */
+export function migrateSchema(db: DatabaseAdapter): void {
+  // 这些迁移是幂等的：如果列已存在，ALTER TABLE 会失败，catch 忽略
+  const migrations = [
+    `ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'`,
+    `ALTER TABLE posts ADD COLUMN is_pinned INTEGER DEFAULT 0`,
+    `ALTER TABLE posts ADD COLUMN images TEXT`,
+    `ALTER TABLE posts ADD COLUMN is_pinned INTEGER DEFAULT 0`,
+    `CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      type TEXT NOT NULL,
+      message TEXT NOT NULL,
+      related_post_id INTEGER REFERENCES posts(id),
+      related_comment_id INTEGER REFERENCES comments(id),
+      from_user_id INTEGER REFERENCES users(id),
+      is_read INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`,
+  ];
+  for (const sql of migrations) {
+    try { db.exec(sql); } catch { /* 列已存在，忽略 */ }
+  }
 }
