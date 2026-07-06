@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, DatabaseAdapter } from '@campus-forum/core';
+import { Plugin, PluginContext, uid, isAdmin, paginate } from '@campus-forum/core';
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
@@ -17,7 +17,7 @@ export interface PostListItem {
   like_count: number; comment_count: number; is_favorited: number;
 }
 export interface PostDetail extends PostListItem {
-  content: string; author_id: number; updated_at: string; my_vote: number; view_count: number;
+  content: string; author_id: number; updated_at: string; my_vote: number; view_count: number; is_private: number;
 }
 
 // ── Zod Schema ────────────────────────────────
@@ -26,6 +26,7 @@ const createPostSchema = z.object({
   content: z.string().min(1, '内容不能为空'),
   boardId: z.number().int().positive('请选择版块'),
   isAnonymous: z.boolean().optional().default(false),
+  isPrivate: z.boolean().optional().default(false),
   images: z.array(z.string()).max(9, '最多 9 张图片').optional(),
 });
 
@@ -54,10 +55,6 @@ const uploadSchema = z.object({ image: z.string().min(1, '请提供图片数据'
 const paginationSchema = z.object({ page: z.coerce.number().int().positive().optional().default(1), boardId: z.coerce.number().int().positive().optional(), sort: z.enum(['latest', 'hot']).optional().default('latest') });
 
 // ── 工具函数 ──────────────────────────────────
-function uid(req: any): number | null { return req.session?.userId ?? null; }
-function isAdmin(db: DatabaseAdapter, userId: number): boolean {
-  return !!db.get<UserRow>('SELECT is_admin FROM users WHERE id = ?', userId)?.is_admin;
-}
 function notify(ctx: PluginContext, userId: number, type: string, message: string, postId?: number, commentId?: number, fromUserId?: number) {
   try { (ctx as any).createNotification?.(userId, type, message, postId, commentId, fromUserId); } catch {}
 }
@@ -69,7 +66,18 @@ export const postsPlugin: Plugin = {
   apply(ctx: PluginContext) {
     const { app, db } = ctx;
 
-    // ponytail: boards are managed by the boards plugin, only CRUD ops here
+    // ─── 获取版块列表 ───
+    app.get('/api/boards', async () => db.all<BoardRow>('SELECT id, name, description, icon FROM boards ORDER BY sort_order ASC'));
+
+    // ─── 创建版块（管理员）───
+    app.post('/api/boards', async (req, rep) => {
+      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+      if (!isAdmin(db, userId)) return rep.status(403).send({ error: '仅管理员可操作' });
+      const { name, description, icon } = boardSchema.parse(req.body);
+      db.run('INSERT INTO boards (name, description, icon, created_by) VALUES (?,?,?,?)', name, description || '', icon || '📁', userId);
+      return { success: true, board: db.get<BoardRow>('SELECT * FROM boards ORDER BY id DESC LIMIT 1') };
+    });
+
     // ─── 编辑版块 ───
     app.put('/api/boards/:id', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
@@ -96,10 +104,10 @@ export const postsPlugin: Plugin = {
     // ─── 发帖 ───
     app.post('/api/posts', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
-      const { title, content, boardId, isAnonymous, images } = createPostSchema.parse(req.body);
+      const { title, content, boardId, isAnonymous, isPrivate, images } = createPostSchema.parse(req.body);
       if (!db.get('SELECT id FROM boards WHERE id = ?', boardId)) return rep.status(404).send({ error: '版块不存在' });
-      db.run('INSERT INTO posts (title, content, author_id, board_id, is_anonymous, images) VALUES (?,?,?,?,?,?)',
-        title, content, userId, boardId, isAnonymous ? 1 : 0, images ? JSON.stringify(images) : null);
+      db.run('INSERT INTO posts (title, content, author_id, board_id, is_anonymous, is_private, images) VALUES (?,?,?,?,?,?,?)',
+        title, content, userId, boardId, isAnonymous ? 1 : 0, isPrivate ? 1 : 0, images ? JSON.stringify(images) : null);
       return { success: true, post: db.get<PostRow>('SELECT id, title, content, author_id, board_id, is_anonymous, created_at FROM posts ORDER BY id DESC LIMIT 1') };
     });
 
@@ -131,6 +139,18 @@ export const postsPlugin: Plugin = {
       return { success: true, isPinned: newVal === 1, message: newVal ? '已置顶' : '已取消置顶' };
     });
 
+    // ─── 切换私密（仅作者可操作）───
+    app.put('/api/posts/:id/privacy', async (req, rep) => {
+      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+      const id = Number((req.params as { id: string }).id);
+      const post = db.get<{ id: number; author_id: number; is_private: number }>('SELECT id, author_id, is_private FROM posts WHERE id = ?', id);
+      if (!post) return rep.status(404).send({ error: '帖子不存在' });
+      if (post.author_id !== userId) return rep.status(403).send({ error: '仅作者可操作' });
+      const newVal = post.is_private ? 0 : 1;
+      db.run('UPDATE posts SET is_private = ?, updated_at = datetime(\'now\') WHERE id = ?', newVal, id);
+      return { success: true, isPrivate: newVal === 1, message: newVal ? '已设为仅自己可见' : '已取消私密' };
+    });
+
     // ─── 删除帖子（保留手动级联以兼容旧库）───
     app.delete('/api/posts/:id', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
@@ -145,16 +165,39 @@ export const postsPlugin: Plugin = {
       return { success: true, message: '帖子已删除' };
     });
 
+    // ─── 我的帖子 ───
+    app.get('/api/posts/my', async (req, rep) => {
+      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+      const page = Math.max(1, Number((req.query as any).page) || 1);
+      const limit = 20; const offset = (page - 1) * limit;
+      const posts = db.all<any>(
+        `SELECT p.id,p.title,p.board_id,p.is_anonymous,p.is_private,p.created_at,
+          CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,
+          b.name as board_name, COALESCE(v.like_count,0) as like_count, COALESCE(c.comment_count,0) as comment_count
+         FROM posts p JOIN users u ON p.author_id=u.id JOIN boards b ON p.board_id=b.id
+         LEFT JOIN (SELECT post_id,COUNT(*) as like_count FROM votes WHERE value=1 GROUP BY post_id) v ON v.post_id=p.id
+         LEFT JOIN (SELECT post_id,COUNT(*) as comment_count FROM comments GROUP BY post_id) c ON c.post_id=p.id
+         WHERE p.author_id=? ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
+        userId, limit, offset
+      );
+      return { posts, page, limit };
+    });
+
     // ─── 帖子列表 ───
     app.get('/api/posts', async (req) => {
       const { page, boardId, sort } = paginationSchema.parse(req.query);
       const userId = uid(req);
       const limit = 20; const offset = (page - 1) * limit;
-      const where = boardId ? 'WHERE p.board_id = ?' : '';
-      const params: unknown[] = boardId ? [boardId] : [];
+      const userIdVal = userId || 0;
+
+      // 私密帖子仅作者可见（管理员也不可见）
+      const privateFilter = `AND (p.is_private = 0 OR p.author_id = ?)`;
+      const params: unknown[] = [userIdVal];
+      if (boardId) { params.push(boardId); }
+      const where = boardId ? `WHERE p.board_id = ? ${privateFilter}` : `WHERE 1=1 ${privateFilter}`;
       const orderBy = sort === 'hot' ? 'ORDER BY p.is_pinned DESC, (p.view_count + COALESCE(v.like_count,0)*5) DESC, p.created_at DESC'
                                       : 'ORDER BY p.is_pinned DESC, p.created_at DESC';
-      params.unshift(userId || 0);
+      params.unshift(userIdVal);
       const sql = `SELECT p.id,p.title,p.board_id,p.is_anonymous,p.is_pinned,p.images,p.created_at,
         CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,
         b.name as board_name, COALESCE(v.like_count,0) as like_count, COALESCE(c.comment_count,0) as comment_count,
@@ -171,7 +214,7 @@ export const postsPlugin: Plugin = {
     app.get('/api/posts/:id', async (req, rep) => {
       const id = Number((req.params as { id: string }).id);
       const userId = uid(req);
-      const post = db.get<PostDetail>(`SELECT p.id,p.title,p.content,p.board_id,p.is_anonymous,p.is_pinned,p.images,p.created_at,p.updated_at,
+      const post = db.get<PostDetail>(`SELECT p.id,p.title,p.content,p.board_id,p.is_anonymous,p.is_private,p.is_pinned,p.images,p.created_at,p.updated_at,
         CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,
         u.id as author_id, b.name as board_name,
         COALESCE(v.like_count,0) as like_count, COALESCE(c.comment_count,0) as comment_count,
@@ -184,6 +227,10 @@ export const postsPlugin: Plugin = {
         LEFT JOIN votes pv ON pv.post_id=p.id AND pv.user_id=?
         WHERE p.id=?`, userId || 0, userId || 0, id);
       if (!post) return rep.status(404).send({ error: '帖子不存在' });
+      // 私密帖子权限检查（仅作者可见，管理员也不行）
+      if (post.is_private && post.author_id !== userId) {
+        return rep.status(403).send({ error: '这是私密帖子' });
+      }
       db.run('UPDATE posts SET view_count=view_count+1 WHERE id=?', id);
       post.view_count = (post.view_count || 0) + 1;
       post.images = post.images ? JSON.parse(post.images as any) : [];
@@ -227,7 +274,7 @@ export const postsPlugin: Plugin = {
       if (parentId && !db.get('SELECT id FROM comments WHERE id = ? AND post_id = ?', parentId, postId))
         return rep.status(404).send({ error: '要回复的评论不存在' });
 
-      db.run('INSERT INTO comments (content, author_id, post_id, parent_id, is_anonymous) VALUES (?,?,?,?,?)',
+      db.run("INSERT INTO comments (content, author_id, post_id, parent_id, is_anonymous) VALUES (?,?,?,?,?)",
         content.trim(), userId, postId, parentId || null, isAnonymous ? 1 : 0);
       const comment = db.get<CommentRow>('SELECT * FROM comments ORDER BY id DESC LIMIT 1');
 

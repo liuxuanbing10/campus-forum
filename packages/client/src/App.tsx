@@ -5,16 +5,12 @@ import Layout from './components/Layout';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Board from './pages/Board';
-import Post from './pages/Post';
-import NewPost from './pages/NewPost';
+import Settings from './pages/Settings';
+import MyPosts from './pages/MyPosts';
 
 export default function App() {
   const fetchUser = useAuthStore(s => s.fetchUser);
-
-  useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
+  useEffect(() => { fetchUser(); }, [fetchUser]);
 
   return (
     <Routes>
@@ -22,9 +18,8 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/board/:id" element={<Board />} />
-        <Route path="/post/:id" element={<Post />} />
-        <Route path="/new" element={<NewPost />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/my-posts" element={<MyPosts />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Route>
     </Routes>
