@@ -139,6 +139,18 @@ export const postsPlugin: Plugin = {
       return { success: true, isPinned: newVal === 1, message: newVal ? '已置顶' : '已取消置顶' };
     });
 
+    // ─── 切换私密（仅作者可操作）───
+    app.put('/api/posts/:id/privacy', async (req, rep) => {
+      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+      const id = Number((req.params as { id: string }).id);
+      const post = db.get<{ id: number; author_id: number; is_private: number }>('SELECT id, author_id, is_private FROM posts WHERE id = ?', id);
+      if (!post) return rep.status(404).send({ error: '帖子不存在' });
+      if (post.author_id !== userId) return rep.status(403).send({ error: '仅作者可操作' });
+      const newVal = post.is_private ? 0 : 1;
+      db.run('UPDATE posts SET is_private = ?, updated_at = datetime(\'now\') WHERE id = ?', newVal, id);
+      return { success: true, isPrivate: newVal === 1, message: newVal ? '已设为仅自己可见' : '已取消私密' };
+    });
+
     // ─── 删除帖子（保留手动级联以兼容旧库）───
     app.delete('/api/posts/:id', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
@@ -160,8 +172,8 @@ export const postsPlugin: Plugin = {
       const limit = 20; const offset = (page - 1) * limit;
       const userIdVal = userId || 0;
 
-      // 私密帖子仅作者和管理员可见
-      const privateFilter = `AND (p.is_private = 0 OR p.author_id = ? OR ${isAdmin(db, userIdVal) ? '1' : '0'})`;
+      // 私密帖子仅作者可见（管理员也不可见）
+      const privateFilter = `AND (p.is_private = 0 OR p.author_id = ?)`;
       const params: unknown[] = [userIdVal];
       if (boardId) { params.push(boardId); }
       const where = boardId ? `WHERE p.board_id = ? ${privateFilter}` : `WHERE 1=1 ${privateFilter}`;
@@ -197,8 +209,8 @@ export const postsPlugin: Plugin = {
         LEFT JOIN votes pv ON pv.post_id=p.id AND pv.user_id=?
         WHERE p.id=?`, userId || 0, userId || 0, id);
       if (!post) return rep.status(404).send({ error: '帖子不存在' });
-      // 私密帖子权限检查
-      if (post.is_private && post.author_id !== userId && !isAdmin(db, userId || 0)) {
+      // 私密帖子权限检查（仅作者可见，管理员也不行）
+      if (post.is_private && post.author_id !== userId) {
         return rep.status(403).send({ error: '这是私密帖子' });
       }
       db.run('UPDATE posts SET view_count=view_count+1 WHERE id=?', id);
