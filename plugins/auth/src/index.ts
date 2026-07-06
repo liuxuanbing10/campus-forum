@@ -20,6 +20,7 @@ interface RegisterBody {
   username: string;
   password: string;
   confirmPassword: string;
+  email?: string;
   deviceCode?: string;
 }
 
@@ -60,7 +61,7 @@ export const authPlugin: Plugin = {
     // 注册
     // ========================================
     app.post('/api/auth/register', async (request, reply) => {
-      const { username, password, confirmPassword } =
+      const { username, password, confirmPassword, email } =
         request.body as RegisterBody;
       const deviceCode = getDeviceCode(request);
 
@@ -107,8 +108,8 @@ export const authPlugin: Plugin = {
       // 5. 创建用户
       const hash = await bcrypt.hash(password, 10);
       db.run(
-        'INSERT INTO users (username, password_hash, display_name, device_code) VALUES (?, ?, ?, ?)',
-        username, hash, username, deviceCode
+        'INSERT INTO users (username, password_hash, display_name, email, device_code) VALUES (?, ?, ?, ?, ?)',
+        username, hash, username, email || null, deviceCode
       );
 
       const user = db.get<UserRow>(

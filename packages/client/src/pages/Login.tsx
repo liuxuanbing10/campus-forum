@@ -27,41 +27,55 @@ export default function LoginPage() {
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
-      <div className="w-full max-w-md mx-4 sm:mx-0 p-6 sm:p-10 bg-white rounded-lg shadow-card">
-        {/* Literary ornament */}
-        <div className="flex items-center my-6">
-          <div className="flex-1 border-t border-primary-200" />
-          <span className="text-primary-600 text-sm mx-4">◆</span>
-          <div className="flex-1 border-t border-primary-200" />
+      <div className="w-full max-w-md mx-4 sm:mx-0 p-8 sm:p-10 bg-surface rounded-lg shadow-card">
+        {/* Literary ornament ◆ */}
+        <div className="flex items-center mb-6">
+          <div className="flex-1 border-t border-primary" />
+          <span className="text-primary text-sm mx-3">◆</span>
+          <div className="flex-1 border-t border-primary" />
+        </div>
+
+        {/* Heading */}
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold text-campus-text-primary font-display">
+            欢迎回来
+          </h2>
+          <p className="text-sm text-campus-text-secondary mt-2 font-body">
+            登录你的校园论坛账号
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-3 rounded-lg text-sm">
+            <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm mb-4">
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium mb-1">用户名</label>
+            <label className="block text-sm font-medium text-campus-text-secondary mb-2 font-body">
+              用户名
+            </label>
             <input
               type="text"
               value={username}
               onChange={e => setUsername(e.target.value)}
-              className="input"
-              placeholder="输入用户名"
+              className="w-full px-4 py-3 border border-border rounded-lg bg-surface text-campus-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+              placeholder="请输入用户名"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">密码</label>
+            <label className="block text-sm font-medium text-campus-text-secondary mb-2 font-body">
+              密码
+            </label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="input"
-              placeholder="输入密码"
+              className="w-full px-4 py-3 border border-border rounded-lg bg-surface text-campus-text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+              placeholder="请输入密码"
               required
             />
           </div>
@@ -69,14 +83,14 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full btn-primary disabled:opacity-50"
+            className="w-full h-12 font-body text-base font-semibold text-white bg-primary border border-primary rounded-lg hover:opacity-90 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50"
           >
             {loading ? '登录中...' : '登录'}
           </button>
 
-          <p className="text-center text-sm text-gray-500">
+          <p className="text-center text-sm text-campus-text-secondary mt-6 font-body">
             没有账号？{' '}
-            <Link to="/register" className="text-primary-600 hover:underline">
+            <Link to="/register" className="font-medium text-primary hover:opacity-80 transition-opacity">
               注册
             </Link>
           </p>

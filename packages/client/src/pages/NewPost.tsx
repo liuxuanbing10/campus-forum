@@ -41,16 +41,16 @@ export default function NewPostPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto py-8">
+    <div className="max-w-[42rem] mx-auto py-8">
       <Link
         to="/"
         className="text-sm text-campus-text-tertiary hover:text-primary-600 transition-colors mb-6 inline-flex items-center gap-1"
       >
-        &larr; 返回首页
+        &larr; 返回
       </Link>
 
-      <div className="max-w-2xl mx-auto p-6 sm:p-10 bg-white rounded-xl border border-border shadow-card">
-        <h1 className="font-display text-2xl font-bold text-campus-text-primary mb-8">
+      <div className="max-w-[42rem] mx-auto p-6 sm:p-10 bg-white rounded-xl border border-border shadow-card">
+        <h1 className="font-display text-2xl font-semibold text-campus-text-primary mb-8" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>
           发表新帖
         </h1>
 
@@ -63,6 +63,7 @@ export default function NewPostPage() {
               value={boardId}
               onChange={e => setBoardId(Number(e.target.value))}
               className="w-full h-12 px-4 border border-border rounded-md bg-white text-campus-text-primary focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-100 appearance-none"
+              style={{ backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23a8a29e%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpolyline points=%276 9 12 15 18 9%27%3E%3C/polyline%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center' }}
               required
             >
               <option value={0}>请选择板块</option>
@@ -97,7 +98,7 @@ export default function NewPostPage() {
             />
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-campus-text-secondary">
+          <label className="flex items-center gap-3 text-sm text-campus-text-secondary cursor-pointer">
             <input
               type="checkbox"
               checked={isAnonymous}
@@ -110,7 +111,7 @@ export default function NewPostPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-12 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-all mt-6 disabled:opacity-50"
+            className="w-full h-12 bg-primary-600 text-white font-semibold rounded-md border border-primary-600 hover:opacity-90 hover:-translate-y-0.5 transition-all mt-6 disabled:opacity-50"
           >
             {loading ? '发布中...' : '发布'}
           </button>

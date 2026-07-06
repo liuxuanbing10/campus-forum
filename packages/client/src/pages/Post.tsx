@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
 
 interface Post {
@@ -52,9 +52,10 @@ export default function PostPage() {
   return (
     <div className="max-w-3xl mx-auto">
       {/* Breadcrumb */}
-      <div className="text-sm text-campus-text-tertiary mb-6">
-        ← 课程交流 &gt; 帖子详情
-      </div>
+      <Link to="/" className="inline-flex items-center gap-1 text-sm text-campus-text-tertiary hover:text-primary-600 transition-colors mb-6">
+        <span className="text-base leading-none">←</span>
+        课程交流 &gt; 帖子详情
+      </Link>
 
       {/* Article Card */}
       <article className="relative p-5 sm:p-8 md:p-10 bg-white border border-border rounded-xl shadow-card">
@@ -72,10 +73,10 @@ export default function PostPage() {
         </h1>
 
         {/* Author Row */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-4 pb-4 border-b border-border text-xs sm:text-sm relative">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 pb-5 border-b border-border-light text-xs sm:text-sm relative">
           <span className="font-medium text-campus-text-secondary">{post.author_name}</span>
           <span className="text-campus-text-tertiary">👁 {post.view_count}</span>
-          <span className="text-campus-text-tertiary">{new Date(post.created_at).toLocaleDateString()}</span>
+          <span className="text-campus-text-tertiary ml-auto">{new Date(post.created_at).toLocaleDateString()}</span>
         </div>
 
         {/* Post Body */}
@@ -85,7 +86,7 @@ export default function PostPage() {
       </article>
 
       {/* Comments Section */}
-      <h2 className="font-display text-xl font-bold text-campus-text-primary mt-10 mb-6">
+      <h2 className="font-display text-2xl md:text-3xl font-semibold text-campus-text-primary mt-10 mb-6" style={{ fontSize: 'clamp(22px, 2.4vw, 32px)' }}>
         评论 ({comments.length})
       </h2>
 
@@ -104,19 +105,23 @@ export default function PostPage() {
 
       {/* Reply Form */}
       <form onSubmit={handleComment} className="mb-10">
-        <textarea
-          value={newComment}
-          onChange={e => setNewComment(e.target.value)}
-          placeholder="写下你的想法..."
-          className="w-full min-h-[120px] p-4 border border-border rounded-md bg-white text-campus-text-primary focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-100 resize-none"
-          required
-        />
-        <button
-          type="submit"
-          className="mt-3 inline-flex items-center h-10 px-5 bg-primary-600 text-white text-sm font-body rounded-md hover:bg-primary-700 transition-colors"
-        >
-          发表评论
-        </button>
+        <div className="p-6 bg-white border border-border rounded-lg shadow-card">
+          <textarea
+            value={newComment}
+            onChange={e => setNewComment(e.target.value)}
+            placeholder="写下你的想法..."
+            className="w-full min-h-[120px] p-4 border border-border rounded-md bg-primary-50/30 text-campus-text-primary focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-100 resize-none"
+            required
+          />
+          <div className="flex justify-end mt-4">
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center h-10 px-8 font-body text-sm font-semibold text-white bg-primary-600 border border-primary-600 rounded-md cursor-pointer transition-all hover:opacity-90 hover:-translate-y-0.5"
+            >
+              发表评论
+            </button>
+          </div>
+        </div>
       </form>
     </div>
   );

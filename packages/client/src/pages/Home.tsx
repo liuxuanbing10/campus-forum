@@ -6,6 +6,7 @@ interface Board {
   name: string;
   description: string;
   icon: string;
+  _count?: { posts: number };
 }
 
 export default function HomePage() {
@@ -27,37 +28,19 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* Hero — 核心标语 */}
-      <div className="py-12 sm:py-20 px-4 bg-gradient-to-b from-primary-50 to-transparent">
-        <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-campus-text-primary text-center leading-tight">
-          独行快，众行远
+      {/* Hero Section — 在这里，遇见志同道合 */}
+      <div className="py-16 sm:py-20 px-4 bg-gradient-to-b from-primary-50/50 to-surface text-center">
+        <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-campus-text-primary leading-tight">
+          在这里，遇见志同道合
         </h1>
-        <p className="text-campus-text-secondary text-center mt-4 text-base sm:text-lg font-body max-w-lg mx-auto">
-          一个人的疑惑，一群人的答案
+        <p className="text-lg text-campus-text-secondary font-body max-w-2xl mx-auto mt-4">
+          分享校园点滴，找到属于你的圈子
         </p>
-      </div>
-
-      {/* 精神理念 */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-          <div className="bg-surface border border-border rounded-lg shadow-card p-5">
-            <p className="font-display text-base sm:text-lg text-campus-text-primary font-semibold">每种声音，都值得一个回声</p>
-            <p className="text-xs text-campus-text-tertiary mt-1 font-body">平等发声</p>
-          </div>
-          <div className="bg-surface border border-border rounded-lg shadow-card p-5">
-            <p className="font-display text-base sm:text-lg text-campus-text-primary font-semibold">你的经验，可能就是别人的光</p>
-            <p className="text-xs text-campus-text-tertiary mt-1 font-body">开放包容</p>
-          </div>
-          <div className="bg-surface border border-border rounded-lg shadow-card p-5">
-            <p className="font-display text-base sm:text-lg text-campus-text-primary font-semibold">在这里，提问和回答都是勇敢</p>
-            <p className="text-xs text-campus-text-tertiary mt-1 font-body">成长同行</p>
-          </div>
-        </div>
       </div>
 
       {/* Board Grid */}
       {user ? (
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
           {boardsLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {[1, 2, 3].map((i) => (
@@ -80,9 +63,12 @@ export default function HomePage() {
                   <h2 className="font-body text-lg font-semibold text-campus-text-primary mb-2">
                     {board.name}
                   </h2>
-                  <p className="text-sm text-campus-text-secondary font-body">
+                  <p className="text-sm text-campus-text-secondary font-body mb-4 flex-1">
                     {board.description}
                   </p>
+                  <span className="text-xs font-medium text-campus-text-tertiary font-body">
+                    {(board._count?.posts ?? 0) + ' 帖子'}
+                  </span>
                 </a>
               ))}
             </div>

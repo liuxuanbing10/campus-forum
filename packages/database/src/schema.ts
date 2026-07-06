@@ -114,6 +114,7 @@ export function initializeSchema(db: DatabaseAdapter): void {
 export function migrateSchema(db: DatabaseAdapter): void {
   // 这些迁移是幂等的：如果列已存在，ALTER TABLE 会失败，catch 忽略
   const migrations = [
+    `ALTER TABLE users ADD COLUMN email TEXT`,
     `ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'`,
     `ALTER TABLE posts ADD COLUMN is_pinned INTEGER DEFAULT 0`,
