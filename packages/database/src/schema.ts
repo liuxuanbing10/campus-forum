@@ -38,6 +38,7 @@ export function initializeSchema(db: DatabaseAdapter): void {
       board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
       is_anonymous INTEGER DEFAULT 0,
       is_pinned INTEGER DEFAULT 0,
+      is_private INTEGER DEFAULT 0,
       view_count INTEGER DEFAULT 0,
       images TEXT,
       created_at TEXT DEFAULT (datetime('now')),
@@ -110,29 +111,41 @@ export function initializeSchema(db: DatabaseAdapter): void {
   `);
 }
 
-/** 可重复执行的迁移 */
+/** 迁移：用 _migrations 表记录已执行的迁移 */
 export function migrateSchema(db: DatabaseAdapter): void {
-  // 这些迁移是幂等的：如果列已存在，ALTER TABLE 会失败，catch 忽略
-  const migrations = [
-    `ALTER TABLE users ADD COLUMN email TEXT`,
-    `ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0`,
-    `ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'`,
-    `ALTER TABLE posts ADD COLUMN is_pinned INTEGER DEFAULT 0`,
-    `ALTER TABLE posts ADD COLUMN images TEXT`,
-    `ALTER TABLE posts ADD COLUMN is_pinned INTEGER DEFAULT 0`,
-    `CREATE TABLE IF NOT EXISTS notifications (
+  // 建迁移记录表
+  db.exec(`CREATE TABLE IF NOT EXISTS _migrations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    applied_at TEXT DEFAULT (datetime('now'))
+  )`);
+
+  const migrations: [string, string][] = [
+    ['add_images', `ALTER TABLE posts ADD COLUMN images TEXT`],
+    ['add_is_pinned', `ALTER TABLE posts ADD COLUMN is_pinned INTEGER DEFAULT 0`],
+    ['add_is_banned', `ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0`],
+    ['add_role', `ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'`],
+    ['add_notifications', `CREATE TABLE IF NOT EXISTS notifications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL REFERENCES users(id),
-      type TEXT NOT NULL,
-      message TEXT NOT NULL,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL, message TEXT NOT NULL,
       related_post_id INTEGER REFERENCES posts(id),
       related_comment_id INTEGER REFERENCES comments(id),
       from_user_id INTEGER REFERENCES users(id),
       is_read INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
-    )`,
+    )`],
+    ['add_is_private', `ALTER TABLE posts ADD COLUMN is_private INTEGER DEFAULT 0`],
   ];
-  for (const sql of migrations) {
-    try { db.exec(sql); } catch { /* 列已存在，忽略 */ }
+
+  for (const [name, sql] of migrations) {
+    const done = db.get<{ id: number }>('SELECT id FROM _migrations WHERE name = ?', name);
+    if (done) continue;
+    try {
+      db.exec(sql);
+      db.run('INSERT INTO _migrations (name) VALUES (?)', name);
+    } catch (err) {
+      console.warn(`⚠️  迁移 ${name} 失败（可能已存在）:`, (err as Error).message);
+    }
   }
 }
