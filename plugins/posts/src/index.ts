@@ -69,18 +69,7 @@ export const postsPlugin: Plugin = {
   apply(ctx: PluginContext) {
     const { app, db } = ctx;
 
-    // ─── 获取版块列表 ───
-    app.get('/api/boards', async () => db.all<BoardRow>('SELECT id, name, description, icon FROM boards ORDER BY sort_order ASC'));
-
-    // ─── 创建版块（管理员）───
-    app.post('/api/boards', async (req, rep) => {
-      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
-      if (!isAdmin(db, userId)) return rep.status(403).send({ error: '仅管理员可操作' });
-      const { name, description, icon } = boardSchema.parse(req.body);
-      db.run('INSERT INTO boards (name, description, icon, created_by) VALUES (?,?,?,?)', name, description || '', icon || '📁', userId);
-      return { success: true, board: db.get<BoardRow>('SELECT * FROM boards ORDER BY id DESC LIMIT 1') };
-    });
-
+    // ponytail: boards are managed by the boards plugin, only CRUD ops here
     // ─── 编辑版块 ───
     app.put('/api/boards/:id', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });

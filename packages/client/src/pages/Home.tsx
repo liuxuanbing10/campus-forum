@@ -6,7 +6,7 @@ interface Board {
   name: string;
   description: string;
   icon: string;
-  _count?: { posts: number };
+  post_count: number;
 }
 
 export default function HomePage() {
@@ -28,13 +28,13 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* Hero Section — 在这里，遇见志同道合 */}
+      {/* Hero Section — 精神理念 */}
       <div className="py-16 sm:py-20 px-4 bg-gradient-to-b from-primary-50/50 to-surface text-center">
         <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-campus-text-primary leading-tight">
-          在这里，遇见志同道合
+          独行快，众行远
         </h1>
         <p className="text-lg text-campus-text-secondary font-body max-w-2xl mx-auto mt-4">
-          分享校园点滴，找到属于你的圈子
+          一个人的疑惑，一群人的答案
         </p>
       </div>
 
@@ -67,7 +67,7 @@ export default function HomePage() {
                     {board.description}
                   </p>
                   <span className="text-xs font-medium text-campus-text-tertiary font-body">
-                    {(board._count?.posts ?? 0) + ' 帖子'}
+                    {board.post_count + ' 帖子'}
                   </span>
                 </a>
               ))}
