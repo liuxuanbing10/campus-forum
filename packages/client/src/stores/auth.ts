@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import api from '../lib/api';
 
 interface User {
   id: number;
@@ -12,7 +12,7 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  register: (username: string, password: string, confirmPassword: string) => Promise<void>;
   logout: () => Promise<void>;
   fetchUser: () => Promise<void>;
 }
@@ -22,7 +22,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   loading: true,
 
   login: async (username, password) => {
-    const { data } = await axios.post('/api/auth/login', { username, password });
+    const { data } = await api.post('/auth/login', { username, password });
     if (data.success) {
       set({ user: data.user });
     } else {
@@ -30,8 +30,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  register: async (username, email, password) => {
-    const { data } = await axios.post('/api/auth/register', { username, email, password });
+  register: async (username, password, confirmPassword) => {
+    const { data } = await api.post('/auth/register', {
+      username,
+      password,
+      confirmPassword,
+    });
     if (data.success) {
       set({ user: data.user });
     } else {
@@ -40,13 +44,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
-    await axios.post('/api/auth/logout');
+    await api.post('/auth/logout');
     set({ user: null });
   },
 
   fetchUser: async () => {
     try {
-      const { data } = await axios.get('/api/auth/me');
+      const { data } = await api.get('/auth/me');
       set({ user: data, loading: false });
     } catch {
       set({ user: null, loading: false });

@@ -1,41 +1,48 @@
-import { Link } from 'react-router-dom';
+import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 
-interface LayoutProps {
-  children: React.ReactNode;
-}
-
-export default function Layout({ children }: LayoutProps) {
+export default function Layout() {
   const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link to="/" className="text-xl font-bold text-primary-600">
-            🎓 校园论坛
+    <div className="min-h-screen flex flex-col">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+          <Link to="/" className="text-lg font-bold text-primary-600">
+            校园论坛
           </Link>
-          
+
           <nav className="flex items-center gap-4">
             {user ? (
               <>
-                <Link to="/new" className="btn-primary">
-                  发帖
-                </Link>
-                <span className="text-gray-600 dark:text-gray-400">
-                  {user.displayName || user.username}
+                <span className="text-sm text-gray-600 dark:text-gray-300">
+                  {user.displayName}
                 </span>
-                <button onClick={logout} className="btn-secondary">
+                <button
+                  onClick={handleLogout}
+                  className="text-sm text-gray-500 hover:text-red-500 transition-colors"
+                >
                   退出
                 </button>
               </>
             ) : (
               <>
-                <Link to="/login" className="btn-secondary">
+                <Link
+                  to="/login"
+                  className="text-sm text-gray-600 dark:text-gray-300 hover:text-primary-600"
+                >
                   登录
                 </Link>
-                <Link to="/register" className="btn-primary">
+                <Link
+                  to="/register"
+                  className="text-sm btn-primary py-1.5"
+                >
                   注册
                 </Link>
               </>
@@ -44,9 +51,8 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {children}
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-6">
+        <Outlet />
       </main>
     </div>
   );
