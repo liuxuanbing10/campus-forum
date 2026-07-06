@@ -27,7 +27,6 @@ interface RegisterBody {
 interface LoginBody {
   username: string;
   password: string;
-  deviceCode?: string;
 }
 
 // 从 body 或请求头获取设备码
@@ -136,19 +135,14 @@ export const authPlugin: Plugin = {
     // ========================================
     app.post('/api/auth/login', async (request, reply) => {
       const { username, password } = request.body as LoginBody;
-      const deviceCode = getDeviceCode(request);
 
       if (!username || !password) {
         return reply.status(400).send({ error: '请填写用户名和密码' });
       }
 
-      if (!deviceCode) {
-        return reply.status(400).send({ error: '缺少设备码，请检查请求头 X-Device-Code' });
-      }
-
       // 1. 查找用户
       const user = db.get<UserRow>(
-        'SELECT id, username, password_hash, device_code FROM users WHERE username = ?',
+        'SELECT id, username, password_hash, display_name FROM users WHERE username = ?',
         username
       );
 
@@ -162,35 +156,9 @@ export const authPlugin: Plugin = {
         return reply.status(401).send({ error: '密码错误' });
       }
 
-      // 3. 设备码校验
-      if (user.device_code && user.device_code !== deviceCode) {
-        return reply.status(403).send({
-          error: '该账号已被其他设备绑定，请使用注册时的设备码登录',
-        });
-      }
-
-      // 4. 如果用户还没有设备码，绑定当前设备
-      if (!user.device_code) {
-        // 先检查这个设备码是否已经被其他用户绑定
-        const otherDeviceUser = db.get<UserRow>(
-          'SELECT id FROM users WHERE device_code = ? AND id != ?',
-          deviceCode, user.id
-        );
-        if (otherDeviceUser) {
-          return reply.status(409).send({
-            error: '该设备码已被其他账号绑定，一个设备码只能登录一个账号',
-          });
-        }
-        db.run(
-          'UPDATE users SET device_code = ?, updated_at = datetime(\'now\') WHERE id = ?',
-          deviceCode, user.id
-        );
-      }
-
-      // 5. 设置 session
+      // 3. 设置 session（不校验设备码，支持多设备登录）
       request.session.userId = user.id;
       request.session.username = user.username;
-      request.session.deviceCode = deviceCode;
       await request.session.save();
 
       return {
