@@ -66,9 +66,6 @@ export const postsPlugin: Plugin = {
   apply(ctx: PluginContext) {
     const { app, db } = ctx;
 
-    // ─── 获取版块列表 ───
-    app.get('/api/boards', async () => db.all<BoardRow>('SELECT id, name, description, icon FROM boards ORDER BY sort_order ASC'));
-
     // ─── 创建版块（管理员）───
     app.post('/api/boards', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });

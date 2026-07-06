@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../lib/api';
+import { Lock, ThumbsUp, MessageCircle } from 'lucide-react';
 
 interface Post {
   id: number; title: string; board_name: string;
@@ -18,27 +20,41 @@ export default function MyPostsPage() {
     }).catch(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-center py-12 text-gray-500">加载中...</div>;
+  if (loading) return <div className="text-center py-12 text-campus-text-tertiary font-body">加载中...</div>;
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">我的帖子</h1>
+      <h1 className="font-handwrite text-2xl font-bold text-campus-text-primary mb-6">我的帖子</h1>
       {posts.length === 0 ? (
-        <p className="text-gray-400 text-center py-12">你还没有发表过帖子</p>
+        <div className="card text-center py-12">
+          <p className="text-campus-text-tertiary font-body">你还没有发表过帖子</p>
+        </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {posts.map(p => (
-            <div key={p.id} className="card flex items-center justify-between">
+            <Link key={p.id} to={`/post/${p.id}`} className="card flex items-center justify-between hover:-translate-y-0.5 transition-all">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  {p.is_private ? <span className="text-xs text-gray-400">🔒</span> : null}
-                  <h3 className="font-medium truncate">{p.title}</h3>
+                  {p.is_private ? <Lock className="w-4 h-4 text-campus-text-tertiary" /> : null}
+                  <h3 className="font-medium text-campus-text-primary truncate font-body">{p.title}</h3>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">
-                  {p.board_name} · {p.created_at?.slice(0, 10)} · 👍 {p.like_count} · 💬 {p.comment_count}
-                </p>
+                <div className="flex items-center gap-3 text-xs text-campus-text-tertiary mt-2 font-body">
+                  <span>{p.board_name}</span>
+                  <span>·</span>
+                  <span>{new Date(p.created_at).toLocaleDateString()}</span>
+                  <span>·</span>
+                  <span className="flex items-center gap-1">
+                    <ThumbsUp className="w-3 h-3" />
+                    {p.like_count}
+                  </span>
+                  <span>·</span>
+                  <span className="flex items-center gap-1">
+                    <MessageCircle className="w-3 h-3" />
+                    {p.comment_count}
+                  </span>
+                </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}

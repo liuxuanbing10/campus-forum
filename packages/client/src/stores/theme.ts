@@ -13,16 +13,16 @@ export interface ThemeInfo {
 }
 
 export const THEMES: ThemeInfo[] = [
-  { id: 'campus', name: '校园蓝', description: '清新校园，学术氛围', emoji: '🎓', colors: { primary: '#3b82f6', surface: '#ffffff', bg: '#f9fafb' } },
-  { id: 'glass', name: '毛玻璃', description: '现代通透，光影交错', emoji: '🪟', colors: { primary: '#8b5cf6', surface: 'rgba(255,255,255,0.7)', bg: '#f0f0ff' } },
-  { id: 'dark', name: '暗黑模式', description: '深邃夜空，护眼舒适', emoji: '🌙', colors: { primary: '#60a5fa', surface: '#1a1a2e', bg: '#0f0f23' } },
-  { id: 'neumorphism', name: '新拟态', description: '柔和立体，触感真实', emoji: '🔘', colors: { primary: '#6366f1', surface: '#e0e5ec', bg: '#e0e5ec' } },
-  { id: 'cyberpunk', name: '赛博朋克', description: '霓虹闪烁，未来科技', emoji: '🤖', colors: { primary: '#f72585', surface: '#1a1a2e', bg: '#0a0a0f' } },
-  { id: 'vintage', name: '复古暖调', description: '温暖怀旧，时光沉淀', emoji: '📜', colors: { primary: '#c2410c', surface: '#fef7ed', bg: '#fdf2e9' } },
-  { id: 'minimalist', name: '极简白', description: '纯净留白，回归本质', emoji: '⬜', colors: { primary: '#171717', surface: '#ffffff', bg: '#ffffff' } },
-  { id: 'nature', name: '自然森绿', description: '清新自然，生机盎然', emoji: '🌿', colors: { primary: '#16a34a', surface: '#f0fdf4', bg: '#ecfdf5' } },
-  { id: 'sakura', name: '樱花粉', description: '浪漫柔美，春意盎然', emoji: '🌸', colors: { primary: '#ec4899', surface: '#fdf2f8', bg: '#fce7f3' } },
-  { id: 'ocean', name: '深海蓝', description: '深邃静谧，海天一色', emoji: '🌊', colors: { primary: '#0284c7', surface: '#f0f9ff', bg: '#e0f2fe' } },
+  { id: 'campus', name: '校园紫', description: '紫+琥珀·霞鹜文楷', emoji: '🎓', colors: { primary: '#7C3AED', surface: '#FFFFFF', bg: '#FAF5FF' } },
+  { id: 'glass', name: '毛玻璃', description: '紫+玫红·龙藏草书', emoji: '🪟', colors: { primary: '#8B5CF6', surface: 'rgba(255,255,255,0.55)', bg: '#F0EAFF' } },
+  { id: 'dark', name: '暗黑模式', description: '靛蓝+翡翠·站酷小薇', emoji: '🌙', colors: { primary: '#A78BFA', surface: '#1E1B4B', bg: '#0B0A1F' } },
+  { id: 'neumorphism', name: '新拟态', description: '薰衣草+薄荷·霞鹜文楷', emoji: '🔘', colors: { primary: '#7C3AED', surface: '#ECEEF9', bg: '#ECEEF9' } },
+  { id: 'cyberpunk', name: '赛博朋克', description: '热粉+电光绿·柳建毛草', emoji: '🤖', colors: { primary: '#F72585', surface: '#1A1A2E', bg: '#0A0A0F' } },
+  { id: 'vintage', name: '复古暖调', description: '焦糖+墨绿·马善政毛笔', emoji: '📜', colors: { primary: '#C2410C', surface: '#FEF7ED', bg: '#FDF2E9' } },
+  { id: 'minimalist', name: '极简白', description: '黑灰+蓝·霞鹜文楷', emoji: '⬜', colors: { primary: '#171717', surface: '#FFFFFF', bg: '#FFFFFF' } },
+  { id: 'nature', name: '自然森绿', description: '翠绿+大地棕·马善政', emoji: '🌿', colors: { primary: '#16A34A', surface: '#F0FDF4', bg: '#ECFDF5' } },
+  { id: 'sakura', name: '樱花粉', description: '粉+薰衣草·龙藏草书', emoji: '🌸', colors: { primary: '#EC4899', surface: '#FDF2F8', bg: '#FCE7F3' } },
+  { id: 'ocean', name: '深海蓝', description: '海蓝+珊瑚橙·站酷快乐体', emoji: '🌊', colors: { primary: '#0284C7', surface: '#F0F9FF', bg: '#E0F2FE' } },
 ];
 
 interface ThemeState {

@@ -1,6 +1,7 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 import NotificationBell from './NotificationBell';
+import ThemeSwitcher from './ThemeSwitcher';
 
 export default function Layout() {
   const { user, logout } = useAuthStore();
@@ -13,40 +14,41 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+      <header className="bg-surface border-b border-border shadow-card">
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link to="/" className="text-lg font-bold text-primary-600 hover:text-primary-700">
+          <Link to="/" className="text-lg font-bold text-primary hover:text-primary-hover font-display">
             校园论坛
           </Link>
 
           <nav className="flex items-center gap-4">
+            <ThemeSwitcher />
             {user ? (
               <>
                 <NotificationBell />
-                <Link to="/my-posts" className="text-sm text-gray-500 hover:text-primary-600 transition-colors">
+                <Link to="/my-posts" className="text-sm text-campus-text-secondary hover:text-primary transition-colors font-body">
                   我的帖子
                 </Link>
-                <Link to="/settings" className="text-sm text-gray-500 hover:text-primary-600 transition-colors">
+                <Link to="/settings" className="text-sm text-campus-text-secondary hover:text-primary transition-colors font-body">
                   设置
                 </Link>
-                <span className="text-sm text-gray-600 dark:text-gray-300">
+                <span className="text-sm text-campus-text-primary font-body">
                   {user.displayName}
                 </span>
                 <button
                   onClick={handleLogout}
-                  className="text-sm text-gray-500 hover:text-red-500 transition-colors"
+                  className="text-sm text-campus-text-secondary hover:text-destructive transition-colors font-body"
                 >
                   退出
                 </button>
               </>
             ) : (
               <>
-                <Link to="/login" className="text-sm text-gray-600 dark:text-gray-300 hover:text-primary-600 transition-colors">
+                <Link to="/login" className="text-sm text-campus-text-secondary hover:text-primary transition-colors font-body">
                   登录
                 </Link>
-<Link
+                <Link
                   to="/register"
-                  className="h-9 px-4 rounded-md bg-primary text-white text-sm font-body hover:bg-primary-hover inline-flex items-center"
+                  className="btn-primary btn-sm btn-inline font-body"
                 >
                   注册
                 </Link>
@@ -54,10 +56,9 @@ export default function Layout() {
             )}
           </nav>
         </div>
-
       </header>
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-6">
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-6 pt-20">
         <Outlet />
       </main>
     </div>

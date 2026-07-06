@@ -39,28 +39,6 @@ export const boardsPlugin: Plugin = {
       return board;
     });
 
-    // Create board (admin only)
-    app.post('/api/boards', async (request, reply) => {
-      const { name, description, icon } = request.body as {
-        name: string; description?: string; icon?: string;
-      };
-
-      if (!name) {
-        return reply.status(400).send({ error: '板块名不能为空' });
-      }
-
-      try {
-        db.run(
-          'INSERT INTO boards (name, description, icon) VALUES (?, ?, ?)',
-          name, description || '', icon || '📁'
-        );
-        const board = db.get<Board>('SELECT * FROM boards WHERE name = ?', name);
-        return { success: true, board };
-      } catch {
-        return reply.status(409).send({ error: '板块名已存在' });
-      }
-    });
-
     // Get posts in a board
     app.get<{ Params: { id: string } }>('/api/boards/:id/posts', async (request, reply) => {
       const board = db.get<Board>('SELECT id FROM boards WHERE id = ?', Number(request.params.id));

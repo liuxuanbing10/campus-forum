@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import { toastStore } from '../App';
+import { ArrowLeft } from 'lucide-react';
 
 interface Board {
   id: number;
@@ -22,7 +24,10 @@ export default function NewPostPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!boardId) return alert('请选择板块');
+    if (!boardId) {
+      toastStore.warning('请选择板块');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -32,9 +37,11 @@ export default function NewPostPage() {
         boardId,
         isAnonymous,
       });
+      toastStore.success('发帖成功！');
       navigate('/');
-    } catch (err) {
-      alert('发帖失败');
+    } catch (err: any) {
+      const errMsg = err.response?.data?.error || '发帖失败';
+      toastStore.error(errMsg);
     } finally {
       setLoading(false);
     }
@@ -44,26 +51,26 @@ export default function NewPostPage() {
     <div className="max-w-[42rem] mx-auto py-8">
       <Link
         to="/"
-        className="text-sm text-campus-text-tertiary hover:text-primary-600 transition-colors mb-6 inline-flex items-center gap-1"
+        className="text-sm text-campus-text-tertiary hover:text-primary transition-colors mb-6 inline-flex items-center gap-1 font-body"
       >
-        &larr; 返回
+        <ArrowLeft className="w-4 h-4" />
+        返回
       </Link>
 
-      <div className="max-w-[42rem] mx-auto p-6 sm:p-10 bg-white rounded-xl border border-border shadow-card">
-        <h1 className="font-display text-2xl font-semibold text-campus-text-primary mb-8" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>
+      <div className="card p-6 sm:p-10">
+        <h1 className="font-handwrite text-2xl font-semibold text-campus-text-primary mb-8" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>
           发表新帖
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-campus-text-primary mb-1.5">
+            <label className="block text-sm font-medium text-campus-text-secondary mb-2 font-body">
               板块
             </label>
             <select
               value={boardId}
               onChange={e => setBoardId(Number(e.target.value))}
-              className="w-full h-12 px-4 border border-border rounded-md bg-white text-campus-text-primary focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-100 appearance-none"
-              style={{ backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23a8a29e%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpolyline points=%276 9 12 15 18 9%27%3E%3C/polyline%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center' }}
+              className="input appearance-none"
               required
             >
               <option value={0}>请选择板块</option>
@@ -74,36 +81,38 @@ export default function NewPostPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-campus-text-primary mb-1.5">
+            <label className="block text-sm font-medium text-campus-text-secondary mb-2 font-body">
               标题
             </label>
             <input
               type="text"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              className="w-full h-12 px-4 border border-border rounded-md bg-white text-campus-text-primary focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-100"
+              className="input"
+              placeholder="请输入标题"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-campus-text-primary mb-1.5">
+            <label className="block text-sm font-medium text-campus-text-secondary mb-2 font-body">
               内容
             </label>
             <textarea
               value={content}
               onChange={e => setContent(e.target.value)}
-              className="w-full min-h-[200px] p-4 border border-border rounded-md bg-primary-50 text-campus-text-primary focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-100 resize-none"
+              className="input min-h-[200px] resize-none p-4"
+              placeholder="请输入内容"
               required
             />
           </div>
 
-          <label className="flex items-center gap-3 text-sm text-campus-text-secondary cursor-pointer">
+          <label className="flex items-center gap-3 text-sm text-campus-text-secondary cursor-pointer font-body">
             <input
               type="checkbox"
               checked={isAnonymous}
               onChange={e => setIsAnonymous(e.target.checked)}
-              className="accent-primary-600"
+              className="accent-primary"
             />
             匿名发帖
           </label>
@@ -111,7 +120,7 @@ export default function NewPostPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-12 bg-primary-600 text-white font-semibold rounded-md border border-primary-600 hover:opacity-90 hover:-translate-y-0.5 transition-all mt-6 disabled:opacity-50"
+            className="btn-primary font-body mt-6"
           >
             {loading ? '发布中...' : '发布'}
           </button>
