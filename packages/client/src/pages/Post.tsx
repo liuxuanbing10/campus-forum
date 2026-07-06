@@ -57,7 +57,7 @@ export default function PostPage() {
       </div>
 
       {/* Article Card */}
-      <article className="relative p-8 md:p-10 bg-white border border-border rounded-xl shadow-card">
+      <article className="relative p-5 sm:p-8 md:p-10 bg-white border border-border rounded-xl shadow-card">
         {/* Decorative quote mark */}
         <div className="absolute top-4 left-6 text-6xl text-primary-200 font-display leading-none select-none pointer-events-none">
           ❝
@@ -72,7 +72,7 @@ export default function PostPage() {
         </h1>
 
         {/* Author Row */}
-        <div className="flex items-center gap-4 pb-4 border-b border-border text-sm relative">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 pb-4 border-b border-border text-xs sm:text-sm relative">
           <span className="font-medium text-campus-text-secondary">{post.author_name}</span>
           <span className="text-campus-text-tertiary">👁 {post.view_count}</span>
           <span className="text-campus-text-tertiary">{new Date(post.created_at).toLocaleDateString()}</span>

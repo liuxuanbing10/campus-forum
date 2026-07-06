@@ -38,11 +38,11 @@ export default function BoardPage() {
         ← 返回首页
       </Link>
 
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="font-display text-2xl font-bold text-campus-text-primary">{boardName}</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <h1 className="font-display text-xl sm:text-2xl font-bold text-campus-text-primary">{boardName}</h1>
         <Link
           to="/new"
-          className="inline-flex items-center h-10 px-5 bg-primary-600 text-white text-sm font-body rounded-md hover:bg-primary-700 transition-colors"
+          className="inline-flex items-center justify-center h-10 px-5 bg-primary-600 text-white text-sm font-body rounded-md hover:bg-primary-700 transition-colors self-start sm:self-auto"
         >
           发帖
         </Link>
@@ -56,7 +56,7 @@ export default function BoardPage() {
             className="block p-5 bg-white border border-border border-l-[3px] border-l-primary-600 rounded-lg shadow-card hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200"
           >
             <h2 className="text-lg font-semibold text-campus-text-primary">{post.title}</h2>
-            <div className="flex items-center gap-4 mt-3 text-sm text-campus-text-tertiary">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-3 text-xs sm:text-sm text-campus-text-tertiary">
               <span>{post.author_name}</span>
               <span>👁 {post.view_count}</span>
               <span>👍 {post.vote_count || 0}</span>

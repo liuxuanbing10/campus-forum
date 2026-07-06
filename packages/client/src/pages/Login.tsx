@@ -26,55 +26,62 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-8">
-      <h1 className="text-2xl font-bold mb-6 text-center">登录</h1>
+    <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="w-full max-w-md mx-4 sm:mx-0 p-6 sm:p-10 bg-white rounded-lg shadow-card">
+        {/* Literary ornament */}
+        <div className="flex items-center my-6">
+          <div className="flex-1 border-t border-primary-200" />
+          <span className="text-primary-600 text-sm mx-4">◆</span>
+          <div className="flex-1 border-t border-primary-200" />
+        </div>
 
-      <form onSubmit={handleSubmit} className="card space-y-4">
-        {error && (
-          <div className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-3 rounded-lg text-sm">
-            {error}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium mb-1">用户名</label>
+            <input
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              className="input"
+              placeholder="输入用户名"
+              required
+            />
           </div>
-        )}
 
-        <div>
-          <label className="block text-sm font-medium mb-1">用户名</label>
-          <input
-            type="text"
-            value={username}
-            onChange={e => setUsername(e.target.value)}
-            className="input"
-            placeholder="输入用户名"
-            required
-          />
-        </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">密码</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="input"
+              placeholder="输入密码"
+              required
+            />
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">密码</label>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            className="input"
-            placeholder="输入密码"
-            required
-          />
-        </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full btn-primary disabled:opacity-50"
+          >
+            {loading ? '登录中...' : '登录'}
+          </button>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full btn-primary disabled:opacity-50"
-        >
-          {loading ? '登录中...' : '登录'}
-        </button>
-
-        <p className="text-center text-sm text-gray-500">
-          没有账号？{' '}
-          <Link to="/register" className="text-primary-600 hover:underline">
-            注册
-          </Link>
-        </p>
-      </form>
+          <p className="text-center text-sm text-gray-500">
+            没有账号？{' '}
+            <Link to="/register" className="text-primary-600 hover:underline">
+              注册
+            </Link>
+          </p>
+        </form>
+      </div>
     </div>
   );
 }

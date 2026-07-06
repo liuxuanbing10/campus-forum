@@ -49,7 +49,7 @@ export default function NewPostPage() {
         &larr; 返回首页
       </Link>
 
-      <div className="max-w-2xl mx-auto p-10 bg-white rounded-xl border border-border shadow-card">
+      <div className="max-w-2xl mx-auto p-6 sm:p-10 bg-white rounded-xl border border-border shadow-card">
         <h1 className="font-display text-2xl font-bold text-campus-text-primary mb-8">
           发表新帖
         </h1>
