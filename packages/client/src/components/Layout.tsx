@@ -1,12 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
+import ThemeSwitcher from './ThemeSwitcher';
+import { useThemeStore } from '../stores/theme';
 
 export default function Layout() {
   const { user, logout } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const initTheme = useThemeStore((s) => s.initTheme);
+
+  useEffect(() => {
+    initTheme();
+  }, [initTheme]);
 
   const handleLogout = async () => {
     await logout();
@@ -22,7 +29,8 @@ export default function Layout() {
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-4">
+          <nav className="hidden md:flex items-center gap-2">
+            <ThemeSwitcher />
             <Link
               to="/"
               className={`text-sm font-body transition-colors ${
@@ -101,6 +109,11 @@ export default function Layout() {
             >
               首页
             </Link>
+            {/* Mobile theme row */}
+            <div className="flex items-center justify-between py-2 border-t border-border/50 mt-1 pt-3">
+              <span className="text-sm text-campus-text-tertiary">主题</span>
+              <ThemeSwitcher />
+            </div>
             {user ? (
               <>
                 <Link

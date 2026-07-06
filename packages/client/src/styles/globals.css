@@ -1,29 +1,281 @@
+/* ===== Google Fonts — Handwritten Style ===== */
+@import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Liu+Jian+Mao+Cao&family=Zhi+Mang+Xing&family=Long+Cang&family=ZCOOL+XiaoWei&family=ZCOOL+QingKe+HuangYou&family=LXGW+WenKai+TC:wght@400;700&family=Caveat:wght@400;700&family=Kalam:wght@400;700&family=Patrick+Hand&family=Architects+Daughter&family=Dancing+Script:wght@400;700&family=Pacifico&family=Amatic+SC:wght@400;700&family=Shadows+Into+Light&family=Sacramento&family=Noto+Serif+SC:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ===== Theme: Campus (Default) — 校园蓝 ===== */
+[data-theme="campus"] {
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-primary-light: #eff6ff;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f9fafb;
+  --color-bg: #f9fafb;
+  --color-text-primary: #111827;
+  --color-text-secondary: #374151;
+  --color-text-tertiary: #9ca3af;
+  --color-border: #e5e7eb;
+  --color-border-light: #f3f4f6;
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-card-hover: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-float: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --font-display: 'Ma Shan Zheng', 'LXGW WenKai TC', cursive;
+  --font-body: 'LXGW WenKai TC', 'Noto Serif SC', serif;
+}
+
+/* ===== Theme: Glass — 毛玻璃 ===== */
+[data-theme="glass"] {
+  --color-primary: #8b5cf6;
+  --color-primary-hover: #7c3aed;
+  --color-primary-light: rgba(139, 92, 246, 0.1);
+  --color-surface: rgba(255, 255, 255, 0.55);
+  --color-surface-hover: rgba(255, 255, 255, 0.7);
+  --color-bg: #eef2ff;
+  --color-text-primary: #1e1b4b;
+  --color-text-secondary: #4c1d95;
+  --color-text-tertiary: #9ca3af;
+  --color-border: rgba(255, 255, 255, 0.3);
+  --color-border-light: rgba(255, 255, 255, 0.15);
+  --shadow-card: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  --shadow-card-hover: 0 8px 32px 0 rgba(31, 38, 135, 0.25);
+  --shadow-float: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --font-display: 'Caveat', 'LXGW WenKai TC', cursive;
+  --font-body: 'LXGW WenKai TC', 'Noto Serif SC', serif;
+}
+
+/* ===== Theme: Dark — 暗黑模式 ===== */
+[data-theme="dark"] {
+  --color-primary: #60a5fa;
+  --color-primary-hover: #3b82f6;
+  --color-primary-light: rgba(96, 165, 250, 0.15);
+  --color-surface: #1a1a2e;
+  --color-surface-hover: #16213e;
+  --color-bg: #0f0f23;
+  --color-text-primary: #e2e8f0;
+  --color-text-secondary: #a0aec0;
+  --color-text-tertiary: #4a5568;
+  --color-border: #2d3748;
+  --color-border-light: #1a202c;
+  --shadow-card: 0 2px 8px 0 rgba(0, 0, 0, 0.3);
+  --shadow-card-hover: 0 4px 16px 0 rgba(0, 0, 0, 0.4);
+  --shadow-float: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --font-display: 'Kalam', 'Zhi Mang Xing', cursive;
+  --font-body: 'Zhi Mang Xing', 'LXGW WenKai TC', cursive;
+}
+
+/* ===== Theme: Neumorphism — 新拟态 ===== */
+[data-theme="neumorphism"] {
+  --color-primary: #6366f1;
+  --color-primary-hover: #4f46e5;
+  --color-primary-light: rgba(99, 102, 241, 0.1);
+  --color-surface: #e0e5ec;
+  --color-surface-hover: #d4d9e3;
+  --color-bg: #e0e5ec;
+  --color-text-primary: #2d3748;
+  --color-text-secondary: #4a5568;
+  --color-text-tertiary: #a0aec0;
+  --color-border: transparent;
+  --color-border-light: transparent;
+  --shadow-card: 8px 8px 16px #bebebe, -8px -8px 16px #ffffff;
+  --shadow-card-hover: 6px 6px 12px #bebebe, -6px -6px 12px #ffffff;
+  --shadow-float: 12px 12px 24px #bebebe, -12px -12px 24px #ffffff;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --font-display: 'Patrick Hand', 'Long Cang', cursive;
+  --font-body: 'Long Cang', 'ZCOOL XiaoWei', cursive;
+}
+
+/* ===== Theme: Cyberpunk — 赛博朋克 ===== */
+[data-theme="cyberpunk"] {
+  --color-primary: #f72585;
+  --color-primary-hover: #e01a6b;
+  --color-primary-light: rgba(247, 37, 133, 0.15);
+  --color-surface: #1a1a2e;
+  --color-surface-hover: #16213e;
+  --color-bg: #0a0a0f;
+  --color-text-primary: #e2e8f0;
+  --color-text-secondary: #a0aec0;
+  --color-text-tertiary: #4a5568;
+  --color-border: #f72585;
+  --color-border-light: rgba(247, 37, 133, 0.3);
+  --shadow-card: 0 0 15px rgba(247, 37, 133, 0.3), 0 0 5px rgba(57, 255, 20, 0.1);
+  --shadow-card-hover: 0 0 25px rgba(247, 37, 133, 0.5), 0 0 10px rgba(57, 255, 20, 0.2);
+  --shadow-float: 0 0 35px rgba(247, 37, 133, 0.4), 0 0 15px rgba(57, 255, 20, 0.15);
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --font-display: 'Architects Daughter', 'Long Cang', cursive;
+  --font-body: 'Long Cang', 'ZCOOL XiaoWei', cursive;
+}
+
+/* ===== Theme: Vintage — 复古暖调 ===== */
+[data-theme="vintage"] {
+  --color-primary: #c2410c;
+  --color-primary-hover: #9a3412;
+  --color-primary-light: #fff7ed;
+  --color-surface: #fef7ed;
+  --color-surface-hover: #ffedd5;
+  --color-bg: #fdf2e9;
+  --color-text-primary: #431407;
+  --color-text-secondary: #7c2d12;
+  --color-text-tertiary: #a07c5b;
+  --color-border: #fed7aa;
+  --color-border-light: #ffedd5;
+  --shadow-card: 0 2px 8px 0 rgba(120, 70, 30, 0.12);
+  --shadow-card-hover: 0 4px 16px 0 rgba(120, 70, 30, 0.18);
+  --shadow-float: 0 8px 24px 0 rgba(120, 70, 30, 0.15);
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --font-display: 'Dancing Script', 'Liu Jian Mao Cao', cursive;
+  --font-body: 'Liu Jian Mao Cao', 'Noto Serif SC', cursive;
+}
+
+/* ===== Theme: Minimalist — 极简白 ===== */
+[data-theme="minimalist"] {
+  --color-primary: #171717;
+  --color-primary-hover: #000000;
+  --color-primary-light: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-hover: #fafafa;
+  --color-bg: #ffffff;
+  --color-text-primary: #171717;
+  --color-text-secondary: #404040;
+  --color-text-tertiary: #a3a3a3;
+  --color-border: #e5e5e5;
+  --color-border-light: #f5f5f5;
+  --shadow-card: 0 0 0 1px rgba(0, 0, 0, 0.05);
+  --shadow-card-hover: 0 0 0 1px rgba(0, 0, 0, 0.1);
+  --shadow-float: 0 4px 12px 0 rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --font-display: 'Amatic SC', 'ZCOOL XiaoWei', cursive;
+  --font-body: 'ZCOOL XiaoWei', 'LXGW WenKai TC', serif;
+}
+
+/* ===== Theme: Nature — 自然森绿 ===== */
+[data-theme="nature"] {
+  --color-primary: #16a34a;
+  --color-primary-hover: #15803d;
+  --color-primary-light: #f0fdf4;
+  --color-surface: #f0fdf4;
+  --color-surface-hover: #dcfce7;
+  --color-bg: #ecfdf5;
+  --color-text-primary: #14532d;
+  --color-text-secondary: #166534;
+  --color-text-tertiary: #86b98b;
+  --color-border: #bbf7d0;
+  --color-border-light: #dcfce7;
+  --shadow-card: 0 2px 8px 0 rgba(22, 163, 74, 0.1);
+  --shadow-card-hover: 0 4px 16px 0 rgba(22, 163, 74, 0.15);
+  --shadow-float: 0 8px 24px 0 rgba(22, 163, 74, 0.12);
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --font-display: 'Shadows Into Light', 'Ma Shan Zheng', cursive;
+  --font-body: 'Ma Shan Zheng', 'LXGW WenKai TC', cursive;
+}
+
+/* ===== Theme: Sakura — 樱花粉 ===== */
+[data-theme="sakura"] {
+  --color-primary: #ec4899;
+  --color-primary-hover: #db2777;
+  --color-primary-light: #fdf2f8;
+  --color-surface: #fdf2f8;
+  --color-surface-hover: #fce7f3;
+  --color-bg: #fce7f3;
+  --color-text-primary: #831843;
+  --color-text-secondary: #9d174d;
+  --color-text-tertiary: #e09db5;
+  --color-border: #fbcfe8;
+  --color-border-light: #fce7f3;
+  --shadow-card: 0 2px 8px 0 rgba(236, 72, 153, 0.1);
+  --shadow-card-hover: 0 4px 16px 0 rgba(236, 72, 153, 0.15);
+  --shadow-float: 0 8px 24px 0 rgba(236, 72, 153, 0.12);
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --font-display: 'Pacifico', 'ZCOOL QingKe HuangYou', cursive;
+  --font-body: 'ZCOOL QingKe HuangYou', 'ZCOOL XiaoWei', cursive;
+}
+
+/* ===== Theme: Ocean — 深海蓝 ===== */
+[data-theme="ocean"] {
+  --color-primary: #0284c7;
+  --color-primary-hover: #0369a1;
+  --color-primary-light: #f0f9ff;
+  --color-surface: #f0f9ff;
+  --color-surface-hover: #e0f2fe;
+  --color-bg: #e0f2fe;
+  --color-text-primary: #0c4a6e;
+  --color-text-secondary: #075985;
+  --color-text-tertiary: #7ba9c9;
+  --color-border: #bae6fd;
+  --color-border-light: #e0f2fe;
+  --shadow-card: 0 2px 8px 0 rgba(2, 132, 199, 0.1);
+  --shadow-card-hover: 0 4px 16px 0 rgba(2, 132, 199, 0.15);
+  --shadow-float: 0 8px 24px 0 rgba(2, 132, 199, 0.12);
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --font-display: 'Sacramento', 'Long Cang', cursive;
+  --font-body: 'Long Cang', 'ZCOOL XiaoWei', cursive;
+}
+
+/* ===== Default theme (no data-theme attribute) ===== */
+:root,
+[data-theme="campus"] {
+  /* same as campus — already defined above */
+}
+
+/* ===== Base Layer ===== */
 @layer base {
   body {
-    @apply text-gray-900 dark:text-gray-100 min-h-screen;
+    @apply bg-page-bg text-campus-text-secondary min-h-screen font-body;
   }
 }
 
+/* ===== Glass theme: add backdrop blur to surfaces ===== */
+[data-theme="glass"] .card,
+[data-theme="glass"] .input,
+[data-theme="glass"] .btn-primary,
+[data-theme="glass"] .btn-secondary {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* ===== Component Layer ===== */
 @layer components {
   .card {
-    @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6;
+    @apply bg-surface rounded-md shadow-card border border-border p-6 transition-shadow duration-200;
+  }
+  .card:hover {
+    @apply shadow-card-hover;
   }
   .input {
-    @apply w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-           bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
-           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-           placeholder-gray-400 dark:placeholder-gray-500;
+    @apply w-full px-4 py-2 border border-border rounded-sm bg-surface text-campus-text-primary
+           focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
+           placeholder-campus-text-tertiary;
   }
   .btn-primary {
-    @apply px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg
+    @apply px-6 py-2 bg-primary hover:bg-primary-hover text-white rounded-sm
            font-medium transition-colors duration-200;
   }
   .btn-secondary {
-    @apply px-6 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600
-           text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-colors duration-200;
+    @apply px-6 py-2 bg-surface-hover hover:bg-border text-campus-text-primary rounded-sm
+           font-medium transition-colors duration-200;
   }
 }
