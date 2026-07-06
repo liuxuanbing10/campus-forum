@@ -10,6 +10,7 @@
 - 📱 **响应式设计** — 适配手机和桌面
 - 🌲 **匿名树洞** — 匿名发帖，保护隐私
 - 🔍 **搜索功能** — 全文搜索帖子内容
+- 📟 **设备码绑定** — 一个设备码只能登录一个账号
 
 ## 🛠️ 技术栈
 
@@ -63,7 +64,7 @@ npm run dev
 ### 默认账号
 
 - 用户名：`admin`
-- 密码：`admin123`
+- 密码：`123456`
 
 ### 可用脚本
 
@@ -99,32 +100,20 @@ export const myPlugin: Plugin = {
     description: '我的功能',
     author: 'your-name',
   },
-  apply(ctx) {
-    // 注册 Fastify 路由
-    ctx.app.get('/api/my-endpoint', async () => {
-      return { message: 'Hello from plugin!' };
+  apply(ctx: PluginContext) {
+    const { app, db } = ctx;
+    // 添加路由
+    app.get('/api/my-feature', async () => {
+      return { hello: 'world' };
     });
   },
 };
-
-export default myPlugin;
 ```
 
-## 🎯 路线图
+### 设备码说明
 
-- [x] 项目骨架
-- [x] 用户认证系统（auth 插件）
-- [x] 板块管理（boards 插件）
-- [x] 帖子 CRUD（posts 插件）
-- [x] 评论系统（posts 插件）
-- [x] 投票功能（posts 插件）
-- [x] 搜索功能（search 插件）
-- [x] 匿名发帖（posts 插件）
-- [ ] 暗色模式
-- [ ] 移动端适配
-- [ ] 私信功能
-- [ ] 文件上传
+前端使用 localStorage 自动生成设备码（UUID v4），通过 `X-Device-Code` 请求头自动发送到后端。一个设备码只能绑定一个账号，换设备/清缓存后需要重新登录。
 
 ## 📄 License
 
-MIT — 详见 [LICENSE](./LICENSE)
+MIT

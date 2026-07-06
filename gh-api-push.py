@@ -10,7 +10,6 @@ import json, base64, os, sys, urllib.request, urllib.error
 TOKEN = os.environ.get("GH_TOKEN", "")
 if not TOKEN:
     print("❌ 请设置环境变量 GH_TOKEN")
-    print("   用法: GH_TOKEN=ghp_xxx python gh-api-push.py [目录] [repo] [分支]")
     sys.exit(1)
 
 PROJECT_DIR = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.getcwd()
@@ -36,8 +35,7 @@ def gh_api(method, path, data=None):
         print(f"  HTTP {e.code}: {err[:300]}")
         raise
 
-print(f"📦 仓库: {REPO}  分支: {BRANCH}")
-print(f"📁 目录: {PROJECT_DIR}")
+print(f"📦 {REPO}  {BRANCH}  📁 {PROJECT_DIR}")
 
 # Step 1 — 获取最新 commit
 print("\n⏳ 获取最新 commit...")
@@ -46,9 +44,9 @@ try:
     latest_sha = ref["object"]["sha"]
     commit = gh_api("GET", f"/git/commits/{latest_sha}")
     base_tree = commit["tree"]["sha"]
-    print(f"  最新 commit: {latest_sha[:12]}")
+    print(f"  commit: {latest_sha[:12]}")
 except urllib.error.HTTPError:
-    print("  仓库为空，创建初始 commit")
+    print("  空仓库，创建初始 commit")
     latest_sha = None
     base_tree = None
 
@@ -58,15 +56,14 @@ files = []
 for root, dirs, names in os.walk(PROJECT_DIR):
     dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
     for name in names:
-        if name in SKIP_FILES:
-            continue
+        if name in SKIP_FILES: continue
         full = os.path.join(root, name)
         rel = os.path.relpath(full, PROJECT_DIR).replace('\\', '/')
         with open(full, 'rb') as fh:
             content = fh.read()
         files.append((rel, content))
 files.sort(key=lambda x: x[0])
-print(f"  共 {len(files)} 个文件")
+print(f"  {len(files)} 个文件")
 
 # Step 3 — 创建 blobs
 print("\n⏳ 创建 Blobs...")
@@ -84,8 +81,7 @@ for i, (path, content) in enumerate(files):
 # Step 4 — 创建 tree
 print("\n⏳ 创建 Tree...")
 payload = {"tree": tree}
-if base_tree:
-    payload["base_tree"] = base_tree
+if base_tree: payload["base_tree"] = base_tree
 new_tree = gh_api("POST", "/git/trees", payload)["sha"]
 print(f"  tree: {new_tree[:12]}")
 
