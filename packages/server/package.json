@@ -12,6 +12,7 @@
     "@campus-forum/core": "*",
     "@campus-forum/database": "*",
     "@campus-forum/plugin-auth": "*",
+    "@campus-forum/plugin-posts": "*",
     "@fastify/cookie": "^11.0.0",
     "@fastify/cors": "^11.0.0",
     "@fastify/session": "^11.0.0",

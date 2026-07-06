@@ -1,201 +1,142 @@
-import type { Plugin, PluginContext } from '@campus-forum/core';
+import { Plugin, PluginContext } from '@campus-forum/core';
 
-interface Post {
+interface BoardRow {
+  id: number;
+  name: string;
+  description: string;
+  icon: string;
+}
+
+interface PostRow {
   id: number;
   title: string;
   content: string;
   author_id: number;
   board_id: number;
-  is_anonymous: number;
-  view_count: number;
   created_at: string;
-}
-
-interface Comment {
-  id: number;
-  content: string;
-  author_id: number;
-  post_id: number;
-  parent_id: number | null;
-  created_at: string;
-}
-
-// Increment view count helper
-function incrementViewCount(ctx: PluginContext, postId: number): void {
-  ctx.db.run('UPDATE posts SET view_count = view_count + 1 WHERE id = ?', postId);
 }
 
 export const postsPlugin: Plugin = {
   manifest: {
     name: 'posts',
     version: '0.1.0',
-    description: '帖子与评论管理插件',
+    description: '帖子管理插件',
     author: 'campus-forum',
-    dependencies: ['auth'],
   },
 
-  apply(ctx) {
+  apply(ctx: PluginContext) {
     const { app, db } = ctx;
 
-    // --- Posts ---
+    // ========================================
+    // 获取版块列表
+    // ========================================
+    app.get('/api/boards', async () => {
+      const boards = db.all<BoardRow>(
+        'SELECT id, name, description, icon FROM boards ORDER BY sort_order ASC'
+      );
+      return boards;
+    });
 
-    // Create post
+    // ========================================
+    // 创建帖子
+    // ========================================
     app.post('/api/posts', async (request, reply) => {
-      const { title, content, boardId, isAnonymous } = request.body as {
-        title: string; content: string; boardId: number; isAnonymous?: boolean;
-      };
-
-      if (!title || !content || !boardId) {
-        return reply.status(400).send({ error: '请填写标题、内容和板块' });
-      }
-
-      // Check auth
-      const session = (request as any).session;
-      if (!session?.userId) {
+      const userId = (request as any).session?.userId;
+      if (!userId) {
         return reply.status(401).send({ error: '请先登录' });
       }
 
-      // Check board exists
-      const board = db.get('SELECT id FROM boards WHERE id = ?', boardId);
+      const { title, content, boardId } = request.body as {
+        title: string; content: string; boardId: number;
+      };
+
+      if (!title || !content || !boardId) {
+        return reply.status(400).send({ error: '标题、内容和版块不能为空' });
+      }
+
+      if (title.length < 2 || title.length > 100) {
+        return reply.status(400).send({ error: '标题长度应为 2-100 个字符' });
+      }
+
+      // 检查版块是否存在
+      const board = db.get<BoardRow>('SELECT id FROM boards WHERE id = ?', boardId);
       if (!board) {
-        return reply.status(404).send({ error: '板块不存在' });
+        return reply.status(404).send({ error: '版块不存在' });
       }
 
       db.run(
-        'INSERT INTO posts (title, content, author_id, board_id, is_anonymous) VALUES (?, ?, ?, ?, ?)',
-        title, content, session.userId, boardId, isAnonymous ? 1 : 0
+        'INSERT INTO posts (title, content, author_id, board_id) VALUES (?, ?, ?, ?)',
+        title, content, userId, boardId
       );
 
-      const post = db.get<Post>(
-        'SELECT * FROM posts WHERE id = last_insert_rowid()'
+      const post = db.get<PostRow>(
+        'SELECT id, title, content, author_id, board_id, created_at FROM posts ORDER BY id DESC LIMIT 1'
       );
-
-      ctx.events.emit('post:created', post);
 
       return { success: true, post };
     });
 
-    // Get single post
-    app.get<{ Params: { id: string } }>('/api/posts/:id', async (request, reply) => {
-      const post = db.get<Post & { author_name: string; board_name: string }>(
-        `SELECT p.*,
-                CASE WHEN p.is_anonymous = 1 THEN '匿名' ELSE COALESCE(u.display_name, u.username) END as author_name,
+    // ========================================
+    // 获取帖子列表
+    // ========================================
+    app.get('/api/posts', async (request) => {
+      const query = request.query as { boardId?: string; page?: string };
+      const boardId = query.boardId ? Number(query.boardId) : undefined;
+      const page = Math.max(1, Number(query.page) || 1);
+      const limit = 20;
+      const offset = (page - 1) * limit;
+
+      let sql: string;
+      let params: unknown[];
+
+      if (boardId) {
+        sql = `SELECT p.id, p.title, p.content, p.board_id, p.created_at,
+                      u.username as author_name
+               FROM posts p
+               JOIN users u ON p.author_id = u.id
+               WHERE p.board_id = ?
+               ORDER BY p.created_at DESC
+               LIMIT ? OFFSET ?`;
+        params = [boardId, limit, offset];
+      } else {
+        sql = `SELECT p.id, p.title, p.content, p.board_id, p.created_at,
+                      u.username as author_name, b.name as board_name
+               FROM posts p
+               JOIN users u ON p.author_id = u.id
+               JOIN boards b ON p.board_id = b.id
+               ORDER BY p.created_at DESC
+               LIMIT ? OFFSET ?`;
+        params = [limit, offset];
+      }
+
+      const posts = db.all<any>(sql, ...params);
+      return { posts, page, limit };
+    });
+
+    // ========================================
+    // 获取单个帖子详情
+    // ========================================
+    app.get('/api/posts/:id', async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const post = db.get<any>(
+        `SELECT p.id, p.title, p.content, p.board_id, p.created_at, p.updated_at,
+                u.username as author_name, u.id as author_id,
                 b.name as board_name
          FROM posts p
          JOIN users u ON p.author_id = u.id
          JOIN boards b ON p.board_id = b.id
          WHERE p.id = ?`,
-        Number(request.params.id)
+        Number(id)
       );
 
       if (!post) {
         return reply.status(404).send({ error: '帖子不存在' });
       }
 
-      // Increment view count
-      incrementViewCount(ctx, post.id);
+      // 增加浏览次数
+      db.run('UPDATE posts SET view_count = view_count + 1 WHERE id = ?', Number(id));
 
       return post;
-    });
-
-    // Vote on post
-    app.post<{ Params: { id: string } }>('/api/posts/:id/vote', async (request, reply) => {
-      const session = (request as any).session;
-      if (!session?.userId) {
-        return reply.status(401).send({ error: '请先登录' });
-      }
-
-      const { value } = request.body as { value: number };
-      if (value !== 1 && value !== -1) {
-        return reply.status(400).send({ error: '投票值只能为 1 或 -1' });
-      }
-
-      const postId = Number(request.params.id);
-      const post = db.get('SELECT id FROM posts WHERE id = ?', postId);
-      if (!post) {
-        return reply.status(404).send({ error: '帖子不存在' });
-      }
-
-      // Upsert vote
-      const existing = db.get<{ id: number; value: number }>(
-        'SELECT id, value FROM votes WHERE user_id = ? AND post_id = ?',
-        session.userId, postId
-      );
-
-      if (existing) {
-        if (existing.value === value) {
-          // Remove vote (toggle off)
-          db.run('DELETE FROM votes WHERE id = ?', existing.id);
-          return { success: true, action: 'removed' };
-        }
-        // Change vote
-        db.run('UPDATE votes SET value = ? WHERE id = ?', value, existing.id);
-      } else {
-        db.run('INSERT INTO votes (user_id, post_id, value) VALUES (?, ?, ?)',
-          session.userId, postId, value);
-      }
-
-      return { success: true, action: 'voted' };
-    });
-
-    // --- Comments ---
-
-    // Get comments for a post
-    app.get<{ Params: { id: string } }>('/api/posts/:id/comments', async (request, reply) => {
-      const postId = Number(request.params.id);
-      const post = db.get('SELECT id FROM posts WHERE id = ?', postId);
-      if (!post) {
-        return reply.status(404).send({ error: '帖子不存在' });
-      }
-
-      const comments = db.all<{
-        id: number; content: string; author_name: string; created_at: string;
-      }>(
-        `SELECT c.id, c.content,
-                CASE WHEN p.is_anonymous = 1 THEN '匿名'
-                     ELSE COALESCE(u.display_name, u.username) END as author_name,
-                c.created_at
-         FROM comments c
-         JOIN users u ON c.author_id = u.id
-         JOIN posts p ON c.post_id = p.id
-         WHERE c.post_id = ?
-         ORDER BY c.created_at ASC`,
-        postId
-      );
-
-      return comments;
-    });
-
-    // Create comment
-    app.post<{ Params: { id: string } }>('/api/posts/:id/comments', async (request, reply) => {
-      const session = (request as any).session;
-      if (!session?.userId) {
-        return reply.status(401).send({ error: '请先登录' });
-      }
-
-      const postId = Number(request.params.id);
-      const { content, parentId } = request.body as {
-        content: string; parentId?: number;
-      };
-
-      if (!content?.trim()) {
-        return reply.status(400).send({ error: '评论内容不能为空' });
-      }
-
-      const post = db.get('SELECT id, is_anonymous FROM posts WHERE id = ?', postId);
-      if (!post) {
-        return reply.status(404).send({ error: '帖子不存在' });
-      }
-
-      db.run(
-        'INSERT INTO comments (content, author_id, post_id, parent_id) VALUES (?, ?, ?, ?)',
-        content.trim(), session.userId, postId, parentId || null
-      );
-
-      const comment = db.get<Comment>('SELECT * FROM comments WHERE id = last_insert_rowid()');
-      ctx.events.emit('comment:created', comment);
-
-      return { success: true, comment };
     });
   },
 };
