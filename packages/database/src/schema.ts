@@ -11,6 +11,8 @@ export function initializeSchema(db: DatabaseAdapter): void {
       avatar_url TEXT,
       device_code TEXT UNIQUE,
       is_admin INTEGER DEFAULT 0,
+      is_banned INTEGER DEFAULT 0,
+      role TEXT DEFAULT 'user',
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
@@ -32,10 +34,12 @@ export function initializeSchema(db: DatabaseAdapter): void {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
       content TEXT NOT NULL,
-      author_id INTEGER NOT NULL REFERENCES users(id),
-      board_id INTEGER NOT NULL REFERENCES boards(id),
+      author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
       is_anonymous INTEGER DEFAULT 0,
+      is_pinned INTEGER DEFAULT 0,
       view_count INTEGER DEFAULT 0,
+      images TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
@@ -44,9 +48,9 @@ export function initializeSchema(db: DatabaseAdapter): void {
     CREATE TABLE IF NOT EXISTS comments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       content TEXT NOT NULL,
-      author_id INTEGER NOT NULL REFERENCES users(id),
-      post_id INTEGER NOT NULL REFERENCES posts(id),
-      parent_id INTEGER REFERENCES comments(id),
+      author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      parent_id INTEGER REFERENCES comments(id) ON DELETE CASCADE,
       is_anonymous INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     );
@@ -54,9 +58,9 @@ export function initializeSchema(db: DatabaseAdapter): void {
     -- Votes (up/down)
     CREATE TABLE IF NOT EXISTS votes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL REFERENCES users(id),
-      post_id INTEGER REFERENCES posts(id),
-      comment_id INTEGER REFERENCES comments(id),
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+      comment_id INTEGER REFERENCES comments(id) ON DELETE CASCADE,
       value INTEGER NOT NULL CHECK(value IN (-1, 1)),
       created_at TEXT DEFAULT (datetime('now')),
       UNIQUE(user_id, post_id),
@@ -66,10 +70,23 @@ export function initializeSchema(db: DatabaseAdapter): void {
     -- Favorites
     CREATE TABLE IF NOT EXISTS favorites (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL REFERENCES users(id),
-      post_id INTEGER NOT NULL REFERENCES posts(id),
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
       created_at TEXT DEFAULT (datetime('now')),
       UNIQUE(user_id, post_id)
+    );
+
+    -- Notifications
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL,
+      message TEXT NOT NULL,
+      related_post_id INTEGER REFERENCES posts(id),
+      related_comment_id INTEGER REFERENCES comments(id),
+      from_user_id INTEGER REFERENCES users(id),
+      is_read INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
     );
 
     -- Tags
@@ -91,4 +108,42 @@ export function initializeSchema(db: DatabaseAdapter): void {
       expired TEXT NOT NULL
     );
   `);
+}
+
+/** 迁移：用 _migrations 表记录已执行的迁移 */
+export function migrateSchema(db: DatabaseAdapter): void {
+  // 建迁移记录表
+  db.exec(`CREATE TABLE IF NOT EXISTS _migrations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    applied_at TEXT DEFAULT (datetime('now'))
+  )`);
+
+  const migrations: [string, string][] = [
+    ['add_images', `ALTER TABLE posts ADD COLUMN images TEXT`],
+    ['add_is_pinned', `ALTER TABLE posts ADD COLUMN is_pinned INTEGER DEFAULT 0`],
+    ['add_is_banned', `ALTER TABLE users ADD COLUMN is_banned INTEGER DEFAULT 0`],
+    ['add_role', `ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'`],
+    ['add_notifications', `CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL, message TEXT NOT NULL,
+      related_post_id INTEGER REFERENCES posts(id),
+      related_comment_id INTEGER REFERENCES comments(id),
+      from_user_id INTEGER REFERENCES users(id),
+      is_read INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`],
+  ];
+
+  for (const [name, sql] of migrations) {
+    const done = db.get<{ id: number }>('SELECT id FROM _migrations WHERE name = ?', name);
+    if (done) continue;
+    try {
+      db.exec(sql);
+      db.run('INSERT INTO _migrations (name) VALUES (?)', name);
+    } catch (err) {
+      console.warn(`⚠️  迁移 ${name} 失败（可能已存在）:`, (err as Error).message);
+    }
+  }
 }

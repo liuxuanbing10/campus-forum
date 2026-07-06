@@ -1,126 +1,63 @@
-import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
-import fs from 'fs';
+import Database from 'better-sqlite3';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { DatabaseAdapter, PreparedStatement } from '@campus-forum/core';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export class SQLiteAdapter implements DatabaseAdapter {
-  private db: SqlJsDatabase;
-  private dbPath: string;
+  private db: Database.Database;
 
-  private constructor(db: SqlJsDatabase, dbPath: string) {
+  private constructor(db: Database.Database) {
     this.db = db;
-    this.dbPath = dbPath;
+    this.db.pragma('journal_mode = WAL');
+    this.db.pragma('foreign_keys = ON');
   }
 
-  static async create(dbPath?: string): Promise<SQLiteAdapter> {
-    const SQL = await initSqlJs();
+  static create(dbPath?: string): SQLiteAdapter {
     const resolvedPath = dbPath || path.join(__dirname, '../../data/forum.db');
-
-    // Ensure directory exists
     const dir = path.dirname(resolvedPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-    // Load existing DB or create new
-    let db: SqlJsDatabase;
-    if (fs.existsSync(resolvedPath)) {
-      const buffer = fs.readFileSync(resolvedPath);
-      db = new SQL.Database(buffer);
-    } else {
-      db = new SQL.Database();
-    }
-
-    // Enable WAL-like mode (sql.js doesn't support WAL, but we set pragmas)
-    db.run('PRAGMA foreign_keys = ON;');
-
-    const adapter = new SQLiteAdapter(db, resolvedPath);
-    adapter.save();
-    return adapter;
-  }
-
-  // Persist to disk after writes
-  private save(): void {
-    const data = this.db.export();
-    fs.writeFileSync(this.dbPath, Buffer.from(data));
+    const db = new Database(resolvedPath);
+    return new SQLiteAdapter(db);
   }
 
   get<T>(sql: string, ...params: unknown[]): T | undefined {
-    const stmt = this.db.prepare(sql);
-    stmt.bind(params);
-    if (stmt.step()) {
-      const row = stmt.getAsObject() as T;
-      stmt.free();
-      return row;
-    }
-    stmt.free();
-    return undefined;
+    return this.db.prepare(sql).get(...params) as T | undefined;
   }
 
   all<T>(sql: string, ...params: unknown[]): T[] {
-    const results: T[] = [];
-    const stmt = this.db.prepare(sql);
-    stmt.bind(params);
-    while (stmt.step()) {
-      results.push(stmt.getAsObject() as T);
-    }
-    stmt.free();
-    return results;
+    return this.db.prepare(sql).all(...params) as T[];
   }
 
   run(sql: string, ...params: unknown[]): void {
-    this.db.run(sql, params);
-    this.save();
+    this.db.prepare(sql).run(...params);
   }
 
   exec(sql: string): void {
-    this.db.run(sql);
-    this.save();
+    this.db.exec(sql);
   }
 
   prepare<T>(sql: string): PreparedStatement<T> {
+    const stmt = this.db.prepare(sql);
     return {
-      get: (...params: unknown[]) => {
-        const stmt = this.db.prepare(sql);
-        stmt.bind(params);
-        if (stmt.step()) {
-          const row = stmt.getAsObject() as T;
-          stmt.free();
-          return row;
-        }
-        stmt.free();
-        return undefined;
-      },
-      all: (...params: unknown[]) => {
-        const results: T[] = [];
-        const stmt = this.db.prepare(sql);
-        stmt.bind(params);
-        while (stmt.step()) {
-          results.push(stmt.getAsObject() as T);
-        }
-        stmt.free();
-        return results;
-      },
-      run: (...params: unknown[]) => {
-        this.db.run(sql, params);
-        this.save();
-      },
+      get: (...params: unknown[]) => stmt.get(...params) as T | undefined,
+      all: (...params: unknown[]) => stmt.all(...params) as T[],
+      run: (...params: unknown[]) => { stmt.run(...params); },
     };
   }
 
   close(): void {
-    this.save();
     this.db.close();
   }
 }
 
-export async function createDatabase(dbPath?: string): Promise<SQLiteAdapter> {
+export function createDatabase(dbPath?: string): SQLiteAdapter {
   return SQLiteAdapter.create(dbPath);
 }
 
-// Re-export schema and seed
 export { initializeSchema } from './schema.js';
 export { seedData } from './seed.js';
+export { migrateSchema } from './schema.js';

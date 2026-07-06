@@ -15,18 +15,24 @@ declare module 'fastify' {
   }
 }
 
-// 请求体类型
+// 请求体类型（deviceCode 可以从 body 或 X-Device-Code 请求头读取）
 interface RegisterBody {
   username: string;
   password: string;
   confirmPassword: string;
-  deviceCode: string;
+  deviceCode?: string;
 }
 
 interface LoginBody {
   username: string;
   password: string;
-  deviceCode: string;
+  deviceCode?: string;
+}
+
+// 从 body 或请求头获取设备码
+function getDeviceCode(request: any): string | undefined {
+  const body = request.body as Record<string, any> | undefined;
+  return body?.deviceCode || request.headers['x-device-code'] || undefined;
 }
 
 // 用户行类型
@@ -54,12 +60,17 @@ export const authPlugin: Plugin = {
     // 注册
     // ========================================
     app.post('/api/auth/register', async (request, reply) => {
-      const { username, password, confirmPassword, deviceCode } =
+      const { username, password, confirmPassword } =
         request.body as RegisterBody;
+      const deviceCode = getDeviceCode(request);
 
       // 1. 校验必填字段
-      if (!username || !password || !confirmPassword || !deviceCode) {
-        return reply.status(400).send({ error: '请填写所有字段（用户名、密码、确认密码、设备码）' });
+      if (!username || !password || !confirmPassword) {
+        return reply.status(400).send({ error: '请填写所有字段（用户名、密码、确认密码）' });
+      }
+
+      if (!deviceCode) {
+        return reply.status(400).send({ error: '缺少设备码，请检查请求头 X-Device-Code' });
       }
 
       if (username.length < 2 || username.length > 20) {
@@ -120,13 +131,18 @@ export const authPlugin: Plugin = {
     });
 
     // ========================================
-    // 登录（需要设备码）
+    // 登录
     // ========================================
     app.post('/api/auth/login', async (request, reply) => {
-      const { username, password, deviceCode } = request.body as LoginBody;
+      const { username, password } = request.body as LoginBody;
+      const deviceCode = getDeviceCode(request);
 
-      if (!username || !password || !deviceCode) {
-        return reply.status(400).send({ error: '请填写用户名、密码和设备码' });
+      if (!username || !password) {
+        return reply.status(400).send({ error: '请填写用户名和密码' });
+      }
+
+      if (!deviceCode) {
+        return reply.status(400).send({ error: '缺少设备码，请检查请求头 X-Device-Code' });
       }
 
       // 1. 查找用户
