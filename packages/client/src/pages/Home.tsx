@@ -80,11 +80,6 @@ export default function HomePage() {
       zIndex,
       flexShrink: 0,
       filter: blur > 0 ? `blur(${blur}px)` : 'none',
-      boxShadow: absOffset === 0
-        ? '0 20px 40px rgba(0, 0, 0, 0.12)'
-        : absOffset === 1
-        ? '0 10px 25px rgba(0, 0, 0, 0.08)'
-        : '0 4px 12px rgba(0, 0, 0, 0.04)',
     };
   };
 
@@ -95,18 +90,31 @@ export default function HomePage() {
   return (
     <div>
       {/* Hero Section — 精神理念 */}
-      <div className="py-16 sm:py-20 px-4 bg-gradient-to-b from-primary-50/50 to-surface text-center">
-        <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-campus-text-primary leading-tight">
+      <div className="relative py-16 sm:py-20 px-4 bg-gradient-to-b from-primary-50/50 to-surface text-center overflow-hidden">
+        {/* 水墨晕染背景 */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="ink-blob ink-blob-1" />
+          <div className="ink-blob ink-blob-2" />
+          <div className="ink-blob ink-blob-3" />
+          <div className="ink-blob ink-blob-4" />
+        </div>
+        <h1 className="relative z-10 font-display text-3xl sm:text-4xl md:text-5xl font-bold text-campus-text-primary leading-tight">
           独行快，众行远
         </h1>
-        <p className="text-lg text-campus-text-secondary font-body max-w-2xl mx-auto mt-4">
+        <p className="relative z-10 text-lg text-campus-text-secondary font-body max-w-2xl mx-auto mt-4">
           一个人的疑惑，一群人的答案
         </p>
       </div>
 
       {/* Board Section */}
       {user ? (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 overflow-hidden">
+          {/* 背景水彩晕染 — 为玻璃效果提供色彩背景 */}
+          <div className="absolute inset-0 pointer-events-none -z-10">
+            <div className="absolute w-96 h-96 -top-10 -left-20 rounded-full bg-gradient-to-br from-pink-300 via-purple-300 to-blue-300 blur-3xl opacity-30" />
+            <div className="absolute w-80 h-80 top-20 -right-10 rounded-full bg-gradient-to-br from-yellow-200 via-orange-300 to-pink-300 blur-3xl opacity-30" />
+            <div className="absolute w-72 h-72 bottom-0 left-1/3 rounded-full bg-gradient-to-br from-green-200 via-teal-300 to-cyan-300 blur-3xl opacity-30" />
+          </div>
           {boardsLoading ? (
             <div className="flex gap-5 overflow-x-auto pb-4">
               {[1, 2, 3].map((i) => (
@@ -118,8 +126,17 @@ export default function HomePage() {
               ))}
             </div>
           ) : boards.length > 0 ? (
-            <div className="relative rounded-2xl bg-gradient-to-br from-primary-light/25 via-surface to-primary-light/10 p-6 sm:p-8">
-              <div className="flex items-center justify-between mb-6">
+            <div className="relative rounded-3xl overflow-hidden glass-liquid p-6 sm:p-8">
+              {/* 玻璃高光 */}
+              <div className="glass-highlight" />
+              {/* 玻璃内阴影 */}
+              <div className="glass-inner-shadow" />
+              {/* 水彩装饰 */}
+              <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl opacity-60">
+                <div className="ink-blob ink-blob-section-1" />
+                <div className="ink-blob ink-blob-section-2" />
+              </div>
+              <div className="relative z-10 flex items-center justify-between mb-6">
                 <h2 className="font-display text-xl sm:text-2xl text-campus-text-primary">
                   探索板块
                 </h2>
@@ -131,7 +148,7 @@ export default function HomePage() {
               </div>
 
               {/* Carousel container */}
-              <div className="relative">
+              <div className="relative z-10">
                 {/* Left gradient mask */}
                 <div className="absolute left-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-r from-surface via-surface/80 to-transparent pointer-events-none z-20" />
                 {/* Right gradient mask */}
@@ -150,20 +167,20 @@ export default function HomePage() {
                     <a
                       key={board.id}
                       href={`/board/${board.id}`}
-                      className="carousel-card card-enter w-64 sm:w-72 flex flex-col items-start p-6 sm:p-7 bg-surface border border-border rounded-xl transition-all duration-500 ease-out snap-center -mx-8 sm:-mx-10"
+                      className="carousel-card card-enter relative w-64 sm:w-72 flex flex-col items-start p-6 sm:p-7 rounded-2xl transition-all duration-500 ease-out snap-center -mx-8 sm:-mx-10 overflow-hidden glass-card"
                       style={{
                         ...getCardStyle(index),
                         animationDelay: `${index * 0.08}s`,
                       }}
                     >
-                      <span className="text-4xl mb-4">{board.icon}</span>
-                      <h3 className="font-body text-lg font-semibold text-campus-text-primary mb-2">
+                      <span className="relative z-10 text-4xl mb-4">{board.icon}</span>
+                      <h3 className="relative z-10 font-body text-lg font-semibold text-campus-text-primary mb-2">
                         {board.name}
                       </h3>
-                      <p className="text-sm text-campus-text-secondary font-body mb-5 flex-1 leading-relaxed">
+                      <p className="relative z-10 text-sm text-campus-text-secondary font-body mb-5 flex-1 leading-relaxed">
                         {board.description}
                       </p>
-                      <span className="text-xs font-medium text-campus-text-tertiary font-body">
+                      <span className="relative z-10 text-xs font-medium text-campus-text-tertiary font-body">
                         {board.post_count} 帖子
                       </span>
                     </a>
@@ -175,7 +192,7 @@ export default function HomePage() {
               </div>
 
               {/* Indicator dots */}
-              <div className="flex justify-center gap-2 mt-4">
+              <div className="relative z-10 flex justify-center gap-2 mt-4">
                 {boards.map((_, index) => (
                   <button
                     key={index}
@@ -192,7 +209,7 @@ export default function HomePage() {
 
               {/* Mobile hint */}
               {canScroll && (
-                <div className="flex sm:hidden justify-center mt-2">
+                <div className="relative z-10 flex sm:hidden justify-center mt-2">
                   <span className="inline-flex items-center gap-1 text-xs text-campus-text-tertiary font-medium font-body animate-scroll-hint">
                     左右滑动浏览
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -216,6 +233,146 @@ export default function HomePage() {
 
       {/* Custom animations */}
       <style>{`
+        /* 水彩晕染效果 */
+        .ink-blob {
+          position: absolute;
+          border-radius: 50%;
+          filter: blur(55px);
+          opacity: 0.18;
+          pointer-events: none;
+        }
+        .ink-blob-1 {
+          width: 400px;
+          height: 400px;
+          top: -140px;
+          left: -120px;
+          background: radial-gradient(circle, #f472b6 0%, #fb923c 35%, #fbbf24 65%, transparent 80%);
+          animation: ink-float 20s ease-in-out infinite;
+        }
+        .ink-blob-2 {
+          width: 320px;
+          height: 320px;
+          top: 10%;
+          right: -100px;
+          background: radial-gradient(circle, #60a5fa 0%, #a78bfa 40%, #c084fc 70%, transparent 85%);
+          animation: ink-float 24s ease-in-out infinite reverse;
+          animation-delay: -6s;
+        }
+        .ink-blob-3 {
+          width: 260px;
+          height: 260px;
+          bottom: -80px;
+          left: 25%;
+          background: radial-gradient(circle, #4ade80 0%, #2dd4bf 45%, #22d3ee 75%, transparent 85%);
+          animation: ink-float 22s ease-in-out infinite;
+          animation-delay: -12s;
+        }
+        .ink-blob-4 {
+          width: 200px;
+          height: 200px;
+          top: 35%;
+          left: 10%;
+          background: radial-gradient(circle, #f43f5e 0%, #fb7185 50%, transparent 80%);
+          animation: ink-float 26s ease-in-out infinite reverse;
+          animation-delay: -4s;
+        }
+        .ink-blob-section-1 {
+          width: 320px;
+          height: 320px;
+          top: -120px;
+          right: -100px;
+          background: radial-gradient(circle, #818cf8 0%, #a78bfa 40%, #e879f9 70%, transparent 85%);
+          animation: ink-float 26s ease-in-out infinite;
+          animation-delay: -3s;
+        }
+        .ink-blob-section-2 {
+          width: 280px;
+          height: 280px;
+          bottom: -100px;
+          left: -80px;
+          background: radial-gradient(circle, #fbbf24 0%, #fb923c 45%, #f472b6 75%, transparent 85%);
+          animation: ink-float 22s ease-in-out infinite reverse;
+          animation-delay: -10s;
+        }
+        @keyframes ink-float {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+          }
+          33% {
+            transform: translate(20px, -15px) scale(1.05);
+          }
+          66% {
+            transform: translate(-15px, 20px) scale(0.97);
+          }
+        }
+
+        /* 液态玻璃效果 */
+        .glass-liquid {
+          background: rgba(255, 255, 255, 0.25);
+          backdrop-filter: blur(40px) saturate(200%);
+          -webkit-backdrop-filter: blur(40px) saturate(200%);
+          border: 1px solid rgba(255, 255, 255, 0.6);
+          box-shadow:
+            0 8px 32px rgba(0, 0, 0, 0.06),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9),
+            inset 0 -1px 0 rgba(255, 255, 255, 0.3);
+        }
+        .glass-highlight {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 50%;
+          background: linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.5) 0%,
+            rgba(255, 255, 255, 0.15) 50%,
+            transparent 100%
+          );
+          pointer-events: none;
+          border-radius: inherit;
+          z-index: 1;
+        }
+        .glass-inner-shadow {
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          pointer-events: none;
+          box-shadow:
+            inset 0 2px 30px rgba(255, 255, 255, 0.4),
+            inset 0 -2px 15px rgba(0, 0, 0, 0.04);
+          z-index: 1;
+        }
+
+        /* 玻璃卡片 */
+        .glass-card {
+          background: rgba(255, 255, 255, 0.35);
+          backdrop-filter: blur(25px) saturate(180%);
+          -webkit-backdrop-filter: blur(25px) saturate(180%);
+          border: 1px solid rgba(255, 255, 255, 0.7);
+          box-shadow:
+            0 4px 24px rgba(0, 0, 0, 0.05),
+            inset 0 1px 0 rgba(255, 255, 255, 0.95),
+            inset 0 -1px 0 rgba(255, 255, 255, 0.4);
+        }
+        .glass-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 45%;
+          background: linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.6) 0%,
+            rgba(255, 255, 255, 0.2) 55%,
+            transparent 100%
+          );
+          pointer-events: none;
+          border-radius: inherit;
+          z-index: 1;
+        }
+
         @keyframes card-enter {
           from { opacity: 0; transform: translateY(24px) scale(0.96); }
           to   { opacity: 1; transform: translateY(0) scale(1); }
