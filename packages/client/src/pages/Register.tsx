@@ -4,7 +4,6 @@ import { useAuthStore } from '../stores/auth';
 
 export default function RegisterPage() {
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -24,7 +23,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      await register(username, password, confirmPassword, email);
+      await register(username, password, confirmPassword);
       navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || '注册失败');
@@ -69,19 +68,6 @@ export default function RegisterPage() {
               className="w-full h-12 px-4 bg-surface border border-border rounded-lg text-campus-text-primary text-base font-body outline-none transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
               placeholder="请输入用户名"
               required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-campus-text-primary mb-2 font-body">
-              邮箱
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              className="w-full h-12 px-4 bg-surface border border-border rounded-lg text-campus-text-primary text-base font-body outline-none transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-              placeholder="请输入邮箱"
             />
           </div>
 

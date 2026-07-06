@@ -15,7 +15,7 @@ declare module 'fastify' {
   }
 }
 
-// 请求体类型（deviceCode 可以从 body 或 X-Device-Code 请求头读取）
+
 interface RegisterBody {
   username: string;
   password: string;
@@ -29,7 +29,6 @@ interface LoginBody {
   password: string;
 }
 
-// 从 body 或请求头获取设备码
 function getDeviceCode(request: any): string | undefined {
   const body = request.body as Record<string, any> | undefined;
   return body?.deviceCode || request.headers['x-device-code'] || undefined;

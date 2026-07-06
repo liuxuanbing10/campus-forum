@@ -5,6 +5,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===== Default fallback (survives missing data-theme) ===== */
+:root {
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-primary-light: #eff6ff;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f9fafb;
+  --color-bg: #f9fafb;
+  --color-text-primary: #111827;
+  --color-text-secondary: #374151;
+  --color-text-tertiary: #9ca3af;
+  --color-border: #e5e7eb;
+  --color-border-light: #f3f4f6;
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-card-hover: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-float: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --font-display: 'Ma Shan Zheng', 'LXGW WenKai TC', cursive;
+  --font-body: 'LXGW WenKai TC', 'Noto Serif SC', serif;
+}
+
 /* ===== Theme: Campus (Default) — 校园蓝 ===== */
 [data-theme="campus"] {
   --color-primary: #3b82f6;
@@ -233,12 +256,6 @@
   --radius-lg: 1rem;
   --font-display: 'Sacramento', 'Long Cang', cursive;
   --font-body: 'Long Cang', 'ZCOOL XiaoWei', cursive;
-}
-
-/* ===== Default theme (no data-theme attribute) ===== */
-:root,
-[data-theme="campus"] {
-  /* same as campus — already defined above */
 }
 
 /* ===== Base Layer ===== */

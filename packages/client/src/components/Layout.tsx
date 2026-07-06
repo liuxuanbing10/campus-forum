@@ -69,7 +69,7 @@ export default function Layout() {
                 </Link>
                 <Link
                   to="/register"
-                  className="h-9 px-4 rounded-md bg-primary-600 text-white text-sm font-body hover:bg-primary-700 inline-flex items-center"
+                  className="h-9 px-4 rounded-md bg-primary text-white text-sm font-body hover:bg-primary-hover inline-flex items-center"
                 >
                   注册
                 </Link>
@@ -147,7 +147,7 @@ export default function Layout() {
                 <Link
                   to="/register"
                   onClick={() => setMenuOpen(false)}
-                  className="block py-2 text-sm font-body text-primary-600 font-medium"
+                  className="block py-2 text-sm font-body text-primary font-medium"
                 >
                   注册
                 </Link>

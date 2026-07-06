@@ -19,6 +19,10 @@ export default {
           DEFAULT: 'var(--color-primary)',
           hover: 'var(--color-primary-hover)',
           light: 'var(--color-primary-light)',
+          50: 'var(--color-primary-light)',
+          100: 'var(--color-primary-light)',
+          600: 'var(--color-primary)',
+          700: 'var(--color-primary-hover)',
         },
       },
       boxShadow: {
