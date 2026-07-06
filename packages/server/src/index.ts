@@ -9,6 +9,7 @@ import { PluginManager, SimpleEventBus, PluginContext, Logger } from '@campus-fo
 import { createDatabase, initializeSchema, seedData } from '@campus-forum/database';
 import { authPlugin } from '@campus-forum/plugin-auth';
 import { postsPlugin } from '@campus-forum/plugin-posts';
+import { searchPlugin } from '@campus-forum/plugin-search';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -66,6 +67,9 @@ async function main() {
 
   // Register posts plugin
   await pluginManager.register(postsPlugin);
+
+  // Register search plugin
+  await pluginManager.register(searchPlugin);
 
   // Health check
   app.get('/api/health', async () => {
