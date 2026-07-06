@@ -1,0 +1,78 @@
+<!-- Project Shell — shared header/navigation fragment -->
+<!-- Leaf pages: include this fragment, then set data-active-nav on the matching nav item -->
+<!-- SLOT: activeNavItem — leaf pages set data-active="true" on the matching [data-nav-key] -->
+
+<header style="position:sticky;top:0;z-index:40;background:var(--color-surface);border-bottom:1px solid var(--color-border);">
+  <div style="max-width:72rem;margin:0 auto;padding:0 var(--space-6);display:flex;align-items:center;justify-content:space-between;height:64px;">
+
+    <!-- Logo -->
+    <a href="pages/home.html" style="display:flex;align-items:center;gap:var(--space-2);text-decoration:none;color:var(--color-text-primary);font-family:var(--font-display);font-size:var(--text-xl);font-weight:var(--weight-bold);letter-spacing:-0.01em;flex-shrink:0;">
+      <span style="font-size:1.5rem;line-height:1;">&#127891;</span>
+      <span>校园论坛</span>
+    </a>
+
+    <!-- Center: Navigation Links -->
+    <nav style="display:flex;align-items:center;gap:var(--space-8);flex-shrink:0;">
+      <a href="pages/home.html"
+         data-nav-key="home"
+         data-active-nav
+         style="font-family:var(--font-body);font-size:var(--text-sm);font-weight:var(--weight-medium);color:var(--color-text-secondary);text-decoration:none;padding:var(--space-2) 0;border-bottom:2px solid transparent;transition:color var(--transition-fast),border-color var(--transition-fast);"
+         onmouseover="this.style.color='var(--color-text-primary)'"
+         onmouseout="if(!this.hasAttribute('data-active'))this.style.color='var(--color-text-secondary)'">
+        首页
+      </a>
+    </nav>
+
+    <!-- Right: Auth buttons + CTA + User info -->
+    <div style="display:flex;align-items:center;gap:var(--space-3);flex-shrink:0;">
+
+      <!-- Auth buttons (visible by default; leaf pages hide when user is logged in) -->
+      <div data-dom-id="auth-buttons" style="display:flex;align-items:center;gap:var(--space-3);">
+        <a href="pages/login.html"
+           data-dom-id="nav-login"
+           style="display:inline-flex;align-items:center;justify-content:center;height:40px;padding:0 var(--space-5);font-family:var(--font-body);font-size:var(--text-sm);font-weight:var(--weight-medium);color:var(--color-text-secondary);background:transparent;border:1px solid var(--color-border);border-radius:var(--radius-md);text-decoration:none;transition:color var(--transition-fast),border-color var(--transition-fast),background var(--transition-fast);"
+           onmouseover="this.style.color='var(--color-text-primary)';this.style.borderColor='var(--color-text-tertiary)'"
+           onmouseout="this.style.color='var(--color-text-secondary)';this.style.borderColor='var(--color-border)'">
+          登录
+        </a>
+        <a href="pages/register.html"
+           data-dom-id="nav-register"
+           style="display:inline-flex;align-items:center;justify-content:center;height:40px;padding:0 var(--space-5);font-family:var(--font-body);font-size:var(--text-sm);font-weight:var(--weight-semibold);color:var(--color-text-inverse);background:var(--color-primary);border:1px solid var(--color-primary);border-radius:var(--radius-md);text-decoration:none;transition:opacity var(--transition-fast),transform var(--transition-fast);"
+           onmouseover="this.style.opacity='0.9';this.style.transform='translateY(-1px)'"
+           onmouseout="this.style.opacity='1';this.style.transform='translateY(0)'">
+          注册
+        </a>
+      </div>
+
+      <!-- New post CTA (hidden by default; leaf pages show for logged-in users) -->
+      <a href="pages/new-post.html"
+         data-dom-id="cta-new-post"
+         style="display:none;inline-flex;align-items:center;justify-content:center;height:40px;padding:0 var(--space-5);font-family:var(--font-body);font-size:var(--text-sm);font-weight:var(--weight-semibold);color:var(--color-text-inverse);background:var(--color-primary);border:1px solid var(--color-primary);border-radius:var(--radius-md);text-decoration:none;transition:opacity var(--transition-fast),transform var(--transition-fast);"
+         onmouseover="this.style.opacity='0.9';this.style.transform='translateY(-1px)'"
+         onmouseout="this.style.opacity='1';this.style.transform='translateY(0)'">
+        发帖
+      </a>
+
+      <!-- User info area (hidden by default; leaf pages show for logged-in users) -->
+      <div data-dom-id="user-info" style="display:none;align-items:center;gap:var(--space-3);">
+        <span data-dom-id="user-display-name" style="font-family:var(--font-body);font-size:var(--text-sm);font-weight:var(--weight-medium);color:var(--color-text-primary);"></span>
+        <button data-dom-id="nav-logout"
+                style="display:inline-flex;align-items:center;justify-content:center;height:40px;padding:0 var(--space-5);font-family:var(--font-body);font-size:var(--text-sm);font-weight:var(--weight-medium);color:var(--color-text-secondary);background:transparent;border:1px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;transition:color var(--transition-fast),border-color var(--transition-fast),background var(--transition-fast);"
+                onmouseover="this.style.color='var(--color-text-primary)';this.style.borderColor='var(--color-text-tertiary)'"
+                onmouseout="this.style.color='var(--color-text-secondary)';this.style.borderColor='var(--color-border)'">
+          退出
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Active nav style injection: leaf pages activate via data-active attribute -->
+  <style>
+    [data-nav-key][data-active="true"] {
+      color: var(--color-primary) !important;
+      border-bottom-color: var(--color-primary) !important;
+      font-weight: var(--weight-semibold) !important;
+    }
+  </style>
+</header>

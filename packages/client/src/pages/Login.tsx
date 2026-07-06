@@ -19,62 +19,78 @@ export default function LoginPage() {
       await login(username, password);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || '登录失败');
+      setError(err.message || '登录失败');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto mt-8">
-      <h1 className="text-2xl font-bold mb-6 text-center">登录</h1>
-
-      <form onSubmit={handleSubmit} className="card space-y-4">
-        {error && (
-          <div className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 p-3 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
-
-        <div>
-          <label className="block text-sm font-medium mb-1">用户名</label>
-          <input
-            type="text"
-            value={username}
-            onChange={e => setUsername(e.target.value)}
-            className="input"
-            placeholder="输入用户名"
-            required
-          />
+    <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+      <div className="w-full max-w-md p-10 bg-white rounded-lg shadow-card">
+        {/* Literary ornament */}
+        <div className="flex items-center my-6">
+          <div className="flex-1 border-t border-primary-200" />
+          <span className="text-primary-600 text-sm mx-4">◆</span>
+          <div className="flex-1 border-t border-primary-200" />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">密码</label>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            className="input"
-            placeholder="输入密码"
-            required
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full btn-primary disabled:opacity-50"
-        >
-          {loading ? '登录中...' : '登录'}
-        </button>
-
-        <p className="text-center text-sm text-gray-500">
-          没有账号？{' '}
-          <Link to="/register" className="text-primary-600 hover:underline">
-            注册
-          </Link>
+        <h1 className="font-display text-3xl text-campus-text-primary text-center">
+          欢迎回来
+        </h1>
+        <p className="text-campus-text-secondary text-center text-sm mt-2">
+          登录你的校园论坛账号
         </p>
-      </form>
+
+        <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+          {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-campus-text-primary mb-1.5">
+              用户名
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              className="w-full h-12 px-4 border border-border rounded-md bg-white text-campus-text-primary focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-100 transition-all"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-campus-text-primary mb-1.5">
+              密码
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="w-full h-12 px-4 border border-border rounded-md bg-white text-campus-text-primary focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-100 transition-all"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full h-12 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-all disabled:opacity-50"
+          >
+            {loading ? '登录中...' : '登录'}
+          </button>
+
+          <p className="text-center text-sm text-campus-text-secondary mt-6">
+            没有账号？{' '}
+            <Link to="/register" className="text-primary-600 font-medium hover:text-primary-700">
+              注册
+            </Link>
+          </p>
+        </form>
+      </div>
     </div>
   );
 }

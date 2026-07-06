@@ -41,52 +41,80 @@ export default function PostPage() {
 
     await axios.post(`/api/posts/${id}/comments`, { content: newComment });
     setNewComment('');
-    
+
     const { data } = await axios.get(`/api/posts/${id}/comments`);
     setComments(data);
   };
 
-  if (loading) return <div className="text-center py-8">加载中...</div>;
-  if (!post) return <div className="text-center py-8">帖子不存在</div>;
+  if (loading) return <div className="text-center py-8 text-campus-text-tertiary">加载中...</div>;
+  if (!post) return <div className="text-center py-8 text-campus-text-tertiary">帖子不存在</div>;
 
   return (
-    <div>
-      <article className="card mb-6">
-        <h1 className="text-2xl font-bold mb-4">{post.title}</h1>
-        <div className="prose dark:prose-invert max-w-none mb-4">
-          {post.content}
+    <div className="max-w-3xl mx-auto">
+      {/* Breadcrumb */}
+      <div className="text-sm text-campus-text-tertiary mb-6">
+        ← 课程交流 &gt; 帖子详情
+      </div>
+
+      {/* Article Card */}
+      <article className="relative p-8 md:p-10 bg-white border border-border rounded-xl shadow-card">
+        {/* Decorative quote mark */}
+        <div className="absolute top-4 left-6 text-6xl text-primary-200 font-display leading-none select-none pointer-events-none">
+          ❝
         </div>
-        <div className="text-sm text-gray-500 flex gap-4">
-          <span>{post.author_name}</span>
-          <span>👁 {post.view_count}</span>
-          <span>{new Date(post.created_at).toLocaleDateString()}</span>
+
+        {/* Title */}
+        <h1
+          className="font-display text-3xl md:text-4xl font-bold text-campus-text-primary mb-6 relative"
+          style={{ fontSize: 'clamp(28px, 3.5vw, 48px)' }}
+        >
+          {post.title}
+        </h1>
+
+        {/* Author Row */}
+        <div className="flex items-center gap-4 pb-4 border-b border-border text-sm relative">
+          <span className="font-medium text-campus-text-secondary">{post.author_name}</span>
+          <span className="text-campus-text-tertiary">👁 {post.view_count}</span>
+          <span className="text-campus-text-tertiary">{new Date(post.created_at).toLocaleDateString()}</span>
+        </div>
+
+        {/* Post Body */}
+        <div className="mt-6 text-base leading-relaxed text-campus-text-primary whitespace-pre-wrap">
+          {post.content}
         </div>
       </article>
 
-      <h2 className="text-lg font-semibold mb-4">
+      {/* Comments Section */}
+      <h2 className="font-display text-xl font-bold text-campus-text-primary mt-10 mb-6">
         评论 ({comments.length})
       </h2>
 
+      {/* Comments List */}
       <div className="space-y-4 mb-6">
         {comments.map(comment => (
-          <div key={comment.id} className="card">
-            <p>{comment.content}</p>
-            <div className="text-sm text-gray-500 mt-2">
-              {comment.author_name} · {new Date(comment.created_at).toLocaleDateString()}
+          <div key={comment.id} className="p-5 bg-white border border-border rounded-lg shadow-card">
+            <p className="text-campus-text-primary leading-relaxed">{comment.content}</p>
+            <div className="flex items-center gap-3 mt-3 text-sm text-campus-text-tertiary">
+              <span className="font-medium text-campus-text-secondary">{comment.author_name}</span>
+              <span>{new Date(comment.created_at).toLocaleDateString()}</span>
             </div>
           </div>
         ))}
       </div>
 
-      <form onSubmit={handleComment} className="card">
+      {/* Reply Form */}
+      <form onSubmit={handleComment} className="mb-10">
         <textarea
           value={newComment}
           onChange={e => setNewComment(e.target.value)}
-          placeholder="写评论..."
-          className="input min-h-[100px] mb-3"
+          placeholder="写下你的想法..."
+          className="w-full min-h-[120px] p-4 border border-border rounded-md bg-white text-campus-text-primary focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-100 resize-none"
           required
         />
-        <button type="submit" className="btn-primary">
+        <button
+          type="submit"
+          className="mt-3 inline-flex items-center h-10 px-5 bg-primary-600 text-white text-sm font-body rounded-md hover:bg-primary-700 transition-colors"
+        >
           发表评论
         </button>
       </form>

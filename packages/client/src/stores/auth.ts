@@ -1,5 +1,16 @@
 import { create } from 'zustand';
-import api from '../lib/api';
+import axios from 'axios';
+
+// ponytail: device fingerprint stored in localStorage, auto-generated once per browser
+function getDeviceCode(): string {
+  const KEY = 'campus_device_code';
+  let code = localStorage.getItem(KEY);
+  if (!code) {
+    code = crypto.randomUUID();
+    localStorage.setItem(KEY, code);
+  }
+  return code;
+}
 
 interface User {
   id: number;
@@ -22,7 +33,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   loading: true,
 
   login: async (username, password) => {
-    const { data } = await api.post('/auth/login', { username, password });
+    const { data } = await axios.post('/api/auth/login', { username, password, deviceCode: getDeviceCode() });
     if (data.success) {
       set({ user: data.user });
     } else {
@@ -31,11 +42,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   register: async (username, password, confirmPassword) => {
-    const { data } = await api.post('/auth/register', {
-      username,
-      password,
-      confirmPassword,
-    });
+    const { data } = await axios.post('/api/auth/register', { username, password, confirmPassword, deviceCode: getDeviceCode() });
     if (data.success) {
       set({ user: data.user });
     } else {
@@ -44,13 +51,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
-    await api.post('/auth/logout');
+    await axios.post('/api/auth/logout');
     set({ user: null });
   },
 
   fetchUser: async () => {
     try {
-      const { data } = await api.get('/auth/me');
+      const { data } = await axios.get('/api/auth/me');
       set({ user: data, loading: false });
     } catch {
       set({ user: null, loading: false });

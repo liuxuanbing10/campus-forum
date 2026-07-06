@@ -27,26 +27,36 @@ export default function BoardPage() {
     }).finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <div className="text-center py-8">加载中...</div>;
+  if (loading) return <div className="text-center py-12 text-campus-text-tertiary">加载中...</div>;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">{boardName}</h1>
-        <Link to="/new" className="btn-primary">
+      <Link
+        to="/"
+        className="text-sm text-campus-text-tertiary hover:text-primary-600 transition-colors mb-6 inline-flex items-center gap-1"
+      >
+        ← 返回首页
+      </Link>
+
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="font-display text-2xl font-bold text-campus-text-primary">{boardName}</h1>
+        <Link
+          to="/new"
+          className="inline-flex items-center h-10 px-5 bg-primary-600 text-white text-sm font-body rounded-md hover:bg-primary-700 transition-colors"
+        >
           发帖
         </Link>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {posts.map(post => (
           <Link
             key={post.id}
             to={`/post/${post.id}`}
-            className="card hover:shadow-md transition-shadow block"
+            className="block p-5 bg-white border border-border border-l-[3px] border-l-primary-600 rounded-lg shadow-card hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200"
           >
-            <h2 className="font-semibold">{post.title}</h2>
-            <div className="text-sm text-gray-500 mt-2 flex gap-4">
+            <h2 className="text-lg font-semibold text-campus-text-primary">{post.title}</h2>
+            <div className="flex items-center gap-4 mt-3 text-sm text-campus-text-tertiary">
               <span>{post.author_name}</span>
               <span>👁 {post.view_count}</span>
               <span>👍 {post.vote_count || 0}</span>
@@ -54,9 +64,9 @@ export default function BoardPage() {
             </div>
           </Link>
         ))}
-        
+
         {posts.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-12 text-campus-text-tertiary">
             暂无帖子，来发第一个吧！
           </div>
         )}

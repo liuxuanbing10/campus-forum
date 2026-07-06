@@ -1,32 +1,47 @@
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 
-export default function Layout() {
-  const { user, logout } = useAuthStore();
-  const navigate = useNavigate();
+interface LayoutProps {
+  children: React.ReactNode;
+}
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
-  };
+export default function Layout({ children }: LayoutProps) {
+  const { user, logout } = useAuthStore();
+  const location = useLocation();
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link to="/" className="text-lg font-bold text-primary-600">
-            校园论坛
+    <div className="min-h-screen bg-surface">
+      <header className="sticky top-0 z-40 bg-white border-b border-border">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <Link to="/" className="font-display text-xl font-bold text-campus-text-primary">
+            🎓 校园论坛
           </Link>
 
           <nav className="flex items-center gap-4">
+            <Link
+              to="/"
+              className={`text-sm font-body transition-colors ${
+                location.pathname === '/'
+                  ? 'border-b-2 border-primary-600 text-primary-600'
+                  : 'text-campus-text-secondary hover:text-campus-text-primary'
+              }`}
+            >
+              首页
+            </Link>
             {user ? (
               <>
-                <span className="text-sm text-gray-600 dark:text-gray-300">
-                  {user.displayName}
+                <Link
+                  to="/new"
+                  className="h-10 px-4 rounded-md bg-primary-600 text-white text-sm font-body hover:bg-primary-700 inline-flex items-center"
+                >
+                  发帖
+                </Link>
+                <span className="text-sm text-campus-text-secondary">
+                  {user.displayName || user.username}
                 </span>
                 <button
-                  onClick={handleLogout}
-                  className="text-sm text-gray-500 hover:text-red-500 transition-colors"
+                  onClick={logout}
+                  className="h-10 px-4 rounded-md border border-border text-campus-text-secondary text-sm font-body hover:bg-surface-hover"
                 >
                   退出
                 </button>
@@ -35,13 +50,13 @@ export default function Layout() {
               <>
                 <Link
                   to="/login"
-                  className="text-sm text-gray-600 dark:text-gray-300 hover:text-primary-600"
+                  className="h-10 px-4 rounded-md border border-border text-campus-text-secondary text-sm font-body hover:bg-surface-hover inline-flex items-center"
                 >
                   登录
                 </Link>
                 <Link
                   to="/register"
-                  className="text-sm btn-primary py-1.5"
+                  className="h-10 px-4 rounded-md bg-primary-600 text-white text-sm font-body hover:bg-primary-700 inline-flex items-center"
                 >
                   注册
                 </Link>
@@ -51,8 +66,8 @@ export default function Layout() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-6">
-        <Outlet />
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        {children}
       </main>
     </div>
   );
