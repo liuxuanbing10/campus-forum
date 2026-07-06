@@ -15,6 +15,7 @@ export default function HomePage() {
   const [boards, setBoards] = useState<Board[]>([]);
   const [boardsLoading, setBoardsLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [canScroll, setCanScroll] = useState(false);
 
   useEffect(() => {
@@ -24,7 +25,6 @@ export default function HomePage() {
       .finally(() => setBoardsLoading(false));
   }, []);
 
-  // Detect if the card container overflows (can be scrolled)
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -33,6 +33,60 @@ export default function HomePage() {
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, [boards]);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const containerCenter = el.clientWidth / 2;
+    const cards = el.querySelectorAll('.carousel-card');
+    let closestIndex = 0;
+    let closestDist = Infinity;
+    cards.forEach((card, index) => {
+      const rect = card.getBoundingClientRect();
+      const cardCenter = rect.left + rect.width / 2 - el.getBoundingClientRect().left;
+      const dist = Math.abs(cardCenter - containerCenter);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestIndex = index;
+      }
+    });
+    setActiveIndex(closestIndex);
+  };
+
+  const scrollToCard = (index: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const cards = el.querySelectorAll('.carousel-card');
+    const card = cards[index] as HTMLElement;
+    if (!card) return;
+    const containerCenter = el.clientWidth / 2;
+    const cardLeft = card.offsetLeft;
+    const cardWidth = card.offsetWidth;
+    const scrollLeft = cardLeft + cardWidth / 2 - containerCenter;
+    el.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+  };
+
+  const getCardStyle = (index: number): React.CSSProperties => {
+    const offset = index - activeIndex;
+    const absOffset = Math.abs(offset);
+    const scale = Math.max(0.7, 1 - absOffset * 0.18);
+    const opacity = Math.max(0.3, 1 - absOffset * 0.3);
+    const translateY = absOffset * 20;
+    const zIndex = 10 - absOffset;
+    const blur = absOffset > 1 ? (absOffset - 1) * 2 : 0;
+    return {
+      transform: `scale(${scale}) translateY(${translateY}px)`,
+      opacity,
+      zIndex,
+      flexShrink: 0,
+      filter: blur > 0 ? `blur(${blur}px)` : 'none',
+      boxShadow: absOffset === 0
+        ? '0 20px 40px rgba(0, 0, 0, 0.12)'
+        : absOffset === 1
+        ? '0 10px 25px rgba(0, 0, 0, 0.08)'
+        : '0 4px 12px rgba(0, 0, 0, 0.04)',
+    };
+  };
 
   if (loading) {
     return <div className="text-center py-12 text-gray-500">加载中...</div>;
@@ -70,46 +124,77 @@ export default function HomePage() {
                   探索板块
                 </h2>
                 {canScroll && (
-                  <span className="hidden sm:inline-flex items-center gap-1 text-xs text-campus-text-tertiary font-body animate-scroll-hint">
-                    滚动探索
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
+                  <span className="hidden sm:inline-flex items-center gap-1 text-xs text-campus-text-tertiary font-body">
+                    左右滚动浏览
                   </span>
                 )}
               </div>
 
-              {/* Horizontal scroll container */}
-              <div
-                ref={scrollRef}
-                className="flex gap-5 overflow-x-auto snap-x snap-mandatory pb-4 -mx-2 px-2 scroll-smooth scrollbar-thin"
-              >
-                {boards.map((board, index) => (
-                  <a
-                    key={board.id}
-                    href={`/board/${board.id}`}
-                    className="card-enter flex-shrink-0 w-72 snap-start flex flex-col items-start p-7 bg-surface border border-border rounded-xl shadow-card hover:-translate-y-1 hover:scale-[1.03] hover:shadow-float transition-all duration-300 ease-out"
-                    style={{ animationDelay: `${index * 0.08}s` }}
-                  >
-                    <span className="text-4xl mb-4">{board.icon}</span>
-                    <h3 className="font-body text-lg font-semibold text-campus-text-primary mb-2">
-                      {board.name}
-                    </h3>
-                    <p className="text-sm text-campus-text-secondary font-body mb-5 flex-1 leading-relaxed">
-                      {board.description}
-                    </p>
-                    <span className="text-xs font-medium text-campus-text-tertiary font-body">
-                      {board.post_count} 帖子
-                    </span>
-                  </a>
+              {/* Carousel container */}
+              <div className="relative">
+                {/* Left gradient mask */}
+                <div className="absolute left-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-r from-surface via-surface/80 to-transparent pointer-events-none z-20" />
+                {/* Right gradient mask */}
+                <div className="absolute right-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-l from-surface via-surface/80 to-transparent pointer-events-none z-20" />
+
+                {/* Scroll container */}
+                <div
+                  ref={scrollRef}
+                  onScroll={handleScroll}
+                  className="flex items-center overflow-x-auto scroll-smooth py-8 px-8 sm:px-16 -mx-2 scrollbar-hide snap-x snap-mandatory"
+                >
+                  {/* Left spacer for centering first card */}
+                  <div className="flex-shrink-0 w-[calc(50%-7rem)] sm:w-[calc(50%-8rem)]" />
+
+                  {boards.map((board, index) => (
+                    <a
+                      key={board.id}
+                      href={`/board/${board.id}`}
+                      className="carousel-card card-enter w-64 sm:w-72 flex flex-col items-start p-6 sm:p-7 bg-surface border border-border rounded-xl transition-all duration-500 ease-out snap-center -mx-8 sm:-mx-10"
+                      style={{
+                        ...getCardStyle(index),
+                        animationDelay: `${index * 0.08}s`,
+                      }}
+                    >
+                      <span className="text-4xl mb-4">{board.icon}</span>
+                      <h3 className="font-body text-lg font-semibold text-campus-text-primary mb-2">
+                        {board.name}
+                      </h3>
+                      <p className="text-sm text-campus-text-secondary font-body mb-5 flex-1 leading-relaxed">
+                        {board.description}
+                      </p>
+                      <span className="text-xs font-medium text-campus-text-tertiary font-body">
+                        {board.post_count} 帖子
+                      </span>
+                    </a>
+                  ))}
+
+                  {/* Right spacer for centering last card */}
+                  <div className="flex-shrink-0 w-[calc(50%-8rem)] sm:w-[calc(50%-9rem)]" />
+                </div>
+              </div>
+
+              {/* Indicator dots */}
+              <div className="flex justify-center gap-2 mt-4">
+                {boards.map((_, index) => (
+                  <button
+                    key={index}
+                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                      index === activeIndex
+                        ? 'bg-primary w-6'
+                        : 'bg-border hover:bg-primary/40'
+                    }`}
+                    onClick={() => scrollToCard(index)}
+                    aria-label={`切换到第 ${index + 1} 个板块`}
+                  />
                 ))}
               </div>
 
-              {/* Mobile scroll hint */}
+              {/* Mobile hint */}
               {canScroll && (
-                <div className="flex sm:hidden justify-center mt-1">
-                  <span className="inline-flex items-center gap-1 text-xs text-primary font-medium font-body animate-scroll-hint">
-                    左右滑动探索更多
+                <div className="flex sm:hidden justify-center mt-2">
+                  <span className="inline-flex items-center gap-1 text-xs text-campus-text-tertiary font-medium font-body animate-scroll-hint">
+                    左右滑动浏览
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
@@ -148,20 +233,12 @@ export default function HomePage() {
           animation: scroll-hint 1.8s ease-in-out infinite;
         }
 
-        /* Custom thin scrollbar — works cross-browser */
-        .scrollbar-thin { scrollbar-width: thin; }
-        .scrollbar-thin::-webkit-scrollbar {
-          height: 5px;
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
-        .scrollbar-thin::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .scrollbar-thin::-webkit-scrollbar-thumb {
-          background: var(--color-border);
-          border-radius: 99px;
-        }
-        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-          background: var(--color-text-tertiary);
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
         }
       `}</style>
     </div>
