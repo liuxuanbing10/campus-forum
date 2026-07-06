@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import { PluginManager, SimpleEventBus, PluginContext, Logger } from '@campus-forum/core';
 import { createDatabase, initializeSchema, seedData } from '@campus-forum/database';
 
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function discoverAndLoadPlugins(pluginManager: PluginManager): Promise<void> {
@@ -95,7 +96,7 @@ async function main() {
   });
   await app.register(cookie);
   await app.register(session, {
-    secret: process.env.SESSION_SECRET || 'campus-forum-secret-dev',
+    secret: process.env.SESSION_SECRET || 'campus-forum-secret-dev-0123456789',
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
@@ -133,7 +134,7 @@ async function main() {
   // Plugin manager
   const pluginManager = new PluginManager(pluginCtx);
 
-  // Auto-discover and load all plugins
+  // Auto-discover and load all plugins (includes auth, boards, posts, search, etc.)
   await discoverAndLoadPlugins(pluginManager);
 
   // Health check

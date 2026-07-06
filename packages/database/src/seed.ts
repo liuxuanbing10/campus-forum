@@ -9,8 +9,8 @@ export async function seedData(db: DatabaseAdapter): Promise<void> {
   // Create admin user (password: admin123)
   const hash = await bcrypt.hash('admin123', 10);
   db.run(
-    'INSERT INTO users (username, email, password_hash, display_name, is_admin) VALUES (?, ?, ?, ?, ?)',
-    'admin', 'admin@campus.edu', hash, '管理员', 1
+    'INSERT INTO users (username, password_hash, display_name, is_admin) VALUES (?, ?, ?, ?)',
+    'admin', hash, '管理员', 1
   );
 
   // Create default boards
