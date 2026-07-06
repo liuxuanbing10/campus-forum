@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../lib/api';
 
 interface Post {
   id: number;
@@ -20,8 +20,8 @@ export default function BoardPage() {
 
   useEffect(() => {
     Promise.all([
-      axios.get(`/api/boards/${id}`),
-      axios.get(`/api/boards/${id}/posts`),
+      api.get(`/boards/${id}`),
+      api.get(`/boards/${id}/posts`),
     ]).then(([boardRes, postsRes]) => {
       setBoardName(boardRes.data.name);
       setBoardIcon(boardRes.data.icon || '📁');

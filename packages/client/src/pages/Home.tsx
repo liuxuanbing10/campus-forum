@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../stores/auth';
+import api from '../lib/api';
 
 interface Board {
   id: number;
@@ -15,9 +16,8 @@ export default function HomePage() {
   const [boardsLoading, setBoardsLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/boards')
-      .then((r) => r.json())
-      .then((data) => setBoards(data))
+    api.get('/boards')
+      .then((res) => setBoards(res.data))
       .catch(() => {})
       .finally(() => setBoardsLoading(false));
   }, []);

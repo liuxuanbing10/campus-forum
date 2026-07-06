@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../lib/api';
 
 interface Board {
   id: number;
@@ -17,7 +17,7 @@ export default function NewPostPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get('/api/boards').then(res => setBoards(res.data));
+    api.get('/boards').then(res => setBoards(res.data));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,7 +26,7 @@ export default function NewPostPage() {
 
     setLoading(true);
     try {
-      await axios.post('/api/posts', {
+      await api.post('/posts', {
         title,
         content,
         boardId,

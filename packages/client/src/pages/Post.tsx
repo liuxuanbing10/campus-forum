@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import axios from 'axios';
+import api from '../lib/api';
 
 interface Post {
   id: number;
@@ -27,8 +27,8 @@ export default function PostPage() {
 
   useEffect(() => {
     Promise.all([
-      axios.get(`/api/posts/${id}`),
-      axios.get(`/api/posts/${id}/comments`),
+      api.get(`/posts/${id}`),
+      api.get(`/posts/${id}/comments`),
     ]).then(([postRes, commentsRes]) => {
       setPost(postRes.data);
       setComments(commentsRes.data);
@@ -39,10 +39,10 @@ export default function PostPage() {
     e.preventDefault();
     if (!newComment.trim()) return;
 
-    await axios.post(`/api/posts/${id}/comments`, { content: newComment });
+    await api.post(`/posts/${id}/comments`, { content: newComment });
     setNewComment('');
 
-    const { data } = await axios.get(`/api/posts/${id}/comments`);
+    const { data } = await api.get(`/posts/${id}/comments`);
     setComments(data);
   };
 
