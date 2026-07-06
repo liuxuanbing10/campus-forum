@@ -165,6 +165,24 @@ export const postsPlugin: Plugin = {
       return { success: true, message: '帖子已删除' };
     });
 
+    // ─── 我的帖子 ───
+    app.get('/api/posts/my', async (req, rep) => {
+      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+      const page = Math.max(1, Number((req.query as any).page) || 1);
+      const limit = 20; const offset = (page - 1) * limit;
+      const posts = db.all<any>(
+        `SELECT p.id,p.title,p.board_id,p.is_anonymous,p.is_private,p.created_at,
+          CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,
+          b.name as board_name, COALESCE(v.like_count,0) as like_count, COALESCE(c.comment_count,0) as comment_count
+         FROM posts p JOIN users u ON p.author_id=u.id JOIN boards b ON p.board_id=b.id
+         LEFT JOIN (SELECT post_id,COUNT(*) as like_count FROM votes WHERE value=1 GROUP BY post_id) v ON v.post_id=p.id
+         LEFT JOIN (SELECT post_id,COUNT(*) as comment_count FROM comments GROUP BY post_id) c ON c.post_id=p.id
+         WHERE p.author_id=? ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
+        userId, limit, offset
+      );
+      return { posts, page, limit };
+    });
+
     // ─── 帖子列表 ───
     app.get('/api/posts', async (req) => {
       const { page, boardId, sort } = paginationSchema.parse(req.query);
