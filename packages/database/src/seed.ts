@@ -6,8 +6,8 @@ export async function seedData(db: DatabaseAdapter): Promise<void> {
   const existing = db.get<{ count: number }>('SELECT COUNT(*) as count FROM users');
   if (existing && existing.count > 0) return;
 
-  // Create admin user (password: 123456)
-  const hash = await bcrypt.hash('123456', 10);
+  // Create admin user (password: admin123)
+  const hash = await bcrypt.hash('admin123', 10);
   db.run(
     'INSERT INTO users (username, password_hash, display_name, is_admin) VALUES (?, ?, ?, ?)',
     'admin', hash, '管理员', 1
