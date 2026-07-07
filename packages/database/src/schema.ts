@@ -232,6 +232,7 @@ export function migrateSchema(db: DatabaseAdapter): void {
       created_at TEXT DEFAULT (datetime('now')),
       UNIQUE(user_id, team_id)
     )`],
+    ['add_last_replied_at', `ALTER TABLE posts ADD COLUMN last_replied_at TEXT`],
   ];
 
   for (const [name, sql] of migrations) {

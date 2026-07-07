@@ -333,6 +333,19 @@ export const authPlugin: Plugin = {
         message: '密码修改成功',
       };
     });
+
+    // ========================================
+    // 用户主页
+    // ========================================
+    app.get('/api/users/:id', async (req, rep) => {
+      const id = Number((req.params as { id: string }).id);
+      const user = db.get<any>('SELECT id,username,display_name,created_at FROM users WHERE id=?', id);
+      if (!user) return rep.status(404).send({ error: '用户不存在' });
+      const postCount = db.get<{ c: number }>('SELECT COUNT(*) as c FROM posts WHERE author_id=?', id)!.c;
+      const commentCount = db.get<{ c: number }>('SELECT COUNT(*) as c FROM comments WHERE author_id=?', id)!.c;
+      const recentPosts = db.all<any>('SELECT id,title,created_at,board_id FROM posts WHERE author_id=? ORDER BY created_at DESC LIMIT 10', id);
+      return { id: user.id, username: user.username, displayName: user.display_name, createdAt: user.created_at, postCount, commentCount, recentPosts };
+    });
   },
 };
 

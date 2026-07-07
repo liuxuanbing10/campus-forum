@@ -52,7 +52,7 @@ const voteSchema = z.object({
 const favoriteSchema = z.object({ postId: z.number().int().positive('请指定帖子') });
 const boardSchema = z.object({ name: z.string().min(1, '版块名称不能为空'), description: z.string().optional(), icon: z.string().optional() });
 const uploadSchema = z.object({ image: z.string().min(1, '请提供图片数据'), filename: z.string().optional() });
-const paginationSchema = z.object({ page: z.coerce.number().int().positive().optional().default(1), boardId: z.coerce.number().int().positive().optional(), sort: z.enum(['latest', 'hot']).optional().default('latest') });
+const paginationSchema = z.object({ page: z.coerce.number().int().positive().optional().default(1), boardId: z.coerce.number().int().positive().optional(), sort: z.enum(['latest', 'hot', 'replied']).optional().default('latest') });
 
 // ── 工具函数 ──────────────────────────────────
 function notify(ctx: PluginContext, userId: number, type: string, message: string, postId?: number, commentId?: number, fromUserId?: number) {
@@ -193,7 +193,8 @@ export const postsPlugin: Plugin = {
       if (boardId) { params.push(boardId); }
       const where = boardId ? `WHERE p.board_id = ? ${privateFilter}` : `WHERE 1=1 ${privateFilter}`;
       const orderBy = sort === 'hot' ? 'ORDER BY p.is_pinned DESC, (p.view_count + COALESCE(v.like_count,0)*5) DESC, p.created_at DESC'
-                                      : 'ORDER BY p.is_pinned DESC, p.created_at DESC';
+        : sort === 'replied' ? 'ORDER BY p.is_pinned DESC, COALESCE(p.last_replied_at, p.created_at) DESC'
+                             : 'ORDER BY p.is_pinned DESC, p.created_at DESC';
       params.unshift(userIdVal);
       const sql = `SELECT p.id,p.title,p.content,p.board_id,p.is_anonymous,p.is_pinned,p.is_private,p.images,p.created_at,p.view_count,
         CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,
@@ -250,16 +251,19 @@ export const postsPlugin: Plugin = {
       return { success: true, url: `/uploads/${name}`, filename: name };
     });
 
-    // ─── 评论列表 ───
+    // ─── 评论列表（含 my_vote）───
     app.get('/api/posts/:id/comments', async (req) => {
       const id = Number((req.params as { id: string }).id);
+      const userId = uid(req) || 0;
       return db.all<any>(
         `SELECT c.id,c.content,c.post_id,c.parent_id,c.is_anonymous,c.created_at,
           CASE WHEN c.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,
-          COALESCE(l.like_count,0) as like_count
+          COALESCE(l.like_count,0) as like_count,
+          COALESCE(v.value,0) as my_vote
          FROM comments c JOIN users u ON c.author_id=u.id
          LEFT JOIN (SELECT comment_id,COUNT(*) as like_count FROM votes WHERE value=1 GROUP BY comment_id) l ON l.comment_id=c.id
-         WHERE c.post_id=? ORDER BY c.created_at ASC`, id);
+         LEFT JOIN votes v ON v.comment_id=c.id AND v.user_id=?
+         WHERE c.post_id=? ORDER BY c.created_at ASC`, userId, id);
     });
 
     // ─── 发表评论 ✅ 通知已触发 ───
@@ -273,6 +277,8 @@ export const postsPlugin: Plugin = {
 
       db.run("INSERT INTO comments (content, author_id, post_id, parent_id, is_anonymous) VALUES (?,?,?,?,?)",
         content.trim(), userId, postId, parentId || null, isAnonymous ? 1 : 0);
+      // 更新帖子最新回复时间
+      db.run("UPDATE posts SET last_replied_at = datetime('now') WHERE id = ?", postId);
       const comment = db.get<CommentRow>('SELECT * FROM comments ORDER BY id DESC LIMIT 1');
 
       // 🔔 通知帖子作者
@@ -365,6 +371,37 @@ export const postsPlugin: Plugin = {
           COALESCE((SELECT COUNT(*) FROM favorites WHERE post_id=?),0) as favorite_count,
           COALESCE((SELECT view_count FROM posts WHERE id=?),0) as view_count`, id, id, id, id)
         || { like_count: 0, comment_count: 0, favorite_count: 0, view_count: 0 };
+    });
+
+    // ─── 标签列表 ───
+    app.get('/api/posts/:id/tags', async (req) => {
+      const id = Number((req.params as { id: string }).id);
+      return { tags: db.all<{ id: number; name: string }>('SELECT t.id,t.name FROM tags t JOIN post_tags pt ON t.id=pt.tag_id WHERE pt.post_id=?', id) };
+    });
+
+    // ─── 添加标签（管理员）───
+    app.post('/api/posts/:id/tags', async (req, rep) => {
+      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+      if (!isAdmin(db, userId)) return rep.status(403).send({ error: '仅管理员可操作' });
+      const postId = Number((req.params as { id: string }).id);
+      if (!db.get('SELECT id FROM posts WHERE id=?', postId)) return rep.status(404).send({ error: '帖子不存在' });
+      const { name } = req.body as { name: string };
+      if (!name || name.trim().length < 1) return rep.status(400).send({ error: '标签名不能为空' });
+      const tag = db.get<{ id: number }>('SELECT id FROM tags WHERE name=?', name.trim());
+      let tagId: number;
+      if (tag) { tagId = tag.id; } else { db.run('INSERT INTO tags (name) VALUES (?)', name.trim()); tagId = db.get<{ id: number }>('SELECT id FROM tags ORDER BY id DESC LIMIT 1')!.id; }
+      try { db.run('INSERT INTO post_tags (post_id,tag_id) VALUES (?,?)', postId, tagId); } catch { return rep.status(409).send({ error: '标签已存在' }); }
+      return { success: true, tagId, name: name.trim() };
+    });
+
+    // ─── 删除标签（管理员）───
+    app.delete('/api/posts/:id/tags/:tagId', async (req, rep) => {
+      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+      if (!isAdmin(db, userId)) return rep.status(403).send({ error: '仅管理员可操作' });
+      const postId = Number((req.params as { id: string }).id);
+      const tagId = Number((req.params as any).tagId);
+      db.run('DELETE FROM post_tags WHERE post_id=? AND tag_id=?', postId, tagId);
+      return { success: true };
     });
   },
 };
