@@ -2,7 +2,7 @@ import { Outlet, Link, useNavigate, useLocation, useSearchParams } from 'react-r
 import { useAuthStore } from '../stores/auth';
 import NotificationBell from './NotificationBell';
 import ThemeSwitcher from './ThemeSwitcher';
-import { Home, Users, Heart, Search, Bell, Shield } from 'lucide-react';
+import { Home, Users, Heart, Search, Shield } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function Layout() {
@@ -65,9 +65,6 @@ export default function Layout() {
               <>
                 <Link to="/search" className="sm:hidden p-2 hover:bg-background rounded-lg transition-colors">
                   <Search className="w-5 h-5 text-campus-text-secondary" />
-                </Link>
-                <Link to="/notifications" className="relative p-2 hover:bg-background rounded-lg transition-colors">
-                  <Bell className="w-5 h-5 text-campus-text-secondary" />
                 </Link>
                 <NotificationBell />
                 <Link to="/favorites" className="hidden sm:block p-2 hover:bg-background rounded-lg transition-colors">
