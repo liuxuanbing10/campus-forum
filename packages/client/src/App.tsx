@@ -7,6 +7,9 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import MyPosts from './pages/MyPosts';
+import Board from './pages/Board';
+import PostDetail from './pages/PostDetail';
+import NewPost from './pages/NewPost';
 import { ToastContainer, ToastProps } from './components/Toast';
 
 const Settings = lazy(() => import('./pages/Settings').catch(() => ({ default: () => <div>加载中...</div> })));
@@ -63,6 +66,9 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/settings" element={<Suspense fallback={<div>加载中...</div>}><Settings /></Suspense>} />
           <Route path="/my-posts" element={<MyPosts />} />
+          <Route path="/board/:id" element={<Board />} />
+          <Route path="/post/:id" element={<PostDetail />} />
+          <Route path="/new" element={<NewPost />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Route>
       </Routes>

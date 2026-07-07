@@ -194,7 +194,7 @@ export default function HomePage() {
                   ref={scrollRef}
                   onScroll={handleScroll}
                   tabIndex={0}
-                  className="flex items-center overflow-x-auto scroll-smooth py-8 px-8 sm:px-16 -mx-2 scrollbar-hide snap-x snap-mandatory focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl"
+                  className="flex items-center overflow-x-auto scroll-smooth py-8 px-8 sm:px-16 scrollbar-hide snap-x snap-mandatory focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl"
                   aria-label="板块轮播，使用左右方向键导航"
                 >
                   <div className="flex-shrink-0 w-[calc(50%-7rem)] sm:w-[calc(50%-8rem)]" />
@@ -203,7 +203,7 @@ export default function HomePage() {
                     <a
                       key={board.id}
                       href={`/board/${board.id}`}
-                      className="carousel-card card-enter relative w-64 sm:w-72 flex flex-col items-start p-6 sm:p-7 rounded-2xl transition-all duration-500 ease-out snap-center -mx-8 sm:-mx-10 overflow-hidden glass-card cursor-pointer"
+                      className="carousel-card card-enter relative w-64 sm:w-72 flex flex-col items-start p-6 sm:p-7 rounded-2xl transition-all duration-500 ease-out snap-center overflow-hidden glass-card cursor-pointer"
                       style={{
                         ...getCardStyle(index),
                         animationDelay: `${index * 0.08}s`,
