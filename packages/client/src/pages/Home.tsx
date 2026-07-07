@@ -203,7 +203,7 @@ export default function HomePage() {
                     <a
                       key={board.id}
                       href={`/board/${board.id}`}
-                      className="carousel-card card-enter relative w-64 sm:w-72 flex flex-col items-start p-6 sm:p-7 rounded-2xl transition-all duration-500 ease-out snap-center overflow-hidden glass-card cursor-pointer"
+                      className="carousel-card card-enter relative w-64 sm:w-72 flex flex-col items-start p-6 sm:p-7 rounded-2xl transition-all duration-500 ease-out snap-center -mx-4 sm:-mx-6 overflow-hidden glass-card cursor-pointer"
                       style={{
                         ...getCardStyle(index),
                         animationDelay: `${index * 0.08}s`,
