@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { Plugin, PluginContext } from '@campus-forum/core';
+import { Plugin, PluginContext, uid, isAdmin } from '@campus-forum/core';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';

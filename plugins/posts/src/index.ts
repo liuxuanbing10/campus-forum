@@ -60,13 +60,13 @@ function addPoints(db: any, userId: number, delta: number) {
 }
 
 function checkSensitive(db: any, text: string): string | null {
-  const words = db.all<{ word: string }>('SELECT word FROM sensitive_words');
-  for (const w of words) if (text.includes(w.word)) return w.word;
+  const rows = db.all('SELECT word FROM sensitive_words');
+  for (const w of (rows as { word: string }[])) if (text.includes(w.word)) return w.word;
   return null;
 }
 
-function log(adminId: number, action: string, targetType?: string, targetId?: number, detail?: string) {
-  try { (ctx as any).db?.run?.('INSERT INTO audit_logs (admin_id,action,target_type,target_id,detail) VALUES (?,?,?,?,?)', adminId, action, targetType || null, targetId || null, detail || null); } catch {}
+function logAction(db: any, adminId: number, action: string, targetType?: string, targetId?: number, detail?: string) {
+  try { db.run('INSERT INTO audit_logs (admin_id,action,target_type,target_id,detail) VALUES (?,?,?,?,?)', adminId, action, targetType || null, targetId || null, detail || null); } catch {}
 }
 
 function parseMentions(text: string): string[] {
@@ -477,7 +477,7 @@ export const postsPlugin: Plugin = {
       if (!['approve','reject'].includes(action)) return rep.status(400).send({ error: 'action 需为 approve 或 reject' });
       if (action === 'reject') { db.run('DELETE FROM posts WHERE id=?', id); return { success: true, message: '已拒绝' }; }
       db.run('UPDATE posts SET is_pending=0 WHERE id=?', id);
-      log(u, '帖子审核通过', 'post', id);
+      logAction(db, u, '帖子审核通过', 'post', id);
       return { success: true, message: '已通过' };
     });
 
