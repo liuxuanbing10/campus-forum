@@ -1,6 +1,11 @@
 import type { FastifyInstance } from 'fastify';
 import { Plugin, PluginContext } from '@campus-forum/core';
 import bcrypt from 'bcryptjs';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Extend Fastify session type
 declare module 'fastify' {
@@ -29,6 +34,18 @@ interface LoginBody {
   password: string;
 }
 
+interface UpdateProfileBody {
+  display_name?: string;
+  email?: string;
+  avatar_url?: string;
+}
+
+interface ChangePasswordBody {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 function getDeviceCode(request: any): string | undefined {
   const body = request.body as Record<string, any> | undefined;
   return body?.deviceCode || request.headers['x-device-code'] || undefined;
@@ -42,6 +59,12 @@ interface UserRow {
   display_name: string;
   device_code: string | null;
   is_admin: number;
+  email: string | null;
+  avatar_url: string | null;
+  role: string;
+  is_banned: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export const authPlugin: Plugin = {
@@ -182,6 +205,8 @@ export const authPlugin: Plugin = {
       if (!request.session.userId) {
         return reply.status(401).send({ error: '未登录' });
       }
+      // 更新在线时间
+      db.run("UPDATE users SET last_active_at = datetime('now') WHERE id = ?", request.session.userId);
 
       const user = db.get<UserRow>(
         'SELECT id, username, display_name, is_admin FROM users WHERE id = ?',
@@ -196,8 +221,207 @@ export const authPlugin: Plugin = {
         id: user.id,
         username: user.username,
         displayName: user.display_name,
+        email: user.email || null,
+        avatarUrl: user.avatar_url || null,
         isAdmin: user.is_admin === 1,
+        role: user.role || 'user',
+        isBanned: user.is_banned === 1,
+        createdAt: user.created_at,
       };
+    });
+
+    // ========================================
+    // 更新用户资料
+    // ========================================
+    app.put('/api/auth/me', async (request, reply) => {
+      if (!request.session.userId) {
+        return reply.status(401).send({ error: '未登录' });
+      }
+
+      const { display_name, email, avatar_url } =
+        request.body as UpdateProfileBody;
+
+      const user = db.get<UserRow>(
+        'SELECT id, username FROM users WHERE id = ?',
+        request.session.userId
+      );
+
+      if (!user) {
+        return reply.status(401).send({ error: '用户不存在' });
+      }
+
+      const updates: string[] = [];
+      const params: any[] = [];
+
+      if (display_name !== undefined) {
+        updates.push('display_name = ?');
+        params.push(display_name);
+      }
+      if (email !== undefined) {
+        updates.push('email = ?');
+        params.push(email);
+      }
+      if (avatar_url !== undefined) {
+        updates.push('avatar_url = ?');
+        params.push(avatar_url);
+      }
+
+      if (updates.length === 0) {
+        return reply.status(400).send({ error: '没有提供需要更新的字段' });
+      }
+
+      params.push(request.session.userId);
+      db.run(`UPDATE users SET ${updates.join(', ')}, updated_at = datetime('now') WHERE id = ?`, ...params);
+
+      const updatedUser = db.get<UserRow>(
+        'SELECT id, username, display_name, email, avatar_url, is_admin, role, is_banned, created_at FROM users WHERE id = ?',
+        request.session.userId
+      )!;
+
+      return {
+        success: true,
+        message: '资料更新成功',
+        user: {
+          id: updatedUser.id,
+          username: updatedUser.username,
+          displayName: updatedUser.display_name,
+          email: updatedUser.email || null,
+          avatarUrl: updatedUser.avatar_url || null,
+          isAdmin: updatedUser.is_admin === 1,
+          role: updatedUser.role || 'user',
+          isBanned: updatedUser.is_banned === 1,
+          createdAt: updatedUser.created_at,
+        },
+      };
+    });
+
+    // ========================================
+    // 修改密码
+    // ========================================
+    app.put('/api/auth/password', async (request, reply) => {
+      if (!request.session.userId) {
+        return reply.status(401).send({ error: '未登录' });
+      }
+
+      const { currentPassword, newPassword, confirmPassword } =
+        request.body as ChangePasswordBody;
+
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        return reply.status(400).send({ error: '请填写所有字段' });
+      }
+
+      if (newPassword.length < 6) {
+        return reply.status(400).send({ error: '新密码长度不能少于 6 位' });
+      }
+
+      if (newPassword !== confirmPassword) {
+        return reply.status(400).send({ error: '两次输入的新密码不一致' });
+      }
+
+      const user = db.get<UserRow>(
+        'SELECT id, password_hash FROM users WHERE id = ?',
+        request.session.userId
+      );
+
+      if (!user) {
+        return reply.status(401).send({ error: '用户不存在' });
+      }
+
+      const valid = await bcrypt.compare(currentPassword, user.password_hash);
+      if (!valid) {
+        return reply.status(401).send({ error: '当前密码错误' });
+      }
+
+      const hash = await bcrypt.hash(newPassword, 10);
+      db.run("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?", hash, request.session.userId);
+
+      return {
+        success: true,
+        message: '密码修改成功',
+      };
+    });
+
+    // ========================================
+    // 用户主页
+    // ========================================
+    app.get('/api/users/:id', async (req, rep) => {
+      const id = Number((req.params as { id: string }).id);
+      const user = db.get<any>('SELECT id,username,display_name,bio,created_at,last_active_at,points FROM users WHERE id=?', id);
+      if (!user) return rep.status(404).send({ error: '用户不存在' });
+      const postCount = db.get<{ c: number }>('SELECT COUNT(*) as c FROM posts WHERE author_id=?', id)!.c;
+      const commentCount = db.get<{ c: number }>('SELECT COUNT(*) as c FROM comments WHERE author_id=?', id)!.c;
+      const followerCount = db.get<{ c: number }>('SELECT COUNT(*) as c FROM follows WHERE followed_id=?', id)!.c;
+      const followingCount = db.get<{ c: number }>('SELECT COUNT(*) as c FROM follows WHERE user_id=?', id)!.c;
+      const recentPosts = db.all<any>('SELECT id,title,created_at,board_id FROM posts WHERE author_id=? ORDER BY created_at DESC LIMIT 10', id);
+      const isOnline = user.last_active_at && (Date.now() - new Date(user.last_active_at + 'Z').getTime()) < 5 * 60 * 1000;
+      const level = Math.floor((user.points || 0) / 100) + 1;
+      return { id: user.id, username: user.username, displayName: user.display_name, bio: user.bio || null, createdAt: user.created_at, lastActiveAt: user.last_active_at, isOnline, points: user.points || 0, level, postCount, commentCount, followerCount, followingCount, recentPosts };
+    });
+
+    // ========================================
+    // 第三方登录（模拟 OAuth 绑定的 API）
+    // ========================================
+    app.post('/api/auth/oauth/bind', async (req, rep) => {
+      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+      const { provider, providerId } = req.body as { provider: string; providerId: string };
+      if (!provider || !providerId) return rep.status(400).send({ error: '参数不完整' });
+      try { db.run('INSERT INTO oauth_accounts (user_id,provider,provider_id) VALUES (?,?,?)', userId, provider, providerId); } catch { return rep.status(409).send({ error: '已绑定' }); }
+      return { success: true, message: '绑定成功' };
+    });
+
+    app.get('/api/auth/oauth/accounts', async (req, rep) => {
+      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+      return { accounts: db.all('SELECT provider,provider_id FROM oauth_accounts WHERE user_id=?', userId) };
+    });
+
+    app.delete('/api/auth/oauth/unbind', async (req, rep) => {
+      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+      const { provider } = req.body as { provider: string };
+      db.run('DELETE FROM oauth_accounts WHERE user_id=? AND provider=?', userId, provider);
+      return { success: true };
+    });
+
+    // ========================================
+    // 头像上传
+    // ========================================
+    app.post('/api/users/avatar', async (req, rep) => {
+      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+      const { image } = req.body as { image: string };
+      if (!image) return rep.status(400).send({ error: '请提供图片数据' });
+      const m = image.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (!m) return rep.status(400).send({ error: '图片格式错误' });
+      const ext = m[1].split('/')[1].replace('jpeg', 'jpg');
+      const buf = Buffer.from(m[2], 'base64');
+      if (buf.length > 2 * 1024 * 1024) return rep.status(400).send({ error: '图片不能超过 2MB' });
+      const uploadsDir = path.resolve(__dirname, '../../../uploads');
+      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+      const name = `avatar_${userId}_${Date.now()}.${ext}`;
+      fs.writeFileSync(path.join(uploadsDir, name), buf);
+      db.run('UPDATE users SET avatar_url=? WHERE id=?', `/uploads/${name}`, userId);
+      return { success: true, url: `/uploads/${name}` };
+    });
+
+    // ========================================
+    // 邮箱验证
+    // ========================================
+    app.post('/api/auth/send-verify-email', async (req, rep) => {
+      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+      const { email } = req.body as { email: string };
+      if (!email || !email.includes('@')) return rep.status(400).send({ error: '邮箱格式不正确' });
+      db.run('UPDATE users SET email=? WHERE id=?', email, userId);
+      // 此处可集成 nodemailer 发送验证邮件
+      return { success: true, message: '验证邮件已发送（演示模式）' };
+    });
+
+    // ========================================
+    // 验证码校验（演示端点）
+    // ========================================
+    app.post('/api/auth/verify-captcha', async (req, rep) => {
+      const { captcha } = req.body as { captcha?: string };
+      if (!captcha) return rep.status(400).send({ error: '请输入验证码' });
+      // 演示：任何 4 位字符都通过，实际应集成 reCAPTCHA 等
+      if (captcha.length < 4) return rep.status(400).send({ error: '验证码错误' });
+      return { success: true };
     });
   },
 };

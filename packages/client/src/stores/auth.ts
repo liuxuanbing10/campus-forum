@@ -7,6 +7,7 @@ interface User {
   username: string;
   displayName: string;
   isAdmin: boolean;
+  role: string;
 }
 
 interface AuthState {

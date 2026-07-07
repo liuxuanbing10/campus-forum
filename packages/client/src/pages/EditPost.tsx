@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import api from '../lib/api';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import api, { postsApi } from '../lib/api';
 import { toastStore } from '../App';
-import { ArrowLeft, Lock, ImagePlus, X } from 'lucide-react';
+import { ArrowLeft, Edit3, Lock, ImagePlus, X } from 'lucide-react';
+import { useAuthStore } from '../stores/auth';
 
 interface Board {
   id: number;
   name: string;
 }
 
-export default function NewPostPage() {
+export default function EditPostPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [boardId, setBoardId] = useState<number>(0);
@@ -19,11 +23,43 @@ export default function NewPostPage() {
   const [images, setImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     api.get('/boards').then(res => setBoards(res.data));
   }, []);
+
+  useEffect(() => {
+    if (!id) return;
+    const loadPost = async () => {
+      try {
+        setLoading(true);
+        const res = await postsApi.getPost(Number(id));
+        const post = res.data;
+        if (user && post.author_id !== user.id) {
+          toastStore.error('您无权编辑此帖子');
+          navigate(`/post/${id}`);
+          return;
+        }
+        setTitle(post.title);
+        setContent(post.content);
+        setBoardId(post.board_id);
+        setIsAnonymous(post.is_anonymous === 1);
+        setIsPrivate(post.is_private === 1);
+        setImages(Array.isArray(post.images) ? post.images : []);
+      } catch (err: any) {
+        if (err.response?.status === 404) {
+          toastStore.error('帖子不存在');
+          navigate('/');
+        } else {
+          toastStore.error('加载帖子失败');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadPost();
+  }, [id, user, navigate]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -68,31 +104,39 @@ export default function NewPostPage() {
       toastStore.warning('请选择板块');
       return;
     }
-
-    setLoading(true);
+    setSubmitting(true);
     try {
-      await api.post('/posts', {
+      await postsApi.updatePost(Number(id), {
         title,
         content,
-        boardId,
-        isAnonymous,
-        isPrivate,
+        board_id: boardId,
+        is_anonymous: isAnonymous,
+        is_private: isPrivate,
         images: images.length > 0 ? images : undefined,
       });
-      toastStore.success('发帖成功！');
-      navigate('/');
+      toastStore.success('编辑成功！');
+      navigate(`/post/${id}`);
     } catch (err: any) {
-      const errMsg = err.response?.data?.error || '发帖失败';
+      const errMsg = err.response?.data?.error || '编辑失败';
       toastStore.error(errMsg);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-campus-text-secondary">加载中...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[42rem] mx-auto py-8">
       <Link
-        to="/"
+        to={`/post/${id}`}
         className="text-sm text-campus-text-tertiary hover:text-primary transition-colors mb-6 inline-flex items-center gap-1 font-body"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -100,8 +144,9 @@ export default function NewPostPage() {
       </Link>
 
       <div className="card p-6 sm:p-10">
-        <h1 className="font-handwrite text-2xl font-semibold text-campus-text-primary mb-8" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>
-          发表新帖
+        <h1 className="font-handwrite text-2xl font-semibold text-campus-text-primary mb-8 flex items-center gap-2" style={{ fontSize: 'clamp(22px, 2.4vw, 30px)' }}>
+          <Edit3 className="w-6 h-6" />
+          编辑帖子
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -198,13 +243,22 @@ export default function NewPostPage() {
             </label>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading || uploading}
-            className="btn-primary font-body mt-6"
-          >
-            {loading ? '发布中...' : '发布'}
-          </button>
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={() => navigate(`/post/${id}`)}
+              className="flex-1 px-4 py-3 border border-border hover:border-primary/50 text-campus-text-primary rounded-xl font-medium transition-colors"
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || uploading}
+              className="flex-1 btn-primary font-body"
+            >
+              {submitting ? '保存中...' : '保存修改'}
+            </button>
+          </div>
         </form>
       </div>
     </div>
