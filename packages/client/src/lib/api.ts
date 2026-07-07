@@ -17,12 +17,28 @@ api.interceptors.response.use(
 export interface User {
   id: number;
   username: string;
-  email: string;
+  email: string | null;
   displayName: string;
   avatar_url?: string;
+  avatarUrl?: string;
   role: string;
   is_banned: number;
+  isBanned: boolean;
+  isAdmin: boolean;
   created_at: string;
+  createdAt: string;
+}
+
+export interface UpdateProfileData {
+  display_name?: string;
+  email?: string;
+  avatar_url?: string;
+}
+
+export interface ChangePasswordData {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
 }
 
 export interface Post {
@@ -232,10 +248,19 @@ export const adminApi = {
 
 export const postsApi = {
   getPost: (id: number) => api.get<Post>(`/posts/${id}`),
-  updatePost: (id: number, data: { title: string; content: string; board_id: number; is_anonymous?: boolean }) =>
+  updatePost: (id: number, data: { title: string; content: string; board_id: number; is_anonymous?: boolean; is_private?: boolean; images?: string[] }) =>
     api.put(`/posts/${id}`, data),
   getStats: (id: number) => api.get<PostStats>(`/posts/${id}/stats`),
   getShareInfo: (id: number) => api.get<ShareInfo>(`/posts/${id}/share`),
+  togglePin: (id: number) => api.put<{ success: boolean; isPinned: boolean; message: string }>(`/posts/${id}/pin`),
+  togglePrivacy: (id: number) => api.put<{ success: boolean; isPrivate: boolean; message: string }>(`/posts/${id}/privacy`),
+  uploadImage: (image: string, filename?: string) =>
+    api.post<{ success: boolean; url: string; filename: string }>('/upload', { image, filename }),
+};
+
+export const authApi = {
+  updateProfile: (data: UpdateProfileData) => api.put<{ success: boolean; message: string; user: User }>('/auth/me', data),
+  changePassword: (data: ChangePasswordData) => api.put<{ success: boolean; message: string }>('/auth/password', data),
 };
 
 export const teamsApi = {
