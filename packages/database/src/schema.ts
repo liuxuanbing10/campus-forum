@@ -77,6 +77,14 @@ export function initializeSchema(db: DatabaseAdapter): void {
       UNIQUE(user_id, post_id)
     );
 
+    -- Team categories
+    CREATE TABLE IF NOT EXISTS team_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      icon TEXT,
+      sort_order INTEGER DEFAULT 0
+    );
+
     -- Teams
     CREATE TABLE IF NOT EXISTS teams (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -86,6 +94,9 @@ export function initializeSchema(db: DatabaseAdapter): void {
       is_public INTEGER DEFAULT 1,
       creator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       max_members INTEGER DEFAULT 50,
+      category_id INTEGER REFERENCES team_categories(id),
+      invite_code TEXT UNIQUE,
+      hide_members INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
@@ -102,6 +113,32 @@ export function initializeSchema(db: DatabaseAdapter): void {
     );
 
     -- Team posts
+    CREATE TABLE IF NOT EXISTS team_posts (
+      team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      PRIMARY KEY (team_id, post_id)
+    );
+
+    -- Team announcements
+    CREATE TABLE IF NOT EXISTS team_announcements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      author_id INTEGER NOT NULL REFERENCES users(id),
+      is_pinned INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    -- Team favorites
+    CREATE TABLE IF NOT EXISTS team_favorites (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(user_id, team_id)
+    );
 
     -- Notifications
     CREATE TABLE IF NOT EXISTS notifications (
@@ -164,6 +201,37 @@ export function migrateSchema(db: DatabaseAdapter): void {
     )`],
     ['add_is_private', `ALTER TABLE posts ADD COLUMN is_private INTEGER DEFAULT 0`],
     ['add_email', `ALTER TABLE users ADD COLUMN email TEXT`],
+    ['add_team_categories', `CREATE TABLE IF NOT EXISTS team_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      icon TEXT,
+      sort_order INTEGER DEFAULT 0
+    )`],
+    ['add_team_category_id', `ALTER TABLE teams ADD COLUMN category_id INTEGER`],
+    ['add_team_invite_code', `ALTER TABLE teams ADD COLUMN invite_code TEXT`],
+    ['add_team_hide_members', `ALTER TABLE teams ADD COLUMN hide_members INTEGER DEFAULT 0`],
+    ['add_team_posts', `CREATE TABLE IF NOT EXISTS team_posts (
+      team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      PRIMARY KEY (team_id, post_id)
+    )`],
+    ['add_team_announcements', `CREATE TABLE IF NOT EXISTS team_announcements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      author_id INTEGER NOT NULL REFERENCES users(id),
+      is_pinned INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )`],
+    ['add_team_favorites', `CREATE TABLE IF NOT EXISTS team_favorites (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(user_id, team_id)
+    )`],
   ];
 
   for (const [name, sql] of migrations) {

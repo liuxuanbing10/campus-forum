@@ -1,97 +1,106 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Users, Lock, Unlock, Calendar, ArrowLeft, Edit, Trash2, LogOut, Check, X, UserPlus } from 'lucide-react';
-import { teamsApi, Team, TeamMember } from '../lib/api';
-import TeamMemberList from '../components/TeamMemberList';
+import {
+  Users, Lock, Unlock, ArrowLeft, Settings, LogOut,
+  UserPlus, UserMinus, Crown, Shield, Heart, Copy,
+  FileText, Megaphone, Plus, Trash2, Pin, Check, X
+} from 'lucide-react';
+import { teamsApi, Team, TeamMember, TeamAnnouncement, TeamPost } from '../lib/api';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 
+type TabType = 'announcements' | 'posts' | 'members';
+
 export default function TeamDetail() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const teamId = Number(id);
+
+  const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState<Team | null>(null);
+  const [tab, setTab] = useState<TabType>('announcements');
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [applications, setApplications] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'members' | 'applications'>('members');
+  const [announcements, setAnnouncements] = useState<TeamAnnouncement[]>([]);
+  const [posts, setPosts] = useState<TeamPost[]>([]);
+  const [membersHidden, setMembersHidden] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+  const [newAnnTitle, setNewAnnTitle] = useState('');
+  const [newAnnContent, setNewAnnContent] = useState('');
+  const [newAnnPinned, setNewAnnPinned] = useState(false);
+  const [annSubmitting, setAnnSubmitting] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const isOwner = team?.myRole === 'owner';
+  const isAdmin = isOwner || team?.myRole === 'admin';
+  const isMember = !!team?.myRole;
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [teamRes, membersRes, annRes, postsRes] = await Promise.all([
+        teamsApi.getTeam(teamId),
+        teamsApi.getTeamMembers(teamId),
+        teamsApi.getAnnouncements(teamId),
+        teamsApi.getTeamPosts(teamId),
+      ]);
+      setTeam(teamRes.data);
+      setMembers(membersRes.data.members);
+      setMembersHidden(!!membersRes.data.hidden);
+      setAnnouncements(annRes.data.announcements);
+      setPosts(postsRes.data.posts);
+
+      if (isOwner || teamRes.data.myRole === 'admin') {
+        const appRes = await teamsApi.getTeamApplications(teamId);
+        setApplications(appRes.data.applications);
+      }
+    } catch (err: any) {
+      toastStore.error(err.response?.data?.error || '加载失败');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (id) {
-      loadTeam();
-      loadMembers();
-    }
-  }, [id]);
-
-  const loadTeam = async () => {
-    try {
-      const res = await teamsApi.getTeam(Number(id));
-      setTeam(res.data);
-      if (res.data.myRole === 'owner' || res.data.myRole === 'admin') {
-        loadApplications();
-      }
-    } catch (err: any) {
-      if (err.response?.status === 404) {
-        toastStore.error('团队不存在');
-        navigate('/teams');
-      } else if (err.response?.status === 403) {
-        toastStore.error('这是私密团队，您无权访问');
-        navigate('/teams');
-      } else {
-        toastStore.error('加载团队信息失败');
-      }
-    }
-  };
-
-  const loadMembers = async () => {
-    try {
-      const res = await teamsApi.getTeamMembers(Number(id));
-      setMembers(res.data.members);
-    } catch (err) {
-      toastStore.error('加载成员列表失败');
-    }
-  };
-
-  const loadApplications = async () => {
-    try {
-      const res = await teamsApi.getTeamApplications(Number(id));
-      setApplications(res.data.applications);
-    } catch (err) {}
-  };
+    loadData();
+  }, [teamId]);
 
   const handleJoin = async () => {
-    if (!user) {
-      toastStore.warning('请先登录');
-      navigate('/login');
-      return;
-    }
+    setActionLoading(true);
     try {
-      const res = await teamsApi.joinTeam(Number(id));
+      const res = await teamsApi.joinTeam(teamId);
       toastStore.success(res.data.message);
-      loadTeam();
+      loadData();
     } catch (err: any) {
-      toastStore.error(err.response?.data?.error || '加入失败');
+      toastStore.error(err.response?.data?.error || '操作失败');
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleLeave = async () => {
-    if (!window.confirm('确定要退出这个团队吗？')) return;
+    if (!confirm('确定要退出团队吗？')) return;
+    setActionLoading(true);
     try {
-      const res = await teamsApi.leaveTeam(Number(id));
+      const res = await teamsApi.leaveTeam(teamId);
       toastStore.success(res.data.message);
       navigate('/teams');
     } catch (err: any) {
-      toastStore.error(err.response?.data?.error || '退出失败');
+      toastStore.error(err.response?.data?.error || '操作失败');
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleApprove = async (userId: number) => {
     try {
-      const res = await teamsApi.approveMember(Number(id), userId);
-      toastStore.success(res.data.message);
-      loadApplications();
-      loadMembers();
-      loadTeam();
+      await teamsApi.approveMember(teamId, userId);
+      toastStore.success('已批准');
+      loadData();
     } catch (err: any) {
       toastStore.error(err.response?.data?.error || '操作失败');
     }
@@ -99,134 +108,225 @@ export default function TeamDetail() {
 
   const handleReject = async (userId: number) => {
     try {
-      const res = await teamsApi.rejectMember(Number(id), userId);
-      toastStore.success(res.data.message);
-      loadApplications();
+      await teamsApi.rejectMember(teamId, userId);
+      toastStore.success('已拒绝');
+      loadData();
     } catch (err: any) {
       toastStore.error(err.response?.data?.error || '操作失败');
     }
   };
 
   const handleRemoveMember = async (userId: number) => {
-    if (!window.confirm('确定要移除该成员吗？')) return;
+    if (!confirm('确定移除该成员吗？')) return;
     try {
-      const res = await teamsApi.removeMember(Number(id), userId);
-      toastStore.success(res.data.message);
-      loadMembers();
-      loadTeam();
+      await teamsApi.removeMember(teamId, userId);
+      toastStore.success('已移除');
+      loadData();
     } catch (err: any) {
       toastStore.error(err.response?.data?.error || '操作失败');
     }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm('确定要删除这个团队吗？此操作不可恢复！')) return;
+  const handleToggleAdmin = async (member: TeamMember) => {
+    if (!isOwner) return;
+    const newRole = member.role === 'admin' ? 'member' : 'admin';
     try {
-      const res = await teamsApi.deleteTeam(Number(id));
-      toastStore.success(res.data.message);
-      navigate('/teams');
+      await teamsApi.setMemberRole(teamId, member.user_id, newRole);
+      toastStore.success(newRole === 'admin' ? '已设为管理员' : '已取消管理员');
+      loadData();
     } catch (err: any) {
-      toastStore.error(err.response?.data?.error || '删除失败');
+      toastStore.error(err.response?.data?.error || '操作失败');
     }
   };
 
+  const handleTransfer = async (newOwnerId: number) => {
+    if (!confirm('确定要转让创建者身份吗？转让后你将变为普通成员。')) return;
+    try {
+      await teamsApi.transferOwnership(teamId, newOwnerId);
+      toastStore.success('已转让');
+      setShowTransferModal(false);
+      loadData();
+    } catch (err: any) {
+      toastStore.error(err.response?.data?.error || '操作失败');
+    }
+  };
+
+  const handleCreateAnnouncement = async () => {
+    if (!newAnnTitle.trim()) {
+      toastStore.warning('请输入标题');
+      return;
+    }
+    if (!newAnnContent.trim()) {
+      toastStore.warning('请输入内容');
+      return;
+    }
+    setAnnSubmitting(true);
+    try {
+      await teamsApi.createAnnouncement(teamId, {
+        title: newAnnTitle.trim(),
+        content: newAnnContent.trim(),
+        isPinned: newAnnPinned,
+      });
+      toastStore.success('公告已发布');
+      setShowAnnouncementModal(false);
+      setNewAnnTitle('');
+      setNewAnnContent('');
+      setNewAnnPinned(false);
+      loadData();
+    } catch (err: any) {
+      toastStore.error(err.response?.data?.error || '发布失败');
+    } finally {
+      setAnnSubmitting(false);
+    }
+  };
+
+  const handleDeleteAnnouncement = async (annId: number) => {
+    if (!confirm('确定删除该公告吗？')) return;
+    try {
+      await teamsApi.deleteAnnouncement(teamId, annId);
+      toastStore.success('已删除');
+      loadData();
+    } catch (err: any) {
+      toastStore.error(err.response?.data?.error || '操作失败');
+    }
+  };
+
+  const handleCopyInvite = async () => {
+    if (!team?.invite_code) return;
+    try {
+      await navigator.clipboard.writeText(team.invite_code);
+      setCopied(true);
+      toastStore.success('邀请码已复制');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toastStore.error('复制失败');
+    }
+  };
+
+  const handleResetInvite = async () => {
+    if (!confirm('确定要重置邀请码吗？重置后原邀请码将失效。')) return;
+    try {
+      const res = await teamsApi.resetInviteCode(teamId);
+      if (team) setTeam({ ...team, invite_code: res.data.inviteCode });
+      toastStore.success('邀请码已重置');
+    } catch (err: any) {
+      toastStore.error(err.response?.data?.error || '操作失败');
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    try {
+      const res = await teamsApi.toggleFavorite(teamId);
+      if (team) setTeam({ ...team, isFavorited: res.data.favorited });
+      toastStore.success(res.data.favorited ? '已收藏' : '已取消收藏');
+    } catch (err: any) {
+      toastStore.error(err.response?.data?.error || '操作失败');
+    }
+  };
+
+  const tabs = [
+    { key: 'announcements', label: '公告', icon: Megaphone },
+    { key: 'posts', label: '帖子', icon: FileText },
+    { key: 'members', label: '成员', icon: Users },
+  ];
+
   if (loading) {
-    return (
-      <div className="text-center py-12">
-        <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-campus-text-secondary">加载中...</p>
-      </div>
-    );
+    return <div className="text-center py-16 text-campus-text-secondary">加载中...</div>;
   }
 
-  if (!team) return null;
-
-  const isAdmin = team.myRole === 'owner' || team.myRole === 'admin';
+  if (!team) {
+    return <div className="text-center py-16 text-campus-text-secondary">团队不存在</div>;
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => navigate('/teams')}
-          className="p-2 hover:bg-surface rounded-lg transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5 text-campus-text-secondary" />
-        </button>
-        <h1 className="text-2xl font-bold text-campus-text-primary font-display">{team.name}</h1>
-      </div>
+    <div className="max-w-4xl mx-auto">
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-2 text-campus-text-secondary hover:text-primary transition-colors mb-4"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        返回
+      </button>
 
-      <div className="bg-surface border border-border rounded-xl p-6">
-        <div className="flex items-start gap-6">
+      <div className="bg-surface border border-border rounded-2xl p-6 mb-6">
+        <div className="flex items-start gap-5">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
             {team.avatar ? (
-              <img src={team.avatar} alt={team.name} className="w-18 h-18 rounded-full object-cover" />
+              <img src={team.avatar} alt={team.name} className="w-16 h-16 rounded-full object-cover" />
             ) : (
               <Users className="w-10 h-10 text-primary" />
             )}
           </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
+              <h1 className="text-2xl font-bold text-campus-text-primary font-display">{team.name}</h1>
               {team.is_public === 1 ? (
-                <Unlock className="w-4 h-4 text-green-500" />
+                <span className="flex items-center gap-1 text-xs text-campus-text-secondary bg-surface-hover px-2 py-1 rounded-full">
+                  <Unlock className="w-3 h-3" />
+                  公开
+                </span>
               ) : (
-                <Lock className="w-4 h-4 text-campus-text-tertiary" />
-              )}
-              <span className="text-sm text-campus-text-secondary">
-                {team.is_public === 1 ? '公开团队' : '私密团队'}
-              </span>
-              {team.myRole && (
-                <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">
-                  {team.myRole === 'owner' ? '创建者' : team.myRole === 'admin' ? '管理员' : '成员'}
+                <span className="flex items-center gap-1 text-xs text-campus-text-secondary bg-surface-hover px-2 py-1 rounded-full">
+                  <Lock className="w-3 h-3" />
+                  私密
                 </span>
               )}
+              {isOwner && (
+                <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">创建者</span>
+              )}
+              {team.myRole === 'admin' && (
+                <span className="text-xs bg-accent/20 text-accent px-2 py-1 rounded-full">管理员</span>
+              )}
             </div>
-            <p className="text-campus-text-secondary mb-4">{team.description || '暂无描述'}</p>
-            <div className="flex items-center gap-6 text-sm text-campus-text-tertiary">
-              <span className="flex items-center gap-1.5">
+            <p className="text-campus-text-secondary mb-4 text-sm line-clamp-2">{team.description || '暂无描述'}</p>
+            <div className="flex items-center gap-5 text-sm text-campus-text-tertiary">
+              <span className="flex items-center gap-1">
                 <Users className="w-4 h-4" />
-                {team.member_count}/{team.max_members} 成员
+                {team.member_count}/{team.max_members} 人
               </span>
-              <span className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4" />
-                创建于 {new Date(team.created_at).toLocaleDateString('zh-CN')}
+              <span className="flex items-center gap-1">
+                <FileText className="w-4 h-4" />
+                {team.post_count} 帖
               </span>
             </div>
           </div>
-          <div className="flex flex-col gap-2">
-            {team.myRole ? (
-              <>
-                <button
-                  onClick={() => navigate(`/teams/${team.id}/edit`)}
-                  className="flex items-center gap-2 px-4 py-2 border border-border hover:border-primary/50 text-campus-text-primary rounded-lg font-medium transition-colors"
-                >
-                  <Edit className="w-4 h-4" />
-                  编辑
-                </button>
-                <button
-                  onClick={handleLeave}
-                  className="flex items-center gap-2 px-4 py-2 text-destructive hover:bg-destructive/10 rounded-lg font-medium transition-colors"
-                >
-                  <LogOut className="w-4 h-4" />
-                  退出
-                </button>
-                {team.myRole === 'owner' && (
-                  <button
-                    onClick={handleDelete}
-                    className="flex items-center gap-2 px-4 py-2 bg-destructive hover:bg-destructive-hover text-white rounded-lg font-medium transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    删除
-                  </button>
-                )}
-              </>
+          <div className="flex gap-2 flex-shrink-0">
+            {user && (
+              <button
+                onClick={handleToggleFavorite}
+                className="p-2 rounded-xl border border-border hover:border-primary/30 hover:bg-surface-hover transition-colors"
+                title={team.isFavorited ? '取消收藏' : '收藏'}
+              >
+                <Heart className={`w-5 h-5 ${team.isFavorited ? 'fill-red-500 text-red-500' : 'text-campus-text-secondary'}`} />
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                onClick={() => navigate(`/teams/${teamId}/edit`)}
+                className="btn-secondary btn-sm btn-inline flex items-center gap-1.5"
+              >
+                <Settings className="w-4 h-4" />
+                管理
+              </button>
+            )}
+            {isMember ? (
+              <button
+                onClick={handleLeave}
+                disabled={actionLoading || isOwner}
+                className="btn-secondary btn-sm btn-inline flex items-center gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+              >
+                <LogOut className="w-4 h-4" />
+                {isOwner ? '创建者' : '退出'}
+              </button>
             ) : team.myApplicationStatus === 'pending' ? (
-              <button disabled className="px-4 py-2 bg-surface text-campus-text-tertiary rounded-lg font-medium cursor-not-allowed">
-                已申请，等待审批
+              <button disabled className="btn-secondary btn-sm btn-inline opacity-60">
+                等待审批
               </button>
             ) : (
               <button
                 onClick={handleJoin}
-                className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium transition-colors"
+                disabled={actionLoading}
+                className="btn-primary btn-sm btn-inline flex items-center gap-1.5 disabled:opacity-50"
               >
                 <UserPlus className="w-4 h-4" />
                 {team.is_public === 1 ? '加入团队' : '申请加入'}
@@ -236,77 +336,361 @@ export default function TeamDetail() {
         </div>
       </div>
 
-      {isAdmin && (
-        <div className="flex gap-2 border-b border-border">
-          <button
-            onClick={() => setActiveTab('members')}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'members' ? 'border-primary text-primary' : 'border-transparent text-campus-text-secondary hover:text-primary'
-            }`}
-          >
-            成员列表 ({members.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('applications')}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'applications' ? 'border-primary text-primary' : 'border-transparent text-campus-text-secondary hover:text-primary'
-            }`}
-          >
-            待审批 ({applications.length})
-          </button>
+      {isAdmin && applications.length > 0 && (
+        <div className="bg-surface border border-border rounded-2xl p-5 mb-6">
+          <h3 className="font-semibold text-campus-text-primary mb-4 flex items-center gap-2">
+            <UserPlus className="w-5 h-5 text-primary" />
+            待审批申请 ({applications.length})
+          </h3>
+          <div className="space-y-3">
+            {applications.map(app => (
+              <div key={app.id} className="flex items-center justify-between p-3 bg-surface-hover rounded-xl">
+                <span className="text-campus-text-primary">{app.display_name || app.username}</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleApprove(app.user_id)}
+                    className="btn-primary btn-xs btn-inline flex items-center gap-1"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    通过
+                  </button>
+                  <button
+                    onClick={() => handleReject(app.user_id)}
+                    className="btn-secondary btn-xs btn-inline flex items-center gap-1 text-destructive"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    拒绝
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      <div className="bg-surface border border-border rounded-xl p-6">
-        {activeTab === 'members' ? (
-          <TeamMemberList
-            members={members}
-            onRemove={isAdmin ? handleRemoveMember : undefined}
-            showActions={isAdmin}
-          />
-        ) : (
-          <div className="space-y-3">
-            {applications.length === 0 ? (
-              <div className="text-center py-8 text-campus-text-secondary">
-                <UserPlus className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>暂无待审批申请</p>
-              </div>
-            ) : (
-              applications.map(app => (
-                <div key={app.id} className="flex items-center justify-between bg-surface/50 rounded-lg p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Users className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-campus-text-primary">{app.username}</p>
-                      <p className="text-xs text-campus-text-tertiary">
-                        申请于 {new Date(app.joined_at).toLocaleString('zh-CN')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleApprove(app.user_id)}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors"
-                    >
-                      <Check className="w-3 h-3" />
-                      批准
-                    </button>
-                    <button
-                      onClick={() => handleReject(app.user_id)}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-surface border border-border hover:border-destructive text-campus-text-secondary rounded-lg text-sm font-medium transition-colors"
-                    >
-                      <X className="w-3 h-3" />
-                      拒绝
-                    </button>
-                  </div>
-                </div>
-              ))
+      <div className="flex gap-1 mb-6 border-b border-border pb-px">
+        {tabs.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key as TabType)}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              tab === t.key
+                ? 'text-primary border-primary'
+                : 'text-campus-text-secondary border-transparent hover:text-campus-text-primary'
+            }`}
+          >
+            <t.icon className="w-4 h-4" />
+            {t.label}
+            {t.key === 'announcements' && announcements.length > 0 && (
+              <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">{announcements.length}</span>
             )}
-          </div>
+            {t.key === 'posts' && posts.length > 0 && (
+              <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">{posts.length}</span>
+            )}
+            {t.key === 'members' && !membersHidden && (
+              <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">{members.length}</span>
+            )}
+          </button>
+        ))}
+        {isAdmin && tab === 'announcements' && (
+          <button
+            onClick={() => setShowAnnouncementModal(true)}
+            className="ml-auto btn-primary btn-sm btn-inline flex items-center gap-1.5 mb-2"
+          >
+            <Plus className="w-4 h-4" />
+            发布公告
+          </button>
+        )}
+        {isAdmin && tab === 'members' && (
+          <button
+            onClick={() => setShowInviteModal(true)}
+            className="ml-auto btn-secondary btn-sm btn-inline flex items-center gap-1.5 mb-2"
+          >
+            <Copy className="w-4 h-4" />
+            邀请码
+          </button>
         )}
       </div>
+
+      {tab === 'announcements' && (
+        <div className="space-y-4">
+          {announcements.length === 0 ? (
+            <div className="text-center py-12">
+              <Megaphone className="w-12 h-12 mx-auto text-campus-text-tertiary mb-3" />
+              <p className="text-campus-text-secondary">暂无公告</p>
+            </div>
+          ) : (
+            announcements.map(ann => (
+              <div key={ann.id} className="bg-surface border border-border rounded-xl p-5">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    {ann.is_pinned === 1 && (
+                      <span className="flex items-center gap-1 text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                        <Pin className="w-3 h-3" />
+                        置顶
+                      </span>
+                    )}
+                    <h4 className="font-semibold text-campus-text-primary">{ann.title}</h4>
+                  </div>
+                  {isAdmin && (
+                    <button
+                      onClick={() => handleDeleteAnnouncement(ann.id)}
+                      className="p-1 text-campus-text-tertiary hover:text-destructive transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <p className="text-campus-text-secondary text-sm whitespace-pre-wrap mb-3">{ann.content}</p>
+                <div className="text-xs text-campus-text-tertiary">
+                  {ann.display_name || ann.username} · {new Date(ann.created_at).toLocaleString('zh-CN')}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {tab === 'posts' && (
+        <div className="space-y-3">
+          {posts.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="w-12 h-12 mx-auto text-campus-text-tertiary mb-3" />
+              <p className="text-campus-text-secondary">暂无帖子</p>
+            </div>
+          ) : (
+            posts.map(post => (
+              <div
+                key={post.id}
+                onClick={() => navigate(`/post/${post.id}`)}
+                className="bg-surface border border-border rounded-xl p-4 cursor-pointer hover:border-primary/30 hover:shadow-card transition-all"
+              >
+                <div className="flex items-start justify-between">
+                  <h4 className="font-medium text-campus-text-primary hover:text-primary transition-colors mb-1">
+                    {post.is_pinned === 1 && <Pin className="w-3.5 h-3.5 inline mr-1 text-primary" />}
+                    {post.title}
+                  </h4>
+                  {isAdmin && (
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (confirm('确定从团队移除该帖子吗？')) {
+                          try {
+                            await teamsApi.removeTeamPost(teamId, post.id);
+                            toastStore.success('已移除');
+                            loadData();
+                          } catch (err: any) {
+                            toastStore.error(err.response?.data?.error || '操作失败');
+                          }
+                        }
+                      }}
+                      className="p-1 text-campus-text-tertiary hover:text-destructive transition-colors flex-shrink-0 ml-2"
+                    >
+                      <UserMinus className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 text-xs text-campus-text-tertiary">
+                  <span>{post.display_name || post.username}</span>
+                  <span>{new Date(post.created_at).toLocaleDateString('zh-CN')}</span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {tab === 'members' && (
+        <div>
+          {membersHidden ? (
+            <div className="text-center py-12">
+              <Lock className="w-12 h-12 mx-auto text-campus-text-tertiary mb-3" />
+              <p className="text-campus-text-secondary">成员列表仅对团队成员可见</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {members.map(member => (
+                <div key={member.id} className="flex items-center justify-between p-3 bg-surface border border-border rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
+                      {member.avatar_url ? (
+                        <img src={member.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                      ) : (
+                        <span className="text-sm font-medium text-primary">{(member.display_name || member.username)[0]}</span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-campus-text-primary font-medium text-sm">
+                          {member.display_name || member.username}
+                        </span>
+                        {member.role === 'owner' && (
+                          <Crown className="w-4 h-4 text-yellow-500" />
+                        )}
+                        {member.role === 'admin' && (
+                          <Shield className="w-4 h-4 text-accent" />
+                        )}
+                      </div>
+                      <span className="text-xs text-campus-text-tertiary">
+                        {new Date(member.joined_at).toLocaleDateString('zh-CN')} 加入
+                      </span>
+                    </div>
+                  </div>
+                  {isOwner && member.role !== 'owner' && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleToggleAdmin(member)}
+                        className="btn-secondary btn-xs btn-inline"
+                      >
+                        {member.role === 'admin' ? '取消管理员' : '设为管理员'}
+                      </button>
+                      <button
+                        onClick={() => handleRemoveMember(member.user_id)}
+                        className="btn-secondary btn-xs btn-inline text-destructive hover:bg-destructive/10"
+                      >
+                        移除
+                      </button>
+                    </div>
+                  )}
+                  {isAdmin && !isOwner && member.role === 'member' && (
+                    <button
+                      onClick={() => handleRemoveMember(member.user_id)}
+                      className="btn-secondary btn-xs btn-inline text-destructive hover:bg-destructive/10"
+                    >
+                      移除
+                    </button>
+                  )}
+                </div>
+              ))}
+              {isOwner && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <button
+                    onClick={() => setShowTransferModal(true)}
+                    className="btn-secondary btn-sm btn-inline text-destructive hover:bg-destructive/10"
+                  >
+                    转让团队
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {showTransferModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[80vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-campus-text-primary mb-4">转让团队</h3>
+            <p className="text-sm text-campus-text-secondary mb-4">选择新的创建者，转让后你将变为普通成员。</p>
+            <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
+              {members.filter(m => m.role !== 'owner').map(member => (
+                <button
+                  key={member.id}
+                  onClick={() => handleTransfer(member.user_id)}
+                  className="w-full flex items-center gap-3 p-3 bg-surface-hover rounded-xl hover:bg-primary/10 transition-colors text-left"
+                >
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-sm font-medium text-primary">{(member.display_name || member.username)[0]}</span>
+                  </div>
+                  <span className="text-campus-text-primary">{member.display_name || member.username}</span>
+                  {member.role === 'admin' && <Shield className="w-4 h-4 text-accent ml-auto" />}
+                </button>
+              ))}
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowTransferModal(false)}
+                className="btn-secondary btn-inline text-sm"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAnnouncementModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface rounded-2xl p-6 w-full max-w-lg shadow-xl">
+            <h3 className="text-lg font-semibold text-campus-text-primary mb-4">发布公告</h3>
+            <input
+              type="text"
+              value={newAnnTitle}
+              onChange={e => setNewAnnTitle(e.target.value)}
+              placeholder="公告标题"
+              maxLength={100}
+              className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-campus-text-primary placeholder-campus-text-tertiary focus:outline-none focus:border-primary/50 transition-colors mb-3"
+            />
+            <textarea
+              value={newAnnContent}
+              onChange={e => setNewAnnContent(e.target.value)}
+              placeholder="公告内容"
+              maxLength={2000}
+              rows={6}
+              className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-campus-text-primary placeholder-campus-text-tertiary focus:outline-none focus:border-primary/50 transition-colors resize-none mb-3"
+            />
+            <label className="flex items-center gap-2 mb-4 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={newAnnPinned}
+                onChange={e => setNewAnnPinned(e.target.checked)}
+                className="w-4 h-4 accent-primary"
+              />
+              <span className="text-sm text-campus-text-secondary">置顶公告</span>
+            </label>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => { setShowAnnouncementModal(false); setNewAnnTitle(''); setNewAnnContent(''); setNewAnnPinned(false); }}
+                className="btn-secondary btn-inline text-sm"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleCreateAnnouncement}
+                disabled={annSubmitting}
+                className="btn-primary btn-inline text-sm disabled:opacity-50"
+              >
+                {annSubmitting ? '发布中...' : '发布'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <h3 className="text-lg font-semibold text-campus-text-primary mb-4">邀请码</h3>
+            <p className="text-sm text-campus-text-secondary mb-4">分享邀请码给好友，对方可直接加入团队。</p>
+            <div className="flex items-center gap-2 mb-4">
+              <code className="flex-1 px-4 py-3 bg-surface-hover rounded-xl text-campus-text-primary font-mono text-center tracking-wider">
+                {team.invite_code}
+              </code>
+              <button
+                onClick={handleCopyInvite}
+                className="btn-secondary btn-sm btn-inline flex items-center gap-1"
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? '已复制' : '复制'}
+              </button>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={handleResetInvite}
+                className="btn-secondary btn-inline text-sm text-destructive hover:bg-destructive/10"
+              >
+                重置邀请码
+              </button>
+              <button
+                onClick={() => setShowInviteModal(false)}
+                className="btn-primary btn-inline text-sm"
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

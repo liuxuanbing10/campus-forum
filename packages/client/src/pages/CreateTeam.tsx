@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users, Lock, Unlock } from 'lucide-react';
-import { teamsApi, CreateTeamData } from '../lib/api';
+import { ArrowLeft, Users, Lock, Unlock, Tag, EyeOff } from 'lucide-react';
+import { teamsApi, CreateTeamData, TeamCategory } from '../lib/api';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 
@@ -13,8 +13,15 @@ export default function CreateTeam() {
     description: '',
     isPublic: true,
     maxMembers: 50,
+    categoryId: undefined,
+    hideMembers: false,
   });
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<TeamCategory[]>([]);
+
+  useEffect(() => {
+    teamsApi.getCategories().then(res => setCategories(res.data.categories)).catch(() => {});
+  }, []);
 
   if (!user) {
     toastStore.warning('请先登录');
@@ -41,7 +48,7 @@ export default function CreateTeam() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-4">
         <button
           onClick={() => navigate('/teams')}
@@ -84,38 +91,73 @@ export default function CreateTeam() {
           </div>
         </div>
 
+        {categories.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-campus-text-primary mb-2 flex items-center gap-1.5">
+              <Tag className="w-4 h-4" />
+              团队分类
+            </label>
+            <select
+              value={form.categoryId || ''}
+              onChange={(e) => setForm({ ...form, categoryId: e.target.value ? Number(e.target.value) : undefined })}
+              className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-campus-text-primary focus:outline-none focus:border-primary/50 transition-colors"
+            >
+              <option value="">无分类</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-medium text-campus-text-primary mb-3">
             团队类型
           </label>
-          <div className="flex gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <button
               type="button"
               onClick={() => setForm({ ...form, isPublic: true })}
-              className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 transition-all ${
+              className={`flex flex-col items-center gap-2 px-4 py-4 rounded-xl border-2 transition-all ${
                 form.isPublic
                   ? 'border-primary bg-primary/5 text-primary'
                   : 'border-border hover:border-primary/30 text-campus-text-secondary'
               }`}
             >
-              <Unlock className="w-5 h-5" />
+              <Unlock className="w-6 h-6" />
               <span className="font-medium">公开团队</span>
-              <span className="text-xs text-campus-text-tertiary">任何人可直接加入</span>
+              <span className="text-xs text-campus-text-tertiary text-center">任何人可直接加入</span>
             </button>
             <button
               type="button"
               onClick={() => setForm({ ...form, isPublic: false })}
-              className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 transition-all ${
+              className={`flex flex-col items-center gap-2 px-4 py-4 rounded-xl border-2 transition-all ${
                 !form.isPublic
                   ? 'border-primary bg-primary/5 text-primary'
                   : 'border-border hover:border-primary/30 text-campus-text-secondary'
               }`}
             >
-              <Lock className="w-5 h-5" />
+              <Lock className="w-6 h-6" />
               <span className="font-medium">私密团队</span>
-              <span className="text-xs text-campus-text-tertiary">需管理员审批</span>
+              <span className="text-xs text-campus-text-tertiary text-center">需管理员审批</span>
             </button>
           </div>
+        </div>
+
+        <div>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.hideMembers}
+              onChange={(e) => setForm({ ...form, hideMembers: e.target.checked })}
+              className="w-4 h-4 accent-primary"
+            />
+            <div className="flex items-center gap-2">
+              <EyeOff className="w-4 h-4 text-campus-text-secondary" />
+              <span className="text-sm text-campus-text-primary">隐藏成员列表</span>
+            </div>
+            <span className="text-xs text-campus-text-tertiary">仅团队成员可见</span>
+          </label>
         </div>
 
         <div>

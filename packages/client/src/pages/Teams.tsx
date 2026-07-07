@@ -1,102 +1,167 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Users } from 'lucide-react';
-import { teamsApi, Team } from '../lib/api';
+import { Plus, Search, Filter, ArrowUpDown } from 'lucide-react';
+import { teamsApi, Team, TeamCategory } from '../lib/api';
 import TeamCard from '../components/TeamCard';
 import { toastStore } from '../App';
 
+type SortType = 'popular' | 'newest' | 'name' | 'posts';
+
 export default function Teams() {
   const navigate = useNavigate();
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [categories, setCategories] = useState<TeamCategory[]>([]);
+  const [activeCategory, setActiveCategory] = useState(0);
+  const [sort, setSort] = useState<SortType>('popular');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchMode, setSearchMode] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
+
+  const sortOptions = [
+    { key: 'popular', label: '最热门' },
+    { key: 'newest', label: '最新创建' },
+    { key: 'posts', label: '帖子最多' },
+    { key: 'name', label: '名称排序' },
+  ];
+
+  const loadCategories = async () => {
+    try {
+      const res = await teamsApi.getCategories();
+      setCategories(res.data.categories);
+    } catch {}
+  };
+
+  const loadTeams = async () => {
+    setLoading(true);
+    try {
+      if (searchMode && searchQuery.trim()) {
+        const res = await teamsApi.searchTeams(searchQuery, activeCategory || undefined);
+        setTeams(res.data.teams);
+      } else {
+        const res = await teamsApi.getTeams(1, activeCategory || undefined, sort);
+        setTeams(res.data.teams);
+      }
+    } catch {
+      toastStore.error('加载失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
 
   useEffect(() => {
     loadTeams();
-  }, []);
+  }, [activeCategory, sort, searchMode]);
 
-  const loadTeams = async () => {
-    try {
-      setLoading(true);
-      const res = await teamsApi.getTeams();
-      setTeams(res.data.teams);
-    } catch (err) {
-      toastStore.error('加载团队失败');
-    } finally {
-      setLoading(false);
-    }
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearchMode(searchQuery.trim().length >= 2);
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      loadTeams();
-      return;
-    }
-    try {
-      setLoading(true);
-      const res = await teamsApi.searchTeams(searchQuery);
-      setTeams(res.data.teams);
-    } catch (err) {
-      toastStore.error('搜索失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleSearch();
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchMode(false);
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-campus-text-primary font-display mb-1">团队</h1>
-          <p className="text-sm text-campus-text-secondary">浏览和加入校园社团与团队</p>
-        </div>
+    <div className="max-w-4xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-campus-text-primary font-display">发现团队</h1>
         <button
           onClick={() => navigate('/teams/new')}
-          className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium transition-colors"
+          className="btn-primary btn-sm btn-inline flex items-center gap-1.5"
         >
           <Plus className="w-4 h-4" />
           创建团队
         </button>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-campus-text-tertiary" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="搜索团队名称..."
-          className="w-full pl-10 pr-4 py-3 bg-surface border border-border rounded-xl text-campus-text-primary placeholder-campus-text-tertiary focus:outline-none focus:border-primary/50 transition-colors"
-        />
-        <button
-          onClick={handleSearch}
-          className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-sm font-medium transition-colors"
-        >
-          搜索
-        </button>
+      <form onSubmit={handleSearch} className="mb-4">
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-campus-text-tertiary" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="搜索团队名称（至少2个字）"
+            className="w-full pl-11 pr-4 py-3 bg-surface border border-border rounded-xl text-campus-text-primary placeholder-campus-text-tertiary focus:outline-none focus:border-primary/50 transition-colors"
+          />
+          {searchMode && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-campus-text-secondary hover:text-primary transition-colors"
+            >
+              清除
+            </button>
+          )}
+        </div>
+      </form>
+
+      <div className="flex items-center justify-between mb-4 gap-4">
+        <div className="flex gap-2 overflow-x-auto pb-2 flex-1">
+          <button
+            onClick={() => setActiveCategory(0)}
+            className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
+              activeCategory === 0
+                ? 'bg-primary text-white'
+                : 'bg-surface border border-border text-campus-text-secondary hover:border-primary/30 hover:text-primary'
+            }`}
+          >
+            全部
+          </button>
+          {categories.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
+                activeCategory === cat.id
+                  ? 'bg-primary text-white'
+                  : 'bg-surface border border-border text-campus-text-secondary hover:border-primary/30 hover:text-primary'
+              }`}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
+        <div className="relative">
+          <button
+            onClick={() => setShowSortMenu(!showSortMenu)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border rounded-full text-sm text-campus-text-secondary hover:border-primary/30 hover:text-primary transition-colors whitespace-nowrap"
+          >
+            <ArrowUpDown className="w-3.5 h-3.5" />
+            {sortOptions.find(o => o.key === sort)?.label}
+          </button>
+          {showSortMenu && (
+            <div className="absolute right-0 top-full mt-2 bg-surface border border-border rounded-xl shadow-lg py-1 z-10 min-w-[120px]">
+              {sortOptions.map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => { setSort(opt.key as SortType); setShowSortMenu(false); }}
+                  className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                    sort === opt.key ? 'text-primary bg-primary/10' : 'text-campus-text-secondary hover:bg-surface-hover'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {loading ? (
-        <div className="text-center py-12">
-          <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-campus-text-secondary">加载中...</p>
-        </div>
+        <div className="text-center py-16 text-campus-text-secondary">加载中...</div>
       ) : teams.length === 0 ? (
-        <div className="text-center py-12">
-          <Users className="w-16 h-16 mx-auto mb-4 text-campus-text-tertiary/50" />
-          <p className="text-campus-text-secondary mb-2">暂无团队</p>
-          <p className="text-sm text-campus-text-tertiary">成为第一个创建团队的人吧！</p>
-          <button
-            onClick={() => navigate('/teams/new')}
-            className="mt-4 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium transition-colors"
-          >
-            创建团队
-          </button>
+        <div className="text-center py-16">
+          <Filter className="w-16 h-16 mx-auto text-campus-text-tertiary mb-4" />
+          <p className="text-campus-text-secondary">
+            {searchMode ? '没有找到匹配的团队' : '暂无团队，快来创建第一个吧！'}
+          </p>
         </div>
       ) : (
         <div className="grid gap-4">

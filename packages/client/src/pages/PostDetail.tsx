@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
-import api from '../lib/api';
+import api, { postsApi, PostStats } from '../lib/api';
 import { toastStore } from '../App';
-import { ArrowLeft, Eye, ThumbsUp, Heart, MessageCircle, Edit3, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Eye, ThumbsUp, Heart, MessageCircle, Edit3, Trash2, X, Share2, Copy, Check } from 'lucide-react';
 
 interface PostDetail {
   id: number; title: string; content: string; board_id: number; board_name: string;
@@ -28,6 +28,9 @@ export default function PostDetailPage() {
   const [commentText, setCommentText] = useState('');
   const [replyTo, setReplyTo] = useState<{ id: number; name: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [stats, setStats] = useState<PostStats | null>(null);
 
   const fetchPost = () => {
     api.get(`/posts/${id}`).then(r => { setPost(r.data); setLoading(false); });
@@ -35,8 +38,27 @@ export default function PostDetailPage() {
   const fetchComments = () => {
     api.get(`/posts/${id}/comments`).then(r => setComments(r.data));
   };
+  const fetchStats = () => {
+    postsApi.getStats(Number(id)).then(r => setStats(r.data)).catch(() => {});
+  };
 
-  useEffect(() => { fetchPost(); fetchComments(); }, [id]);
+  useEffect(() => { fetchPost(); fetchComments(); fetchStats(); }, [id]);
+
+  const handleShare = () => {
+    setShowShareModal(true);
+    setCopied(false);
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      toastStore.success('链接已复制到剪贴板');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toastStore.error('复制失败，请手动复制');
+    }
+  };
 
   const handleVote = async (value: 1 | -1 | 0) => {
     if (!user) return navigate('/login');
@@ -152,17 +174,22 @@ export default function PostDetailPage() {
           <button onClick={() => handleVote(post.my_vote === 1 ? 0 : 1)}
             className={`flex items-center gap-2 text-sm font-medium transition-colors ${post.my_vote === 1 ? 'text-primary' : 'text-campus-text-tertiary'} hover:text-primary`}>
             <ThumbsUp className={`w-5 h-5 ${post.my_vote === 1 ? 'fill-current' : ''}`} />
-            {post.like_count}
+            {stats?.like_count ?? post.like_count}
           </button>
           <button onClick={handleFavorite}
             className={`flex items-center gap-2 text-sm font-medium transition-colors ${post.is_favorited ? 'text-warning' : 'text-campus-text-tertiary'} hover:text-warning`}>
             <Heart className={`w-5 h-5 ${post.is_favorited ? 'fill-current' : ''}`} />
-            收藏
+            {stats?.favorite_count ? `${stats.favorite_count} 收藏` : '收藏'}
           </button>
           <span className="flex items-center gap-2 text-sm text-campus-text-tertiary">
             <MessageCircle className="w-5 h-5" />
-            {post.comment_count}
+            {stats?.comment_count ?? post.comment_count}
           </span>
+          <button onClick={handleShare}
+            className="flex items-center gap-2 text-sm font-medium text-campus-text-tertiary hover:text-primary transition-colors ml-auto">
+            <Share2 className="w-5 h-5" />
+            分享
+          </button>
         </div>
       </article>
 
@@ -237,6 +264,48 @@ export default function PostDetailPage() {
           发表评论
         </button>
       </form>
+
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowShareModal(false)}>
+          <div className="bg-surface border border-border rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-campus-text-primary font-display">分享帖子</h3>
+              <button onClick={() => setShowShareModal(false)} className="p-1 hover:bg-background rounded-lg transition-colors">
+                <X className="w-5 h-5 text-campus-text-secondary" />
+              </button>
+            </div>
+            <p className="text-sm text-campus-text-secondary mb-4">{post?.title}</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={typeof window !== 'undefined' ? window.location.href : ''}
+                readOnly
+                className="flex-1 px-3 py-2 bg-background border border-border rounded-lg text-sm text-campus-text-primary focus:outline-none"
+              />
+              <button
+                onClick={handleCopyLink}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                  copied
+                    ? 'bg-green-500 text-white'
+                    : 'bg-primary hover:bg-primary-hover text-white'
+                }`}
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    已复制
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    复制
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
