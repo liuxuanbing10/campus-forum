@@ -3,11 +3,11 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 import api, { postsApi, PostStats } from '../lib/api';
 import { toastStore } from '../App';
-import { ArrowLeft, Eye, ThumbsUp, Heart, MessageCircle, Edit3, Trash2, X, Share2, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Eye, ThumbsUp, Heart, MessageCircle, Edit3, Trash2, X, Share2, Copy, Check, Lock, Unlock, Pin, PinOff } from 'lucide-react';
 
 interface PostDetail {
   id: number; title: string; content: string; board_id: number; board_name: string;
-  is_anonymous: number; is_pinned: number; images: string[];
+  is_anonymous: number; is_pinned: number; is_private: number; images: string[];
   author_name: string; author_id: number; created_at: string; updated_at: string;
   like_count: number; comment_count: number; is_favorited: number; my_vote: number;
   view_count: number;
@@ -17,6 +17,49 @@ interface Comment {
   id: number; content: string; post_id: number; parent_id: number | null;
   is_anonymous: number; created_at: string; author_name: string;
   like_count: number;
+}
+
+function CommentItem({ comment, allComments, user, onReply, onDelete, depth }: {
+  comment: Comment;
+  allComments: Comment[];
+  user: any;
+  onReply: (id: number, name: string) => void;
+  onDelete: (id: number) => void;
+  depth: number;
+}) {
+  const children = allComments.filter(c => c.parent_id === comment.id);
+  return (
+    <div className={`card ${depth > 0 ? 'ml-4 mt-3 pl-4 border-l-2 border-border' : ''}`}>
+      <div className="flex items-center justify-between text-sm text-campus-text-tertiary mb-2 font-body">
+        <span className="font-medium text-campus-text-secondary">{comment.author_name}</span>
+        <span className="text-xs">{new Date(comment.created_at).toLocaleString()}</span>
+      </div>
+      <p className="text-campus-text-secondary font-body leading-relaxed text-sm">{comment.content}</p>
+      <div className="flex items-center gap-4 mt-2">
+        <button onClick={() => onReply(comment.id, comment.author_name)}
+          className="text-xs text-campus-text-tertiary hover:text-primary transition-colors font-body">
+          回复
+        </button>
+        {user && (user.id === (comment as any).author_id || (user as any).isAdmin) && (
+          <button onClick={() => onDelete(comment.id)}
+            className="text-xs text-destructive hover:text-destructive-hover transition-colors font-body">
+            删除
+          </button>
+        )}
+      </div>
+      {children.map(child => (
+        <CommentItem
+          key={child.id}
+          comment={child}
+          allComments={allComments}
+          user={user}
+          onReply={onReply}
+          onDelete={onDelete}
+          depth={depth + 1}
+        />
+      ))}
+    </div>
+  );
 }
 
 export default function PostDetailPage() {
@@ -101,6 +144,28 @@ export default function PostDetailPage() {
     }
   };
 
+  const handleTogglePrivacy = async () => {
+    if (!user) return;
+    try {
+      const res = await postsApi.togglePrivacy(Number(id));
+      toastStore.success(res.data.message);
+      fetchPost();
+    } catch {
+      toastStore.error('操作失败');
+    }
+  };
+
+  const handleTogglePin = async () => {
+    if (!user) return;
+    try {
+      const res = await postsApi.togglePin(Number(id));
+      toastStore.success(res.data.message);
+      fetchPost();
+    } catch {
+      toastStore.error('操作失败');
+    }
+  };
+
   const handleDelete = async () => {
     if (!confirm('确定删除此帖？')) return;
     try {
@@ -147,12 +212,36 @@ export default function PostDetailPage() {
             <Eye className="w-4 h-4" />
             {post.view_count}
           </span>
+          {post.is_private === 1 && (
+            <span className="flex items-center gap-1 text-warning">
+              <Lock className="w-3 h-3" />
+              私密
+            </span>
+          )}
+          {post.is_pinned === 1 && (
+            <span className="flex items-center gap-1 text-primary">
+              <Pin className="w-3 h-3" />
+              置顶
+            </span>
+          )}
           {user && (user.id === post.author_id || (user as any).isAdmin) && (
             <>
               <Link to={`/edit-post/${post.id}`} className="text-primary hover:text-primary-hover flex items-center gap-1">
                 <Edit3 className="w-4 h-4" />
                 编辑
               </Link>
+              {user.id === post.author_id && (
+                <button onClick={handleTogglePrivacy} className="text-warning hover:text-warning/80 flex items-center gap-1">
+                  {post.is_private === 1 ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                  {post.is_private === 1 ? '取消私密' : '设私密'}
+                </button>
+              )}
+              {(user as any).isAdmin && (
+                <button onClick={handleTogglePin} className="text-primary hover:text-primary-hover flex items-center gap-1">
+                  {post.is_pinned === 1 ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+                  {post.is_pinned === 1 ? '取消置顶' : '置顶'}
+                </button>
+              )}
               <button onClick={handleDelete} className="text-destructive hover:text-destructive-hover flex items-center gap-1">
                 <Trash2 className="w-4 h-4" />
                 删除
@@ -199,38 +288,16 @@ export default function PostDetailPage() {
           评论 ({comments.length})
         </h2>
         <div className="space-y-4">
-          {comments.map(c => (
-            <div key={c.id} className="card">
-              <div className="flex items-center justify-between text-sm text-campus-text-tertiary mb-3 font-body">
-                <span className="font-medium text-campus-text-secondary">{c.author_name}</span>
-                <span className="text-xs">{new Date(c.created_at).toLocaleString()}</span>
-              </div>
-              <p className="text-campus-text-secondary font-body leading-relaxed">{c.content}</p>
-              <div className="flex items-center gap-4 mt-3">
-                <button onClick={() => setReplyTo({ id: c.id, name: c.author_name })}
-                  className="text-xs text-campus-text-tertiary hover:text-primary transition-colors font-body">
-                  回复
-                </button>
-                {user && (user.id === (c as any).author_id || (user as any).isAdmin) && (
-                  <button onClick={() => handleDeleteComment(c.id)}
-                    className="text-xs text-destructive hover:text-destructive-hover transition-colors font-body">
-                    删除
-                  </button>
-                )}
-              </div>
-              {/* 子回复 */}
-              {comments
-                .filter(sub => sub.parent_id === c.id)
-                .map(sub => (
-                  <div key={sub.id} className="ml-4 mt-4 pl-4 border-l-2 border-border">
-                    <div className="flex items-center justify-between text-xs text-campus-text-tertiary font-body">
-                      <span className="font-medium text-campus-text-secondary">{sub.author_name}</span>
-                      <span>{new Date(sub.created_at).toLocaleString()}</span>
-                    </div>
-                    <p className="text-sm text-campus-text-secondary font-body mt-1">{sub.content}</p>
-                  </div>
-                ))}
-            </div>
+          {comments.filter(c => c.parent_id === null).map(c => (
+            <CommentItem
+              key={c.id}
+              comment={c}
+              allComments={comments}
+              user={user}
+              onReply={(id, name) => setReplyTo({ id, name })}
+              onDelete={handleDeleteComment}
+              depth={0}
+            />
           ))}
           {comments.length === 0 && (
             <div className="card text-center py-12">

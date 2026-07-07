@@ -29,6 +29,18 @@ interface LoginBody {
   password: string;
 }
 
+interface UpdateProfileBody {
+  display_name?: string;
+  email?: string;
+  avatar_url?: string;
+}
+
+interface ChangePasswordBody {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 function getDeviceCode(request: any): string | undefined {
   const body = request.body as Record<string, any> | undefined;
   return body?.deviceCode || request.headers['x-device-code'] || undefined;
@@ -42,6 +54,12 @@ interface UserRow {
   display_name: string;
   device_code: string | null;
   is_admin: number;
+  email: string | null;
+  avatar_url: string | null;
+  role: string;
+  is_banned: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export const authPlugin: Plugin = {
@@ -196,7 +214,123 @@ export const authPlugin: Plugin = {
         id: user.id,
         username: user.username,
         displayName: user.display_name,
+        email: user.email || null,
+        avatarUrl: user.avatar_url || null,
         isAdmin: user.is_admin === 1,
+        role: user.role || 'user',
+        isBanned: user.is_banned === 1,
+        createdAt: user.created_at,
+      };
+    });
+
+    // ========================================
+    // 更新用户资料
+    // ========================================
+    app.put('/api/auth/me', async (request, reply) => {
+      if (!request.session.userId) {
+        return reply.status(401).send({ error: '未登录' });
+      }
+
+      const { display_name, email, avatar_url } =
+        request.body as UpdateProfileBody;
+
+      const user = db.get<UserRow>(
+        'SELECT id, username FROM users WHERE id = ?',
+        request.session.userId
+      );
+
+      if (!user) {
+        return reply.status(401).send({ error: '用户不存在' });
+      }
+
+      const updates: string[] = [];
+      const params: any[] = [];
+
+      if (display_name !== undefined) {
+        updates.push('display_name = ?');
+        params.push(display_name);
+      }
+      if (email !== undefined) {
+        updates.push('email = ?');
+        params.push(email);
+      }
+      if (avatar_url !== undefined) {
+        updates.push('avatar_url = ?');
+        params.push(avatar_url);
+      }
+
+      if (updates.length === 0) {
+        return reply.status(400).send({ error: '没有提供需要更新的字段' });
+      }
+
+      params.push(request.session.userId);
+      db.run(`UPDATE users SET ${updates.join(', ')}, updated_at = datetime('now') WHERE id = ?`, ...params);
+
+      const updatedUser = db.get<UserRow>(
+        'SELECT id, username, display_name, email, avatar_url, is_admin, role, is_banned, created_at FROM users WHERE id = ?',
+        request.session.userId
+      )!;
+
+      return {
+        success: true,
+        message: '资料更新成功',
+        user: {
+          id: updatedUser.id,
+          username: updatedUser.username,
+          displayName: updatedUser.display_name,
+          email: updatedUser.email || null,
+          avatarUrl: updatedUser.avatar_url || null,
+          isAdmin: updatedUser.is_admin === 1,
+          role: updatedUser.role || 'user',
+          isBanned: updatedUser.is_banned === 1,
+          createdAt: updatedUser.created_at,
+        },
+      };
+    });
+
+    // ========================================
+    // 修改密码
+    // ========================================
+    app.put('/api/auth/password', async (request, reply) => {
+      if (!request.session.userId) {
+        return reply.status(401).send({ error: '未登录' });
+      }
+
+      const { currentPassword, newPassword, confirmPassword } =
+        request.body as ChangePasswordBody;
+
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        return reply.status(400).send({ error: '请填写所有字段' });
+      }
+
+      if (newPassword.length < 6) {
+        return reply.status(400).send({ error: '新密码长度不能少于 6 位' });
+      }
+
+      if (newPassword !== confirmPassword) {
+        return reply.status(400).send({ error: '两次输入的新密码不一致' });
+      }
+
+      const user = db.get<UserRow>(
+        'SELECT id, password_hash FROM users WHERE id = ?',
+        request.session.userId
+      );
+
+      if (!user) {
+        return reply.status(401).send({ error: '用户不存在' });
+      }
+
+      const valid = await bcrypt.compare(currentPassword, user.password_hash);
+      if (!valid) {
+        return reply.status(401).send({ error: '当前密码错误' });
+      }
+
+      const hash = await bcrypt.hash(newPassword, 10);
+      db.run("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?", hash, request.session.userId);
+
+      return {
+        success: true,
+        message: '密码修改成功',
       };
     });
   },
