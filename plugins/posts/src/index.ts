@@ -12,12 +12,12 @@ interface PostRow { id: number; title: string; content: string; author_id: numbe
 interface UserRow { id: number; username: string; display_name: string; is_admin: number; }
 interface CommentRow { id: number; content: string; author_id: number; post_id: number; parent_id: number | null; }
 export interface PostListItem {
-  id: number; title: string; board_id: number; is_anonymous: number; is_pinned: number;
+  id: number; title: string; content: string; board_id: number; is_anonymous: number; is_pinned: number; is_private: number;
   images: string | null; created_at: string; author_name: string; board_name: string;
-  like_count: number; comment_count: number; is_favorited: number;
+  like_count: number; comment_count: number; view_count: number; is_favorited: number;
 }
 export interface PostDetail extends PostListItem {
-  content: string; author_id: number; updated_at: string; my_vote: number; view_count: number; is_private: number;
+  author_id: number; updated_at: string; my_vote: number;
 }
 
 // ── Zod Schema ────────────────────────────────
@@ -195,7 +195,7 @@ export const postsPlugin: Plugin = {
       const orderBy = sort === 'hot' ? 'ORDER BY p.is_pinned DESC, (p.view_count + COALESCE(v.like_count,0)*5) DESC, p.created_at DESC'
                                       : 'ORDER BY p.is_pinned DESC, p.created_at DESC';
       params.unshift(userIdVal);
-      const sql = `SELECT p.id,p.title,p.board_id,p.is_anonymous,p.is_pinned,p.images,p.created_at,
+      const sql = `SELECT p.id,p.title,p.content,p.board_id,p.is_anonymous,p.is_pinned,p.is_private,p.images,p.created_at,p.view_count,
         CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,
         b.name as board_name, COALESCE(v.like_count,0) as like_count, COALESCE(c.comment_count,0) as comment_count,
         CASE WHEN f.id IS NOT NULL THEN 1 ELSE 0 END as is_favorited
@@ -334,12 +334,15 @@ export const postsPlugin: Plugin = {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
       const page = Math.max(1, Number((req.query as any).page) || 1);
       return { posts: db.all<PostListItem>(
-        `SELECT p.id,p.title,p.board_id,p.created_at,
+        `SELECT p.id,p.title,p.content,p.board_id,p.created_at,p.is_pinned,p.is_private,p.view_count,
           CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,
-          b.name as board_name, COALESCE(v.like_count,0) as like_count
+          b.name as board_name, COALESCE(v.like_count,0) as like_count,
+          COALESCE(c.comment_count,0) as comment_count, COALESCE(f2.is_favorited,0) as is_favorited
          FROM favorites f JOIN posts p ON f.post_id=p.id JOIN users u ON p.author_id=u.id JOIN boards b ON p.board_id=b.id
          LEFT JOIN (SELECT post_id,COUNT(*) as like_count FROM votes WHERE value=1 GROUP BY post_id) v ON v.post_id=p.id
-         WHERE f.user_id=? ORDER BY f.created_at DESC LIMIT 20 OFFSET ?`, userId, (page-1)*20), page, limit: 20 };
+         LEFT JOIN (SELECT post_id,COUNT(*) as comment_count FROM comments GROUP BY post_id) c ON c.post_id=p.id
+         LEFT JOIN (SELECT post_id,1 as is_favorited FROM favorites WHERE user_id=?) f2 ON f2.post_id=p.id
+         WHERE f.user_id=? ORDER BY f.created_at DESC LIMIT 20 OFFSET ?`, userId, userId, (page-1)*20), page, limit: 20 };
     });
 
     // ─── 分享 ───
