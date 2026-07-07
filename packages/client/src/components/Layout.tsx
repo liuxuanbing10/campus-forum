@@ -2,7 +2,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 import NotificationBell from './NotificationBell';
 import ThemeSwitcher from './ThemeSwitcher';
-import { Home } from 'lucide-react';
+import { Home, Users } from 'lucide-react';
 
 export default function Layout() {
   const { user, logout } = useAuthStore();
@@ -35,6 +35,10 @@ export default function Layout() {
             {user ? (
               <>
                 <NotificationBell />
+                <Link to="/teams" className="text-sm text-campus-text-secondary hover:text-primary transition-colors font-body flex items-center gap-1">
+                  <Users className="w-4 h-4" />
+                  团队
+                </Link>
                 <Link to="/my-posts" className="text-sm text-campus-text-secondary hover:text-primary transition-colors font-body">
                   我的帖子
                 </Link>

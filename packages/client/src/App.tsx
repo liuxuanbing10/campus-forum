@@ -10,6 +10,10 @@ import MyPosts from './pages/MyPosts';
 import Board from './pages/Board';
 import PostDetail from './pages/PostDetail';
 import NewPost from './pages/NewPost';
+import Teams from './pages/Teams';
+import TeamDetail from './pages/TeamDetail';
+import CreateTeam from './pages/CreateTeam';
+import EditTeam from './pages/EditTeam';
 import { ToastContainer, ToastProps } from './components/Toast';
 
 const Settings = lazy(() => import('./pages/Settings').catch(() => ({ default: () => <div>加载中...</div> })));
@@ -69,6 +73,10 @@ export default function App() {
           <Route path="/board/:id" element={<Board />} />
           <Route path="/post/:id" element={<PostDetail />} />
           <Route path="/new" element={<NewPost />} />
+          <Route path="/teams" element={<Teams />} />
+          <Route path="/teams/new" element={<CreateTeam />} />
+          <Route path="/teams/:id" element={<TeamDetail />} />
+          <Route path="/teams/:id/edit" element={<EditTeam />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Route>
       </Routes>
