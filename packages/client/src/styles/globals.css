@@ -524,6 +524,94 @@
   }
 }
 
+/* TipTap editor placeholder */
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+  height: 0;
+}
+.tiptap {
+  outline: none;
+}
+.tiptap pre {
+  @apply bg-background rounded-lg p-3 my-2 overflow-x-auto;
+}
+.tiptap pre code {
+  @apply text-sm;
+}
+.tiptap code {
+  @apply bg-background px-1.5 py-0.5 rounded text-sm;
+}
+.tiptap pre code {
+  @apply bg-transparent p-0;
+}
+.tiptap blockquote {
+  @apply border-l-4 border-primary-light pl-4 italic text-campus-text-secondary;
+}
+.tiptap img {
+  @apply rounded-lg max-w-full my-2;
+}
+.tiptap hr {
+  @apply border-border my-4;
+}
+.tiptap ul,
+.tiptap ol {
+  @apply pl-6 my-2;
+}
+.tiptap ul {
+  @apply list-disc;
+}
+.tiptap ol {
+  @apply list-decimal;
+}
+.tiptap h2 {
+  @apply text-lg font-bold mt-4 mb-2;
+}
+
+/* campus-prose: PostDetail HTML rendering with theme-aware colors */
+.campus-prose {
+  color: var(--color-text-secondary);
+}
+.campus-prose h1, .campus-prose h2, .campus-prose h3,
+.campus-prose h4, .campus-prose h5, .campus-prose h6 {
+  color: var(--color-text-primary);
+}
+.campus-prose a {
+  color: var(--color-primary);
+}
+.campus-prose a:hover {
+  color: var(--color-primary-hover);
+}
+.campus-prose code {
+  background: var(--color-bg);
+  padding: 0.15em 0.4em;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+.campus-prose pre {
+  background: var(--color-bg);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+}
+.campus-prose pre code {
+  background: none;
+  padding: 0;
+}
+.campus-prose blockquote {
+  border-left-color: var(--color-primary);
+  opacity: 0.7;
+}
+.campus-prose img {
+  border-radius: 0.5rem;
+  max-width: 100%;
+}
+.campus-prose hr {
+  border-color: var(--color-border);
+}
+
 /* 页面切换过渡 */
 .page-enter {
   animation: page-slide-in 0.4s cubic-bezier(0.21, 0.98, 0.35, 1) forwards;

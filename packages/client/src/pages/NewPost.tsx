@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { toastStore } from '../App';
 import { ArrowLeft, Lock, ImagePlus, X } from 'lucide-react';
+import MarkdownEditor from '../components/MarkdownEditor';
 
 interface Board {
   id: number;
@@ -140,12 +141,10 @@ export default function NewPostPage() {
             <label className="block text-sm font-medium text-campus-text-secondary mb-2 font-body">
               内容
             </label>
-            <textarea
-              value={content}
-              onChange={e => setContent(e.target.value)}
-              className="input min-h-[200px] resize-none p-4"
+            <MarkdownEditor
+              content={content}
+              onChange={setContent}
               placeholder="请输入内容"
-              required
             />
           </div>
 

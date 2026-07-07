@@ -249,8 +249,12 @@ export default function PostDetailPage() {
             </>
           )}
         </div>
-        <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap text-campus-text-secondary font-body">
-          {post.content}
+        <div className="prose dark:prose-invert max-w-none campus-prose">
+          {post.content.startsWith('<') ? (
+            <div dangerouslySetInnerHTML={{ __html: post.content }} />
+          ) : (
+            <div className="whitespace-pre-wrap">{post.content}</div>
+          )}
         </div>
         {images.length > 0 && (
           <div className="grid grid-cols-3 gap-2 mt-4">

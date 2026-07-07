@@ -5,6 +5,7 @@ export default {
   theme: {
     extend: {
       colors: {
+        background: 'var(--color-bg)',
         surface: 'var(--color-surface)',
         'surface-hover': 'var(--color-surface-hover)',
         'page-bg': 'var(--color-bg)',
@@ -60,5 +61,5 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [require('@tailwindcss/typography')],
 };

@@ -2,7 +2,7 @@ import { Outlet, Link, useNavigate, useLocation, useSearchParams } from 'react-r
 import { useAuthStore } from '../stores/auth';
 import NotificationBell from './NotificationBell';
 import ThemeSwitcher from './ThemeSwitcher';
-import { Home, Users, Heart, Search, Shield } from 'lucide-react';
+import { Home, Users, Heart, Search, Shield, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function Layout() {
@@ -11,12 +11,16 @@ export default function Layout() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     if (location.pathname === '/search') {
       setSearchQuery(searchParams.get('q') || '');
     }
   }, [location.pathname, searchParams]);
+
+  // Close mobile menu on route change
+  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
   const handleLogout = async () => {
     await logout();
@@ -61,32 +65,36 @@ export default function Layout() {
 
           <nav className="flex items-center gap-3">
             <ThemeSwitcher />
+            {/* Mobile hamburger */}
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="md:hidden p-2 hover:bg-background rounded-lg transition-colors"
+            >
+              {mobileOpen ? <X className="w-5 h-5 text-campus-text-secondary" /> : <Menu className="w-5 h-5 text-campus-text-secondary" />}
+            </button>
+            {/* Desktop nav (unchanged) */}
+            <div className="hidden md:flex items-center gap-3">
             {user ? (
               <>
-                <Link to="/search" className="sm:hidden p-2 hover:bg-background rounded-lg transition-colors">
-                  <Search className="w-5 h-5 text-campus-text-secondary" />
-                </Link>
                 <NotificationBell />
-                <Link to="/favorites" className="hidden sm:block p-2 hover:bg-background rounded-lg transition-colors">
+                <Link to="/favorites" className="p-2 hover:bg-background rounded-lg transition-colors">
                   <Heart className="w-5 h-5 text-campus-text-secondary" />
                 </Link>
-                <Link to="/teams" className="hidden sm:flex items-center gap-1 p-2 hover:bg-background rounded-lg transition-colors">
+                <Link to="/teams" className="flex items-center gap-1 p-2 hover:bg-background rounded-lg transition-colors">
                   <Users className="w-5 h-5 text-campus-text-secondary" />
                 </Link>
-                <div className="hidden sm:block relative group">
-                  <Link to="/my-posts" className="text-sm text-campus-text-secondary hover:text-primary transition-colors font-body">
-                    我的帖子
-                  </Link>
-                </div>
+                <Link to="/my-posts" className="text-sm text-campus-text-secondary hover:text-primary transition-colors font-body">
+                  我的帖子
+                </Link>
                 {user.role === 'admin' && (
-                  <Link to="/admin" className="hidden sm:flex items-center gap-1 p-2 hover:bg-background rounded-lg transition-colors">
+                  <Link to="/admin" className="flex items-center gap-1 p-2 hover:bg-background rounded-lg transition-colors">
                     <Shield className="w-5 h-5 text-campus-text-secondary" />
                   </Link>
                 )}
-                <Link to="/settings" className="hidden sm:block text-sm text-campus-text-secondary hover:text-primary transition-colors font-body">
+                <Link to="/settings" className="text-sm text-campus-text-secondary hover:text-primary transition-colors font-body">
                   设置
                 </Link>
-                <span className="hidden md:inline text-sm text-campus-text-primary font-body">
+                <span className="text-sm text-campus-text-primary font-body">
                   {user.displayName}
                 </span>
                 <button
@@ -101,16 +109,60 @@ export default function Layout() {
                 <Link to="/login" className="text-sm text-campus-text-secondary hover:text-primary transition-colors font-body">
                   登录
                 </Link>
-                <Link
-                  to="/register"
-                  className="btn-primary btn-sm btn-inline font-body"
-                >
+                <Link to="/register" className="btn-primary btn-sm btn-inline font-body">
                   注册
                 </Link>
               </>
             )}
+            </div>
           </nav>
         </div>
+
+        {/* Mobile dropdown */}
+        {mobileOpen && (
+          <div className="md:hidden border-t border-border bg-surface px-4 py-3 space-y-2">
+            <Link to="/search" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
+              <Search className="w-4 h-4" /> 搜索
+            </Link>
+            {user ? (
+              <>
+                <div className="text-xs text-campus-text-tertiary px-3 pt-1 font-body">{user.displayName}</div>
+                <Link to="/favorites" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
+                  <Heart className="w-4 h-4" /> 我的收藏
+                </Link>
+                <Link to="/teams" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
+                  <Users className="w-4 h-4" /> 我的团队
+                </Link>
+                <Link to="/my-posts" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
+                  <Home className="w-4 h-4" /> 我的帖子
+                </Link>
+                <Link to="/settings" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
+                  设置
+                </Link>
+                {user.role === 'admin' && (
+                  <Link to="/admin" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
+                    <Shield className="w-4 h-4" /> 管理后台
+                  </Link>
+                )}
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-destructive font-body"
+                >
+                  退出登录
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="block px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
+                  登录
+                </Link>
+                <Link to="/register" className="block px-3 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium text-center font-body">
+                  注册
+                </Link>
+              </>
+            )}
+          </div>
+        )}
       </header>
 
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-6 pt-20">
