@@ -77,6 +77,32 @@ export function initializeSchema(db: DatabaseAdapter): void {
       UNIQUE(user_id, post_id)
     );
 
+    -- Teams
+    CREATE TABLE IF NOT EXISTS teams (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      avatar TEXT,
+      is_public INTEGER DEFAULT 1,
+      creator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      max_members INTEGER DEFAULT 50,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    -- Team members
+    CREATE TABLE IF NOT EXISTS team_members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      role TEXT NOT NULL DEFAULT 'member' CHECK(role IN ('owner','admin','member')),
+      status TEXT NOT NULL DEFAULT 'approved' CHECK(status IN ('pending','approved','rejected')),
+      joined_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(team_id, user_id)
+    );
+
+    -- Team posts
+
     -- Notifications
     CREATE TABLE IF NOT EXISTS notifications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -87,6 +113,7 @@ export function initializeSchema(db: DatabaseAdapter): void {
       related_comment_id INTEGER REFERENCES comments(id),
       from_user_id INTEGER REFERENCES users(id),
       is_read INTEGER DEFAULT 0,
+      related_team_id INTEGER REFERENCES teams(id),
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -136,6 +163,7 @@ export function migrateSchema(db: DatabaseAdapter): void {
       created_at TEXT DEFAULT (datetime('now'))
     )`],
     ['add_is_private', `ALTER TABLE posts ADD COLUMN is_private INTEGER DEFAULT 0`],
+    ['add_email', `ALTER TABLE users ADD COLUMN email TEXT`],
   ];
 
   for (const [name, sql] of migrations) {

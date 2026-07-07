@@ -107,12 +107,12 @@ async function main() {
   // 暴露 createNotification 到 context 供其他插件调用
   (pluginCtx as any).createNotification = (
     userId: number, type: string, message: string,
-    relatedPostId?: number, relatedCommentId?: number, fromUserId?: number,
+    relatedPostId?: number, relatedCommentId?: number, fromUserId?: number, relatedTeamId?: number,
   ) => {
     db.run(
-      `INSERT INTO notifications (user_id, type, message, related_post_id, related_comment_id, from_user_id)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      userId, type, message, relatedPostId || null, relatedCommentId || null, fromUserId || null,
+      `INSERT INTO notifications (user_id, type, message, related_post_id, related_comment_id, from_user_id, related_team_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      userId, type, message, relatedPostId || null, relatedCommentId || null, fromUserId || null, relatedTeamId || null,
     );
   };
 
