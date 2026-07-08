@@ -2,10 +2,16 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/auth';
 import { authApi, User, default as api, oauthApi, exportApi, avatarApi, OAuthAccount } from '../lib/api';
 import { toastStore } from '../App';
-import { Eye, EyeOff, User as UserIcon, Mail, Edit3, Check, X, Lock, RefreshCw, Upload, Download, Link2, Unlink, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, User as UserIcon, Mail, Edit3, Check, X, Lock, RefreshCw, Upload, Download, Link2, Unlink, Loader2, Palette } from 'lucide-react';
+import { THEMES, useThemeStore } from '../stores/theme';
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'oauth' | 'export'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'oauth' | 'export' | 'appearance'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'appearance') return 'appearance';
+    return 'profile';
+  });
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [profileForm, setProfileForm] = useState({ display_name: '', email: '' });
@@ -104,6 +110,7 @@ export default function SettingsPage() {
         <button onClick={() => setActiveTab('password')} className={`px-4 py-2 rounded-lg text-sm font-body transition-colors ${activeTab === 'password' ? 'bg-primary text-white' : 'text-campus-text-secondary hover:bg-surface-hover'}`}>修改密码</button>
         <button onClick={() => setActiveTab('oauth')} className={`px-4 py-2 rounded-lg text-sm font-body transition-colors ${activeTab === 'oauth' ? 'bg-primary text-white' : 'text-campus-text-secondary hover:bg-surface-hover'}`}>账号绑定</button>
         <button onClick={() => setActiveTab('export')} className={`px-4 py-2 rounded-lg text-sm font-body transition-colors ${activeTab === 'export' ? 'bg-primary text-white' : 'text-campus-text-secondary hover:bg-surface-hover'}`}>数据导出</button>
+        <button onClick={() => setActiveTab('appearance')} className={`px-4 py-2 rounded-lg text-sm font-body transition-colors ${activeTab === 'appearance' ? 'bg-primary text-white' : 'text-campus-text-secondary hover:bg-surface-hover'}`}>界面风格</button>
       </div>
 
       {/* Avatar + Profile */}
@@ -230,6 +237,51 @@ export default function SettingsPage() {
           </button>
         </div>
       )}
+
+      {/* Appearance Tab */}
+      {activeTab === 'appearance' && (
+        <div className="card p-6">
+          <h3 className="text-lg font-semibold font-display mb-4 flex items-center gap-2">
+            <Palette className="w-5 h-5" /> 界面风格
+          </h3>
+          <p className="text-sm text-campus-text-tertiary mb-6 font-body">选择一个你喜欢的主题，改变论坛的整体视觉效果。</p>
+          <AppearancePicker />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AppearancePicker() {
+  const { currentTheme, setTheme } = useThemeStore();
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      {THEMES.map((t) => {
+        const active = currentTheme === t.id;
+        return (
+          <button
+            key={t.id}
+            onClick={() => setTheme(t.id)}
+            className={`relative flex flex-col items-center gap-2 p-4 rounded-xl text-center transition-all border ${
+              active
+                ? 'ring-2 ring-primary border-primary bg-primary/5'
+                : 'border-border hover:bg-surface-hover'
+            }`}
+          >
+            {active && (
+              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary text-white text-[10px] flex items-center justify-center shadow">✓</span>
+            )}
+            <span className="text-2xl">{t.emoji}</span>
+            <span className="text-sm font-medium font-body text-campus-text-primary">{t.name}</span>
+            <span className="text-[11px] text-campus-text-tertiary font-body leading-tight">{t.description}</span>
+            <div className="flex gap-1 mt-1">
+              <span className="w-4 h-4 rounded-full border border-border/50" style={{ backgroundColor: t.colors.primary }} />
+              <span className="w-4 h-4 rounded-full border border-border/50" style={{ backgroundColor: t.colors.surface }} />
+              <span className="w-4 h-4 rounded-full border border-border/50" style={{ backgroundColor: t.colors.bg }} />
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 }

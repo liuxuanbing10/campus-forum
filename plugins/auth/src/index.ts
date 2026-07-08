@@ -3,7 +3,9 @@ import { Plugin, PluginContext, uid, isAdmin } from '@campus-forum/core';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
+import https from 'https';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -379,6 +381,148 @@ export const authPlugin: Plugin = {
       const { provider } = req.body as { provider: string };
       db.run('DELETE FROM oauth_accounts WHERE user_id=? AND provider=?', userId, provider);
       return { success: true };
+    });
+
+    // ========================================
+    // GitHub OAuth 完整登录流程
+    // ========================================
+
+    // 临时 token 存储（简化版，生产环境应使用 Redis/DB）
+    const oauthTempStore = new Map<string, { provider: string; providerUserId: string; providerUsername: string; expiresAt: number }>();
+
+    function httpsGet(url: string): Promise<string> {
+      return new Promise((resolve, reject) => {
+        https.get(url, { headers: { 'User-Agent': 'campus-forum' } }, (res) => {
+          let data = '';
+          res.on('data', (c: string) => data += c);
+          res.on('end', () => resolve(data));
+        }).on('error', reject);
+      });
+    }
+
+    function httpsPost(url: string, body: string): Promise<string> {
+      return new Promise((resolve, reject) => {
+        const u = new URL(url);
+        const req = https.request({
+          hostname: u.hostname, path: u.pathname, method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'User-Agent': 'campus-forum', 'Content-Length': Buffer.byteLength(body) },
+        }, (res) => {
+          let data = '';
+          res.on('data', (c: string) => data += c);
+          res.on('end', () => resolve(data));
+        });
+        req.on('error', reject);
+        req.write(body);
+        req.end();
+      });
+    }
+
+    // 1. 获取 GitHub 授权 URL
+    app.get('/api/auth/oauth/github/url', async (req, rep) => {
+      const clientId = process.env.GITHUB_CLIENT_ID;
+      if (!clientId) return rep.status(500).send({ error: 'GITHUB_CLIENT_ID 未配置' });
+      const redirectUri = process.env.GITHUB_REDIRECT_URI || `${req.protocol}://${req.hostname}:${process.env.PORT || 3001}/api/auth/oauth/github/callback`;
+      const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=read:user`;
+      return { url };
+    });
+
+    // 2. GitHub OAuth 回调
+    app.get('/api/auth/oauth/github/callback', async (req, rep) => {
+      const { code, error: oauthError } = req.query as { code?: string; error?: string };
+      if (oauthError) return rep.redirect(`/?oauth_error=${oauthError}`);
+      if (!code) return rep.status(400).send({ error: '缺少授权码' });
+
+      const clientId = process.env.GITHUB_CLIENT_ID;
+      const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+      const redirectUri = process.env.GITHUB_REDIRECT_URI || `${req.protocol}://${req.hostname}:${process.env.PORT || 3001}/api/auth/oauth/github/callback`;
+      const frontendUrl = process.env.CLIENT_URL || 'http://localhost:3001';
+
+      if (!clientId || !clientSecret) {
+        return rep.redirect(`${frontendUrl}/login?oauth_error=provider_not_configured`);
+      }
+
+      try {
+        // 交换 access token
+        const tokenRes = await httpsPost('https://github.com/login/oauth/access_token',
+          JSON.stringify({ client_id: clientId, client_secret: clientSecret, code, redirect_uri: redirectUri }));
+        const tokenData = JSON.parse(tokenRes);
+        const accessToken = tokenData.access_token;
+        if (!accessToken) return rep.redirect(`${frontendUrl}/login?oauth_error=token_exchange_failed`);
+
+        // 获取 GitHub 用户信息
+        const userRes = await httpsGet(`https://api.github.com/user`);
+        const githubUser = JSON.parse(userRes);
+        const providerUserId = String(githubUser.id);
+        const providerUsername = githubUser.login || 'unknown';
+
+        // 查找是否已绑定
+        const existing = db.get<{ user_id: number }>('SELECT user_id FROM oauth_accounts WHERE provider=? AND provider_id=?', 'github', providerUserId);
+        if (existing) {
+          // 已绑定 → 直接登录
+          const user = db.get<UserRow>('SELECT id, username FROM users WHERE id=?', existing.user_id);
+          if (user) {
+            req.session.userId = user.id;
+            req.session.username = user.username;
+            await req.session.save();
+            return rep.redirect(frontendUrl);
+          }
+        }
+
+        // 未绑定 → 生成临时 token 引导用户设置用户名
+        const tempToken = crypto.randomBytes(20).toString('hex');
+        oauthTempStore.set(tempToken, {
+          provider: 'github',
+          providerUserId,
+          providerUsername,
+          expiresAt: Date.now() + 10 * 60 * 1000, // 10 分钟过期
+        });
+
+        return rep.redirect(`${frontendUrl}/oauth/setup?token=${tempToken}&provider=github&username=${encodeURIComponent(providerUsername)}`);
+      } catch (err) {
+        console.error('GitHub OAuth error:', err);
+        return rep.redirect(`${frontendUrl}/login?oauth_error=server_error`);
+      }
+    });
+
+    // 3. 完成 OAuth 注册（设置用户名）
+    app.post('/api/auth/oauth/complete', async (req, rep) => {
+      const { token, username } = req.body as { token: string; username: string };
+      if (!token || !username) return rep.status(400).send({ error: '参数不完整' });
+      if (username.length < 2 || username.length > 20) return rep.status(400).send({ error: '用户名长度应为 2-20 个字符' });
+
+      const store = oauthTempStore.get(token);
+      if (!store) return rep.status(400).send({ error: 'token 无效或已过期' });
+      if (Date.now() > store.expiresAt) {
+        oauthTempStore.delete(token);
+        return rep.status(400).send({ error: 'token 已过期，请重新授权' });
+      }
+
+      // 检查用户名是否已存在
+      const existingUser = db.get<UserRow>('SELECT id FROM users WHERE username=?', username);
+      if (existingUser) return rep.status(409).send({ error: '用户名已存在' });
+
+      // 创建用户（无密码）
+      const deviceCode = getDeviceCode(req);
+      db.run(
+        'INSERT INTO users (username, password_hash, display_name, device_code) VALUES (?, ?, ?, ?)',
+        username, '', username, deviceCode || null
+      );
+      const user = db.get<UserRow>('SELECT id, username FROM users WHERE username=?', username);
+      if (!user) return rep.status(500).send({ error: '创建用户失败' });
+
+      // 绑定 OAuth
+      try {
+        db.run('INSERT INTO oauth_accounts (user_id, provider, provider_id) VALUES (?, ?, ?)',
+          user.id, store.provider, store.providerUserId);
+      } catch { /* 可能已存在 */ }
+
+      // 登录
+      req.session.userId = user.id;
+      req.session.username = user.username;
+      await req.session.save();
+
+      oauthTempStore.delete(token);
+      return { success: true, user: { id: user.id, username: user.username } };
     });
 
     // ========================================

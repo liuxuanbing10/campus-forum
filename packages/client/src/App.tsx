@@ -22,6 +22,7 @@ import Notifications from './pages/Notifications';
 import Admin from './pages/Admin';
 import UserProfile from './pages/UserProfile';
 import Messages from './pages/Messages';
+import OAuthSetup from './pages/OAuthSetup';
 import { ToastContainer, ToastProps } from './components/Toast';
 
 const Settings = lazy(() => import('./pages/Settings').catch(() => ({ default: () => <div>加载中...</div> })));
@@ -92,9 +93,10 @@ export default function App() {
           <Route path="/teams/my" element={<MyTeams />} />
           <Route path="/teams/new" element={<CreateTeam />} />
           <Route path="/teams/:id" element={<TeamDetail />} />
-          <Route path="/teams/:id/edit" element={<EditTeam />} />
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path={"/teams/:id/edit"} element={<EditTeam />} />
+          <Route path={"*"} element={<Navigate to="/" />} />
         </Route>
+        <Route path={"/oauth/setup"} element={<OAuthSetup />} />
       </Routes>
       <ToastContainer toasts={toastList} onClose={toastStore.remove} />
     </>
