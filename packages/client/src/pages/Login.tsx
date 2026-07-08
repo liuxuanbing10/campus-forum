@@ -109,6 +109,16 @@ export default function LoginPage() {
             {loading ? '登录中...' : '登录'}
           </button>
 
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+            <div className="relative flex justify-center text-xs"><span className="bg-surface px-2 text-campus-text-tertiary font-body">第三方登录</span></div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <button type="button" className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-border hover:bg-surface-hover transition-colors font-body text-sm">微信</button>
+            <button type="button" className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-border hover:bg-surface-hover transition-colors font-body text-sm">QQ</button>
+            <button type="button" className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-border hover:bg-surface-hover transition-colors font-body text-sm">GitHub</button>
+          </div>
+
           <p className="text-center text-sm text-campus-text-secondary font-body">
             没有账号？{' '}
             <Link to="/register" className="font-medium text-primary hover:text-primary-hover transition-colors">

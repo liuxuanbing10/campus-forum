@@ -83,6 +83,9 @@ export default function App() {
           <Route path="/admin" element={<Admin />} />
           <Route path="/board/:id" element={<Board />} />
           <Route path="/post/:id" element={<PostDetail />} />
+          <Route path="/user/:id" element={<UserProfile />} />
+          <Route path="/messages" element={<Messages />} />
+          <Route path="/messages/:id" element={<Messages />} />
           <Route path="/edit-post/:id" element={<EditPost />} />
           <Route path="/new" element={<NewPost />} />
           <Route path="/teams" element={<Teams />} />
