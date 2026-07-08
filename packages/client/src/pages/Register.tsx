@@ -1,3 +1,4 @@
+import CaptchaInput from '../components/CaptchaInput';
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
@@ -10,6 +11,8 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [captchaId, setCaptchaId] = useState('');
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const register = useAuthStore(s => s.register);
@@ -137,6 +140,8 @@ export default function RegisterPage() {
               </button>
             </div>
           </div>
+
+          <CaptchaInput onVerify={(id, ans) => { setCaptchaId(id); setCaptchaAnswer(ans); }} error={error} />
 
           <button
             type="submit"

@@ -2,7 +2,7 @@ import { Outlet, Link, useNavigate, useLocation, useSearchParams } from 'react-r
 import { useAuthStore } from '../stores/auth';
 import NotificationBell from './NotificationBell';
 import ThemeSwitcher from './ThemeSwitcher';
-import { Home, Users, Heart, Search, Shield } from 'lucide-react';
+import { Home, Users, Heart, Search, Shield, MessageCircle, Bell } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function Layout() {

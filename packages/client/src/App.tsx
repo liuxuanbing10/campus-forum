@@ -20,6 +20,8 @@ import Favorites from './pages/Favorites';
 import EditPost from './pages/EditPost';
 import Notifications from './pages/Notifications';
 import Admin from './pages/Admin';
+import UserProfile from './pages/UserProfile';
+import Messages from './pages/Messages';
 import { ToastContainer, ToastProps } from './components/Toast';
 
 const Settings = lazy(() => import('./pages/Settings').catch(() => ({ default: () => <div>加载中...</div> })));

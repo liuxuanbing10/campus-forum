@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../lib/api';
-import { ArrowLeft, Eye, ThumbsUp, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Eye, ThumbsUp, MessageSquare, Rss } from 'lucide-react';
 
 interface Post {
   id: number;
@@ -47,6 +47,12 @@ export default function BoardPage() {
       <div className="flex items-center justify-between mt-5 mb-6">
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-[1.75rem] leading-none flex-shrink-0">{boardIcon}</span>
+
+          <a href={"/api/rss/boards/${id}"} target="_blank" rel="noopener noreferrer"
+             className="flex items-center gap-1 text-sm text-orange-500 hover:text-orange-600 transition-colors font-body">
+            <Rss className="w-4 h-4" />
+            RSS
+          </a>
           <h1 className="font-handwrite text-2xl sm:text-3xl font-semibold text-campus-text-primary truncate">
             {boardName}
           </h1>

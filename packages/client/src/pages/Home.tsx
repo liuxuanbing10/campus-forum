@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuthStore } from '../stores/auth';
 import api from '../lib/api';
-import { MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Heart, Star } from 'lucide-react';
+import { Pin } from 'lucide-react';
 
 interface Board {
   id: number;
