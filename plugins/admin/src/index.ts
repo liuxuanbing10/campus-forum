@@ -84,6 +84,71 @@ export const adminPlugin: Plugin = {
       db.run('UPDATE users SET points=COALESCE(points,0)+?, updated_at=datetime(\'now\') WHERE id=?', points, id);
       return { success: true, message: `积分已调整 ${points > 0 ? '+' : ''}${points} 分`, reason };
     });
+
+    // ─── 数据统计看板 ───
+    app.get('/api/admin/stats', async (req, rep) => {
+      await guard(req, rep); if (rep.sent) return;
+
+      // 总览数据
+      const totalUsers = db.get<{ c: number }>('SELECT COUNT(*) as c FROM users')?.c || 0;
+      const totalPosts = db.get<{ c: number }>('SELECT COUNT(*) as c FROM posts')?.c || 0;
+      const totalComments = db.get<{ c: number }>('SELECT COUNT(*) as c FROM comments')?.c || 0;
+      const totalTeams = db.get<{ c: number }>('SELECT COUNT(*) as c FROM teams')?.c || 0;
+      const totalBoards = db.get<{ c: number }>('SELECT COUNT(*) as c FROM boards')?.c || 0;
+
+      // 今日数据
+      const todayUsers = db.get<{ c: number }>("SELECT COUNT(*) as c FROM users WHERE date(created_at)=date('now')")?.c || 0;
+      const todayPosts = db.get<{ c: number }>("SELECT COUNT(*) as c FROM posts WHERE date(created_at)=date('now')")?.c || 0;
+      const todayComments = db.get<{ c: number }>("SELECT COUNT(*) as c FROM comments WHERE date(created_at)=date('now')")?.c || 0;
+
+      // 近7天用户增长
+      const userGrowth = db.all<{ date: string; count: number }>(
+        `SELECT date(created_at) as date, COUNT(*) as count FROM users
+         WHERE created_at >= date('now', '-7 days')
+         GROUP BY date(created_at) ORDER BY date`
+      );
+
+      // 近7天帖子发布趋势
+      const postTrend = db.all<{ date: string; count: number }>(
+        `SELECT date(created_at) as date, COUNT(*) as count FROM posts
+         WHERE created_at >= date('now', '-7 days')
+         GROUP BY date(created_at) ORDER BY date`
+      );
+
+      // 板块帖子分布
+      const boardDist = db.all<{ name: string; count: number }>(
+        `SELECT b.name, COUNT(p.id) as count FROM boards b
+         LEFT JOIN posts p ON p.board_id=b.id
+         GROUP BY b.id ORDER BY count DESC LIMIT 10`
+      );
+
+      // 团队热度排行
+      const teamRanking = db.all<{ name: string; member_count: number; post_count: number }>(
+        `SELECT t.name,
+          (SELECT COUNT(*) FROM team_members WHERE team_id=t.id AND status='approved') as member_count,
+          (SELECT COUNT(*) FROM team_posts WHERE team_id=t.id) as post_count
+         FROM teams t ORDER BY member_count DESC LIMIT 5`
+      );
+
+      // 活跃用户排行（按积分）
+      const activeUsers = db.all<{ username: string; display_name: string; points: number; post_count: number }>(
+        `SELECT u.username, u.display_name, COALESCE(u.points,0) as points,
+          COUNT(p.id) as post_count
+         FROM users u LEFT JOIN posts p ON p.author_id=u.id
+         WHERE u.is_banned=0
+         GROUP BY u.id ORDER BY points DESC LIMIT 5`
+      );
+
+      return {
+        overview: { totalUsers, totalPosts, totalComments, totalTeams, totalBoards },
+        today: { users: todayUsers, posts: todayPosts, comments: todayComments },
+        userGrowth,
+        postTrend,
+        boardDist,
+        teamRanking,
+        activeUsers,
+      };
+    });
   },
 };
 

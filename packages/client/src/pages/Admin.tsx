@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, ArrowLeft, Search, Ban, UserCog, MoreVertical, UserX, UserCheck, FileText, Flag, History, AlertTriangle, Loader2, Trash2, Check, X } from 'lucide-react';
-import { adminApi, adminExtendedApi, AdminUser, PendingPost, SensitiveWord, AdminReport, AuditLog } from '../lib/api';
+import { Shield, ArrowLeft, Search, Ban, UserCog, MoreVertical, UserX, UserCheck, FileText, Flag, History, AlertTriangle, Loader2, Trash2, Check, X, BarChart3, TrendingUp, Users, MessageSquare, Folder, Trophy } from 'lucide-react';
+import { adminApi, adminExtendedApi, AdminUser, PendingPost, SensitiveWord, AdminReport, AuditLog, AdminStats } from '../lib/api';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 
-type AdminTab = 'users' | 'pending' | 'words' | 'reports' | 'logs';
+type AdminTab = 'stats' | 'users' | 'pending' | 'words' | 'reports' | 'logs';
 
 export default function AdminPage() {
   const navigate = useNavigate();
@@ -27,6 +27,7 @@ export default function AdminPage() {
       </div>
 
       <div className="flex gap-2 mb-6 flex-wrap">
+        <TabBtn active={activeTab === 'stats'} onClick={() => setActiveTab('stats')}><BarChart3 className="w-4 h-4" />数据看板</TabBtn>
         <TabBtn active={activeTab === 'users'} onClick={() => setActiveTab('users')}><UserCog className="w-4 h-4" />用户管理</TabBtn>
         <TabBtn active={activeTab === 'pending'} onClick={() => setActiveTab('pending')}><FileText className="w-4 h-4" />待审核</TabBtn>
         <TabBtn active={activeTab === 'words'} onClick={() => setActiveTab('words')}><AlertTriangle className="w-4 h-4" />敏感词</TabBtn>
@@ -34,6 +35,7 @@ export default function AdminPage() {
         <TabBtn active={activeTab === 'logs'} onClick={() => setActiveTab('logs')}><History className="w-4 h-4" />操作日志</TabBtn>
       </div>
 
+      {activeTab === 'stats' && <StatsTab />}
       {activeTab === 'users' && <UsersTab />}
       {activeTab === 'pending' && <PendingTab />}
       {activeTab === 'words' && <WordsTab />}
@@ -48,6 +50,176 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
     <button onClick={onClick} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-body transition-colors ${active ? 'bg-primary text-white' : 'bg-surface-hover text-campus-text-secondary hover:bg-border'}`}>
       {children}
     </button>
+  );
+}
+
+function StatsTab() {
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    adminExtendedApi.getStats()
+      .then(r => setStats(r.data))
+      .catch(() => toastStore.error('加载统计数据失败'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="text-center py-8 text-campus-text-tertiary font-body">加载中...</div>;
+  if (!stats) return <div className="text-center py-8 text-campus-text-tertiary font-body">暂无数据</div>;
+
+  const maxUserGrowth = Math.max(...stats.userGrowth.map(d => d.count), 1);
+  const maxPostTrend = Math.max(...stats.postTrend.map(d => d.count), 1);
+  const maxBoardDist = Math.max(...stats.boardDist.map(d => d.count), 1);
+
+  return (
+    <div className="space-y-6">
+      {/* 总览卡片 */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {[
+          { icon: Users, label: '总用户', value: stats.overview.totalUsers, color: 'text-blue-500' },
+          { icon: FileText, label: '总帖子', value: stats.overview.totalPosts, color: 'text-green-500' },
+          { icon: MessageSquare, label: '总评论', value: stats.overview.totalComments, color: 'text-amber-500' },
+          { icon: Trophy, label: '总团队', value: stats.overview.totalTeams, color: 'text-purple-500' },
+          { icon: Folder, label: '总板块', value: stats.overview.totalBoards, color: 'text-pink-500' },
+        ].map((s, i) => (
+          <div key={i} className="card p-4 text-center">
+            <s.icon className={`w-6 h-6 mx-auto mb-2 ${s.color}`} />
+            <div className="text-2xl font-bold font-display">{s.value}</div>
+            <div className="text-xs text-campus-text-tertiary font-body mt-1">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* 今日数据 */}
+      <div className="card p-4">
+        <h3 className="text-sm font-semibold font-display mb-3 flex items-center gap-2">
+          <TrendingUp className="w-4 h-4 text-primary" /> 今日新增
+        </h3>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="text-center">
+            <div className="text-lg font-bold text-blue-500">{stats.today.users}</div>
+            <div className="text-xs text-campus-text-tertiary font-body">新用户</div>
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-bold text-green-500">{stats.today.posts}</div>
+            <div className="text-xs text-campus-text-tertiary font-body">新帖子</div>
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-bold text-amber-500">{stats.today.comments}</div>
+            <div className="text-xs text-campus-text-tertiary font-body">新评论</div>
+          </div>
+        </div>
+      </div>
+
+      {/* 图表区域 */}
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* 用户增长图 */}
+        <div className="card p-4">
+          <h3 className="text-sm font-semibold font-display mb-3">近7天用户增长</h3>
+          {stats.userGrowth.length === 0 ? (
+            <p className="text-center text-campus-text-tertiary text-sm py-8 font-body">暂无数据</p>
+          ) : (
+            <div className="space-y-2">
+              {stats.userGrowth.map(d => (
+                <div key={d.date} className="flex items-center gap-2">
+                  <span className="text-xs text-campus-text-tertiary w-20 font-body">{d.date.slice(5)}</span>
+                  <div className="flex-1 bg-surface-hover rounded-full h-5 overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full transition-all flex items-center justify-end pr-2" style={{ width: `${(d.count / maxUserGrowth) * 100}%` }}>
+                      <span className="text-xs text-white font-medium">{d.count}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 帖子趋势图 */}
+        <div className="card p-4">
+          <h3 className="text-sm font-semibold font-display mb-3">近7天帖子趋势</h3>
+          {stats.postTrend.length === 0 ? (
+            <p className="text-center text-campus-text-tertiary text-sm py-8 font-body">暂无数据</p>
+          ) : (
+            <div className="space-y-2">
+              {stats.postTrend.map(d => (
+                <div key={d.date} className="flex items-center gap-2">
+                  <span className="text-xs text-campus-text-tertiary w-20 font-body">{d.date.slice(5)}</span>
+                  <div className="flex-1 bg-surface-hover rounded-full h-5 overflow-hidden">
+                    <div className="h-full bg-green-500 rounded-full transition-all flex items-center justify-end pr-2" style={{ width: `${(d.count / maxPostTrend) * 100}%` }}>
+                      <span className="text-xs text-white font-medium">{d.count}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 板块分布和团队排行 */}
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* 板块帖子分布 */}
+        <div className="card p-4">
+          <h3 className="text-sm font-semibold font-display mb-3">板块帖子分布</h3>
+          {stats.boardDist.length === 0 ? (
+            <p className="text-center text-campus-text-tertiary text-sm py-8 font-body">暂无数据</p>
+          ) : (
+            <div className="space-y-2">
+              {stats.boardDist.map(b => (
+                <div key={b.name} className="flex items-center gap-2">
+                  <span className="text-xs text-campus-text-secondary w-16 truncate font-body">{b.name}</span>
+                  <div className="flex-1 bg-surface-hover rounded-full h-5 overflow-hidden">
+                    <div className="h-full bg-primary rounded-full transition-all flex items-center justify-end pr-2" style={{ width: `${(b.count / maxBoardDist) * 100}%` }}>
+                      <span className="text-xs text-white font-medium">{b.count}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 团队热度排行 */}
+        <div className="card p-4">
+          <h3 className="text-sm font-semibold font-display mb-3">团队热度排行</h3>
+          {stats.teamRanking.length === 0 ? (
+            <p className="text-center text-campus-text-tertiary text-sm py-8 font-body">暂无数据</p>
+          ) : (
+            <div className="space-y-2">
+              {stats.teamRanking.map((t, i) => (
+                <div key={t.name} className="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-hover transition-colors">
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-gray-400 text-white' : i === 2 ? 'bg-orange-400 text-white' : 'bg-surface-hover text-campus-text-tertiary'}`}>{i + 1}</span>
+                  <span className="flex-1 text-sm font-body truncate">{t.name}</span>
+                  <span className="text-xs text-campus-text-tertiary font-body">{t.member_count} 人</span>
+                  <span className="text-xs text-campus-text-tertiary font-body">{t.post_count} 帖</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 活跃用户排行 */}
+      <div className="card p-4">
+        <h3 className="text-sm font-semibold font-display mb-3">活跃用户排行</h3>
+        {stats.activeUsers.length === 0 ? (
+          <p className="text-center text-campus-text-tertiary text-sm py-8 font-body">暂无数据</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            {stats.activeUsers.map((u, i) => (
+              <div key={u.username} className="flex flex-col items-center p-3 rounded-lg bg-surface-hover">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white font-bold mb-2">
+                  {u.display_name?.[0] || u.username[0]}
+                </div>
+                <span className="text-sm font-body truncate w-full text-center">{u.display_name || u.username}</span>
+                <span className="text-xs text-campus-text-tertiary font-body mt-1">{u.points} 积分 · {u.post_count} 帖</span>
+                {i < 3 && <span className="text-xs text-amber-500 mt-1">#{i + 1}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

@@ -487,7 +487,28 @@ export const adminExtendedApi = {
   getReports: (page?: number) => api.get<{ reports: AdminReport[]; page: number; total: number }>('/admin/reports', { params: { page } }),
   resolveReport: (id: number, action: 'dismiss' | 'penalize') => api.put(`/admin/reports/${id}`, { action }),
   getAuditLogs: (page?: number) => api.get<{ logs: AuditLog[]; page: number; total: number }>('/admin/audit-logs', { params: { page } }),
+  getStats: () => api.get<AdminStats>('/admin/stats'),
 };
+
+export interface AdminStats {
+  overview: {
+    totalUsers: number;
+    totalPosts: number;
+    totalComments: number;
+    totalTeams: number;
+    totalBoards: number;
+  };
+  today: {
+    users: number;
+    posts: number;
+    comments: number;
+  };
+  userGrowth: { date: string; count: number }[];
+  postTrend: { date: string; count: number }[];
+  boardDist: { name: string; count: number }[];
+  teamRanking: { name: string; member_count: number; post_count: number }[];
+  activeUsers: { username: string; display_name: string; points: number; post_count: number }[];
+}
 
 // ===== 编辑历史 API =====
 export const versionApi = {
