@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import api from '../lib/api';
+import api, { setToken, clearToken } from '../lib/api';
 import { getDeviceCode } from '../lib/device';
 
 interface User {
@@ -26,6 +26,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (username, password) => {
     const { data } = await api.post('/auth/login', { username, password });
     if (data.success) {
+      if (data.token) setToken(data.token);
       set({ user: data.user });
     } else {
       throw new Error(data.error);
@@ -40,6 +41,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       deviceCode: getDeviceCode(),
     });
     if (data.success) {
+      if (data.token) setToken(data.token);
       set({ user: data.user });
     } else {
       throw new Error(data.error);
@@ -47,7 +49,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
-    await api.post('/auth/logout');
+    try { await api.post('/auth/logout'); } catch {}
+    clearToken();
     set({ user: null });
   },
 
@@ -56,6 +59,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const { data } = await api.get('/auth/me');
       set({ user: data, loading: false });
     } catch {
+      clearToken();
       set({ user: null, loading: false });
     }
   },

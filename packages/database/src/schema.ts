@@ -166,6 +166,17 @@ export async function initializeSchema(db: DatabaseAdapter): Promise<void> {
       PRIMARY KEY (post_id, tag_id)
     );
 
+    -- Uploaded images
+    CREATE TABLE IF NOT EXISTS uploaded_images (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      filename TEXT,
+      mime_type TEXT NOT NULL,
+      data TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
     -- Sessions (for express-session)
     CREATE TABLE IF NOT EXISTS sessions (
       sid TEXT PRIMARY KEY,

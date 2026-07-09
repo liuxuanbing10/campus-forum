@@ -2,11 +2,9 @@ import 'dotenv/config';
 import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
-import session from '@fastify/session';
 import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
-import fastifyWebSocket from '@fastify/websocket';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -55,7 +53,7 @@ function isSuspiciousUA(ua: string | undefined): boolean {
 // ── 可公开访问的路径（无需验证 UA 或额外限流）────
 const PUBLIC_ASSET_PATHS = ['/uploads/', '/health'];
 
-async function main() {
+export async function buildApp() {
   const app = Fastify({
     logger: true,
     bodyLimit: 1024 * 1024, // 请求体最大 1MB
@@ -91,21 +89,8 @@ async function main() {
     }
   });
 
-  // ── Cookie + Session ─────────────────────────
+  // ── Cookie ─────────────────────────
   await app.register(cookie);
-  const sessionSecret = process.env.SESSION_SECRET;
-  if (!sessionSecret || sessionSecret.length < 32) {
-    console.error('❌ 请设置 SESSION_SECRET 环境变量（≥32 字符）');
-    process.exit(1);
-  }
-  await app.register(session, {
-    secret: sessionSecret,
-    cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    },
-  });
 
   // ── 限流 ─────────────────────────────────────
   await app.register(rateLimit, {
@@ -137,12 +122,6 @@ async function main() {
   await migrateSchema(db);
 
   await (await import('@campus-forum/database')).seedData(db);
-
-  // Uploads 目录（支持 UPLOADS_DIR 环境变量）
-  const uploadsDir = process.env.UPLOADS_DIR
-    ? path.resolve(process.env.UPLOADS_DIR)
-    : path.resolve(__dirname, '../../../uploads');
-  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
   // Logger
   const logger: Logger = {
@@ -201,88 +180,7 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       userId, type, message, relatedPostId || null, relatedCommentId || null, fromUserId || null, relatedTeamId || null,
     );
-
-    // WebSocket 实时推送通知
-    (pluginCtx as any).sendToUser?.(userId, 'new_notification', {
-      userId, type, message, relatedPostId, relatedCommentId, fromUserId, relatedTeamId,
-    });
   };
-
-  // ── WebSocket 支持 ──────────────────────────────
-  await app.register(fastifyWebSocket);
-
-  // WebSocket 连接管理
-  const wsConnections = new Map<number, Set<any>>();
-
-  // 暴露 WebSocket 广播能力到 context
-  (pluginCtx as any).sendToUser = (userId: number, event: string, data: any) => {
-    const sockets = wsConnections.get(userId);
-    if (sockets) {
-      sockets.forEach(socket => {
-        try {
-          socket.send(JSON.stringify({ event, data }));
-        } catch {
-          sockets.delete(socket);
-        }
-      });
-    }
-  };
-
-  (pluginCtx as any).sendToUsers = (userIds: number[], event: string, data: any) => {
-    userIds.forEach(userId => {
-      const sockets = wsConnections.get(userId);
-      if (sockets) {
-        sockets.forEach(socket => {
-          try {
-            socket.send(JSON.stringify({ event, data }));
-          } catch {
-            sockets.delete(socket);
-          }
-        });
-      }
-    });
-  };
-
-  // WebSocket 路由
-  app.get('/ws', { websocket: true }, (socket, req) => {
-    const userId = (req.session as any)?.userId;
-    if (!userId) {
-      socket.close(401, 'Unauthorized');
-      return;
-    }
-
-    // 注册连接
-    if (!wsConnections.has(userId)) {
-      wsConnections.set(userId, new Set());
-    }
-    wsConnections.get(userId)!.add(socket);
-
-    // 发送在线状态
-    socket.send(JSON.stringify({ event: 'connected', data: { userId } }));
-
-    // 清理连接
-    socket.on('close', () => {
-      const sockets = wsConnections.get(userId);
-      if (sockets) {
-        sockets.delete(socket);
-        if (sockets.size === 0) {
-          wsConnections.delete(userId);
-        }
-      }
-    });
-
-    // 监听消息
-    socket.on('message', (message) => {
-      try {
-        const data = JSON.parse(message.toString());
-        if (data.type === 'ping') {
-          socket.send(JSON.stringify({ event: 'pong' }));
-        }
-      } catch {
-        // ignore invalid messages
-      }
-    });
-  });
 
   // Health check
   app.get('/api/health', async () => {
@@ -294,15 +192,7 @@ async function main() {
     reply.header('Content-Type', 'text/plain');
     return `User-agent: *
 Disallow: /api/
-Disallow: /uploads/
 `;
-  });
-
-  // Serve uploads
-  await app.register(fastifyStatic, {
-    root: uploadsDir,
-    prefix: '/uploads/',
-    decorateReply: false,
   });
 
   // Serve client in production
@@ -316,6 +206,12 @@ Disallow: /uploads/
     });
   }
 
+  return app;
+}
+
+async function main() {
+  const port = Number(process.env.PORT) || 3001;
+  const app = await buildApp();
   await app.listen({ port, host: '0.0.0.0' });
   console.log(`🚀 Server running at http://localhost:${port}`);
 }

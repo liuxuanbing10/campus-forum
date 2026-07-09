@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { Plugin, PluginContext, uid, isAdmin } from '@campus-forum/core';
+import { Plugin, PluginContext, uid, isAdmin, signJwt } from '@campus-forum/core';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
@@ -141,18 +141,17 @@ export const authPlugin: Plugin = {
         'SELECT id, username FROM users WHERE username = ?', username
       );
 
-      // 6. 自动登录（写入 session）
+      // 6. 生成 JWT token
+      let token = '';
       if (user) {
-        request.session.userId = user.id;
-        request.session.username = user.username;
-        request.session.deviceCode = deviceCode;
-        await request.session.save();
+        token = signJwt({ userId: user.id, username: user.username });
       }
 
       return {
         success: true,
         message: '注册成功',
         user: { id: user?.id, username },
+        token,
       };
     });
 
@@ -184,23 +183,21 @@ export const authPlugin: Plugin = {
         return reply.status(401).send({ error: '密码错误' });
       }
 
-      // 3. 设置 session（不校验设备码，支持多设备登录）
-      request.session.userId = user.id;
-      request.session.username = user.username;
-      await request.session.save();
+      // 3. 生成 JWT token
+      const token = signJwt({ userId: user.id, username: user.username });
 
       return {
         success: true,
         message: '登录成功',
         user: { id: user.id, username: user.username },
+        token,
       };
     });
 
     // ========================================
     // 登出
     // ========================================
-    app.post('/api/auth/logout', async (request, reply) => {
-      await request.session.destroy();
+    app.post('/api/auth/logout', async () => {
       return { success: true, message: '已退出登录' };
     });
 
@@ -208,15 +205,16 @@ export const authPlugin: Plugin = {
     // 获取当前用户
     // ========================================
     app.get('/api/auth/me', async (request, reply) => {
-      if (!request.session.userId) {
+      const userId = uid(request);
+      if (!userId) {
         return reply.status(401).send({ error: '未登录' });
       }
       // 更新在线时间
-      await db.run("UPDATE users SET last_active_at = datetime('now') WHERE id = ?", request.session.userId);
+      await db.run("UPDATE users SET last_active_at = datetime('now') WHERE id = ?", userId);
 
       const user = await db.get<UserRow>(
         'SELECT id, username, display_name, is_admin FROM users WHERE id = ?',
-        request.session.userId
+        userId
       );
 
       if (!user) {
@@ -240,7 +238,8 @@ export const authPlugin: Plugin = {
     // 更新用户资料
     // ========================================
     app.put('/api/auth/me', async (request, reply) => {
-      if (!request.session.userId) {
+      const userId = uid(request);
+      if (!userId) {
         return reply.status(401).send({ error: '未登录' });
       }
 
@@ -249,7 +248,7 @@ export const authPlugin: Plugin = {
 
       const user = await db.get<UserRow>(
         'SELECT id, username FROM users WHERE id = ?',
-        request.session.userId
+        userId
       );
 
       if (!user) {
@@ -276,12 +275,12 @@ export const authPlugin: Plugin = {
         return reply.status(400).send({ error: '没有提供需要更新的字段' });
       }
 
-      params.push(request.session.userId);
+      params.push(userId);
       await db.run(`UPDATE users SET ${updates.join(', ')}, updated_at = datetime('now') WHERE id = ?`, ...params);
 
       const updatedUser = (await db.get<UserRow>(
         'SELECT id, username, display_name, email, avatar_url, is_admin, role, is_banned, created_at FROM users WHERE id = ?',
-        request.session.userId
+        userId
       ))!;
 
       return {
@@ -305,7 +304,8 @@ export const authPlugin: Plugin = {
     // 修改密码
     // ========================================
     app.put('/api/auth/password', async (request, reply) => {
-      if (!request.session.userId) {
+      const userId = uid(request);
+      if (!userId) {
         return reply.status(401).send({ error: '未登录' });
       }
 
@@ -326,7 +326,7 @@ export const authPlugin: Plugin = {
 
       const user = await db.get<UserRow>(
         'SELECT id, password_hash FROM users WHERE id = ?',
-        request.session.userId
+        userId
       );
 
       if (!user) {
@@ -339,7 +339,7 @@ export const authPlugin: Plugin = {
       }
 
       const hash = await bcrypt.hash(newPassword, 10);
-      await db.run("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?", hash, request.session.userId);
+      await db.run("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?", hash, userId);
 
       return {
         success: true,
@@ -462,13 +462,11 @@ export const authPlugin: Plugin = {
         // 查找是否已绑定
         const existing = await db.get<{ user_id: number }>('SELECT user_id FROM oauth_accounts WHERE provider=? AND provider_id=?', 'github', providerUserId);
         if (existing) {
-          // 已绑定 → 直接登录
+          // 已绑定 → 生成 token 并重定向
           const user = await db.get<UserRow>('SELECT id, username FROM users WHERE id=?', existing.user_id);
           if (user) {
-            req.session.userId = user.id;
-            req.session.username = user.username;
-            await req.session.save();
-            return rep.redirect(frontendUrl);
+            const token = signJwt({ userId: user.id, username: user.username });
+            return rep.redirect(`${frontendUrl}/oauth/callback?token=${encodeURIComponent(token)}`);
           }
         }
 
@@ -521,12 +519,10 @@ export const authPlugin: Plugin = {
       } catch { /* 可能已存在 */ }
 
       // 登录
-      req.session.userId = user.id;
-      req.session.username = user.username;
-      await req.session.save();
+      const jwtToken = signJwt({ userId: user.id, username: user.username });
 
       oauthTempStore.delete(token);
-      return { success: true, user: { id: user.id, username: user.username } };
+      return { success: true, user: { id: user.id, username: user.username }, token: jwtToken };
     });
 
     // ========================================
@@ -538,15 +534,18 @@ export const authPlugin: Plugin = {
       if (!image) return rep.status(400).send({ error: '请提供图片数据' });
       const m = image.match(/^data:(image\/\w+);base64,(.+)$/);
       if (!m) return rep.status(400).send({ error: '图片格式错误' });
-      const ext = m[1].split('/')[1].replace('jpeg', 'jpg');
-      const buf = Buffer.from(m[2], 'base64');
+      const mimeType = m[1];
+      const base64Data = m[2];
+      const buf = Buffer.from(base64Data, 'base64');
       if (buf.length > 2 * 1024 * 1024) return rep.status(400).send({ error: '图片不能超过 2MB' });
-      const uploadsDir = path.resolve(__dirname, '../../../uploads');
-      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-      const name = `avatar_${userId}_${Date.now()}.${ext}`;
-      fs.writeFileSync(path.join(uploadsDir, name), buf);
-      await db.run('UPDATE users SET avatar_url=? WHERE id=?', `/uploads/${name}`, userId);
-      return { success: true, url: `/uploads/${name}` };
+      const result = await db.run(
+        'INSERT INTO uploaded_images (user_id, filename, mime_type, data, size) VALUES (?, ?, ?, ?, ?)',
+        userId, `avatar_${userId}`, mimeType, base64Data, buf.length
+      );
+      const id = result.lastInsertRowid as number;
+      const url = `/api/images/${id}`;
+      await db.run('UPDATE users SET avatar_url=? WHERE id=?', url, userId);
+      return { success: true, url };
     });
 
     // ========================================

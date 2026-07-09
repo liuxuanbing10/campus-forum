@@ -270,14 +270,29 @@ export const postsPlugin: Plugin = {
       const { image, filename } = uploadSchema.parse(req.body);
       const m = image.match(/^data:(image\/\w+);base64,(.+)$/);
       if (!m) return rep.status(400).send({ error: '图片格式错误' });
-      const ext = m[1].split('/')[1].replace('jpeg', 'jpg');
-      const buf = Buffer.from(m[2], 'base64');
+      const mimeType = m[1];
+      const base64Data = m[2];
+      const buf = Buffer.from(base64Data, 'base64');
       if (buf.length > 5 * 1024 * 1024) return rep.status(400).send({ error: '图片不能超过 5MB' });
-      const dir = path.join(__dirname, '../../uploads');
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      const name = filename || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      fs.writeFileSync(path.join(dir, name), buf);
-      return { success: true, url: `/uploads/${name}`, filename: name };
+      const result = await db.run(
+        'INSERT INTO uploaded_images (user_id, filename, mime_type, data, size) VALUES (?, ?, ?, ?, ?)',
+        userId, filename || null, mimeType, base64Data, buf.length
+      );
+      const id = result.lastInsertRowid as number;
+      return { success: true, url: `/api/images/${id}`, filename: filename || `image_${id}` };
+    });
+
+    // ─── 图片读取 ───
+    app.get('/api/images/:id', async (req, rep) => {
+      const id = Number((req.params as { id: string }).id);
+      if (!id || id <= 0) return rep.status(404).send({ error: 'Not found' });
+      const img = await db.get<{ mime_type: string; data: string }>(
+        'SELECT mime_type, data FROM uploaded_images WHERE id = ?', id
+      );
+      if (!img) return rep.status(404).send({ error: 'Not found' });
+      rep.header('Content-Type', img.mime_type);
+      rep.header('Cache-Control', 'public, max-age=86400');
+      return Buffer.from(img.data, 'base64');
     });
 
     // ─── 评论列表（含 my_vote + 排序）───

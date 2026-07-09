@@ -1,0 +1,18 @@
+{
+  "buildCommand": "npm run build:vercel",
+  "outputDirectory": "packages/client/dist",
+  "installCommand": "npm install",
+  "framework": null,
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/[...slug]" },
+    { "source": "/((?!api/|.*\\..*).*)", "destination": "/index.html" }
+  ],
+  "functions": {
+    "api/[...slug].ts": {
+      "maxDuration": 10
+    }
+  },
+  "env": {
+    "NODE_ENV": "production"
+  }
+}

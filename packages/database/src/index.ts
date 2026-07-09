@@ -2,7 +2,7 @@ import { createClient, Client, Row, InArgs } from '@libsql/client';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { DatabaseAdapter, PreparedStatement } from '@campus-forum/core';
+import { DatabaseAdapter, PreparedStatement, RunResult } from '@campus-forum/core';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -84,8 +84,12 @@ export class LibSQLAdapter implements DatabaseAdapter {
     return normalizeRows(result.rows) as T[];
   }
 
-  async run(sql: string, ...params: unknown[]): Promise<void> {
-    await this.client.execute({ sql, args: params as InArgs });
+  async run(sql: string, ...params: unknown[]): Promise<RunResult> {
+    const result = await this.client.execute({ sql, args: params as InArgs });
+    return {
+      lastInsertRowid: result.lastInsertRowid ?? 0,
+      changes: result.rowsAffected ?? 0,
+    };
   }
 
   async exec(sql: string): Promise<void> {
@@ -112,8 +116,12 @@ export class LibSQLAdapter implements DatabaseAdapter {
         const result = await client.execute({ sql, args: params as InArgs });
         return normalizeRows(result.rows) as T[];
       },
-      run: async (...params: unknown[]): Promise<void> => {
-        await client.execute({ sql, args: params as InArgs });
+      run: async (...params: unknown[]): Promise<RunResult> => {
+        const result = await client.execute({ sql, args: params as InArgs });
+        return {
+          lastInsertRowid: result.lastInsertRowid ?? 0,
+          changes: result.rowsAffected ?? 0,
+        };
       },
     };
   }
