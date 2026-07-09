@@ -111,10 +111,10 @@ export default function PostDetailPage() {
   const [showVersions, setShowVersions] = useState(false);
 
   const fetchPost = () => {
-    api.get(`/posts/$\{id}`).then(r => { setPost(r.data); setLoading(false); });
+    api.get(`/posts/${id}`).then(r => { setPost(r.data); setLoading(false); });
   };
   const fetchComments = () => {
-    api.get(`/posts/$\{id}/comments`).then(r => setComments(r.data));
+    api.get(`/posts/${id}/comments`).then(r => setComments(r.data));
   };
   const fetchStats = () => {
     postsApi.getStats(Number(id)).then(r => setStats(r.data)).catch(() => {});
@@ -125,9 +125,6 @@ export default function PostDetailPage() {
       setVersions(r.data.versions || []);
       setShowVersions(true);
     } catch { toastStore.error('加载编辑历史失败'); }
-  };
-  const fetchStats = () => {
-    postsApi.getStats(Number(id)).then(r => setStats(r.data)).catch(() => {});
   };
 
   useEffect(() => { fetchPost(); fetchComments(); fetchStats(); }, [id]);
@@ -155,7 +152,7 @@ export default function PostDetailPage() {
     try {
       const body: any = { content: commentText.trim() };
       if (replyTo) body.parentId = replyTo.id;
-      await api.post(`/posts/$\{id}/comments`, body);
+      await api.post(`/posts/${id}/comments`, body);
       toastStore.success('评论成功');
       setCommentText('');
       setReplyTo(null);
@@ -176,37 +173,15 @@ export default function PostDetailPage() {
     catch { toastStore.error('操作失败'); }
   };
 
-  const handleTogglePrivacy = async () => {
-    if (!user) return;
-    try {
-      const res = await postsApi.togglePrivacy(Number(id));
-      toastStore.success(res.data.message);
-      fetchPost();
-    } catch {
-      toastStore.error('操作失败');
-    }
-  };
-
-  const handleTogglePin = async () => {
-    if (!user) return;
-    try {
-      const res = await postsApi.togglePin(Number(id));
-      toastStore.success(res.data.message);
-      fetchPost();
-    } catch {
-      toastStore.error('操作失败');
-    }
-  };
-
   const handleDelete = async () => {
     if (!confirm('确定删除此帖？')) return;
-    try { await api.delete(`/posts/$\{id}`); toastStore.success('删除成功'); navigate('/'); }
+    try { await api.delete(`/posts/${id}`); toastStore.success('删除成功'); navigate('/'); }
     catch { toastStore.error('删除失败'); }
   };
 
   const handleDeleteComment = async (commentId: number) => {
     if (!confirm('确定删除此评论？')) return;
-    try { await api.delete(`/comments/$\{commentId}`); toastStore.success('删除成功'); fetchComments(); }
+    try { await api.delete(`/comments/${commentId}`); toastStore.success('删除成功'); fetchComments(); }
     catch { toastStore.error('删除失败'); }
   };
 
@@ -217,13 +192,13 @@ export default function PostDetailPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <Link to={`/board/$\{post.board_id}`} className="inline-flex items-center gap-1 text-sm text-campus-text-tertiary hover:text-primary transition-colors font-body">
+      <Link to={`/board/${post.board_id}`} className="inline-flex items-center gap-1 text-sm text-campus-text-tertiary hover:text-primary transition-colors font-body">
         <ArrowLeft className="w-4 h-4" /> 返回 {post.board_name}
       </Link>
 
       {/* Author info with follow */}
       <div className="flex items-center gap-3 mt-4 mb-2">
-        <Link to={`/user/$\{post.author_id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
+        <Link to={`/user/${post.author_id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white text-sm font-bold">
             {post.is_anonymous ? '匿' : post.author_name[0]}
           </div>
@@ -246,7 +221,7 @@ export default function PostDetailPage() {
           {post.is_private === 1 && <span className="flex items-center gap-1 text-warning"><Lock className="w-3 h-3" />私密</span>}
           {user && (user.id === post.author_id || user.isAdmin) && (
             <>
-              <Link to={`/edit-post/$\{post.id}`} className="text-primary hover:text-primary-hover flex items-center gap-1"><Edit3 className="w-4 h-4" />编辑</Link>
+              <Link to={`/edit-post/${post.id}`} className="text-primary hover:text-primary-hover flex items-center gap-1"><Edit3 className="w-4 h-4" />编辑</Link>
               {user.id === post.author_id && (
                 <button onClick={handleTogglePrivacy} className="text-warning hover:text-warning/80 flex items-center gap-1">
                   {post.is_private === 1 ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
@@ -274,12 +249,12 @@ export default function PostDetailPage() {
 
         <div className="flex items-center gap-6 mt-6 pt-6 border-t border-border">
           <button onClick={() => handleVote(post.my_vote === 1 ? 0 : 1)}
-            className={`flex items-center gap-2 text-sm font-medium transition-colors $\{post.my_vote === 1 ? 'text-primary' : 'text-campus-text-tertiary'} hover:text-primary`}>
-            <ThumbsUp className={`w-5 h-5 $\{post.my_vote === 1 ? 'fill-current' : ''}`} />{stats?.like_count ?? post.like_count}
+            className={`flex items-center gap-2 text-sm font-medium transition-colors ${post.my_vote === 1 ? 'text-primary' : 'text-campus-text-tertiary'} hover:text-primary`}>
+            <ThumbsUp className={`w-5 h-5 ${post.my_vote === 1 ? 'fill-current' : ''}`} />{stats?.like_count ?? post.like_count}
           </button>
           <button onClick={handleFavorite}
-            className={`flex items-center gap-2 text-sm font-medium transition-colors $\{post.is_favorited ? 'text-warning' : 'text-campus-text-tertiary'} hover:text-warning`}>
-            <Heart className={`w-5 h-5 $\{post.is_favorited ? 'fill-current' : ''}`} />{stats?.favorite_count ? `$\{stats.favorite_count} 收藏` : '收藏'}
+            className={`flex items-center gap-2 text-sm font-medium transition-colors ${post.is_favorited ? 'text-warning' : 'text-campus-text-tertiary'} hover:text-warning`}>
+            <Heart className={`w-5 h-5 ${post.is_favorited ? 'fill-current' : ''}`} />{stats?.favorite_count ? `${stats.favorite_count} 收藏` : '收藏'}
           </button>
           <span className="flex items-center gap-2 text-sm text-campus-text-tertiary"><MessageCircle className="w-5 h-5" />{stats?.comment_count ?? post.comment_count}</span>
           <button onClick={() => setShowReport({ type: 'post', id: post.id })} className="flex items-center gap-2 text-sm text-campus-text-tertiary hover:text-destructive transition-colors"><Flag className="w-4 h-4" />举报</button>

@@ -2,7 +2,7 @@ import { Outlet, Link, useNavigate, useLocation, useSearchParams } from 'react-r
 import { useAuthStore } from '../stores/auth';
 import NotificationBell from './NotificationBell';
 import ThemeSwitcher from './ThemeSwitcher';
-import { Home, Users, Heart, Search, Shield, MessageCircle, Bell } from 'lucide-react';
+import { Home, Users, Heart, Search, Shield, MessageCircle, Bell, X, Menu } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function Layout() {
@@ -11,6 +11,7 @@ export default function Layout() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     if (location.pathname === '/search') {
