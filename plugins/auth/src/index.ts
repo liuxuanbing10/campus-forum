@@ -79,9 +79,11 @@ export const authPlugin: Plugin = {
     const { app, db } = ctx;
 
     // ========================================
-    // 注册
+    // 注册（严格限流：每 IP 每分钟 5 次）
     // ========================================
-    app.post('/api/auth/register', async (request, reply) => {
+    app.post('/api/auth/register', {
+      config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
+    }, async (request, reply) => {
       const { username, password, confirmPassword, email } =
         request.body as RegisterBody;
       const deviceCode = getDeviceCode(request);
@@ -153,9 +155,11 @@ export const authPlugin: Plugin = {
     });
 
     // ========================================
-    // 登录
+    // 登录（严格限流：每 IP 每分钟 10 次）
     // ========================================
-    app.post('/api/auth/login', async (request, reply) => {
+    app.post('/api/auth/login', {
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+    }, async (request, reply) => {
       const { username, password } = request.body as LoginBody;
 
       if (!username || !password) {

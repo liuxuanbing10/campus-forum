@@ -52,7 +52,7 @@ const voteSchema = z.object({
 const favoriteSchema = z.object({ postId: z.number().int().positive('请指定帖子') });
 const boardSchema = z.object({ name: z.string().min(1, '版块名称不能为空'), description: z.string().optional(), icon: z.string().optional() });
 const uploadSchema = z.object({ image: z.string().min(1, '请提供图片数据'), filename: z.string().optional() });
-const paginationSchema = z.object({ page: z.coerce.number().int().positive().optional().default(1), boardId: z.coerce.number().int().positive().optional(), sort: z.enum(['latest', 'hot', 'replied']).optional().default('latest') });
+const paginationSchema = z.object({ page: z.coerce.number().int().positive().max(100).optional().default(1), boardId: z.coerce.number().int().positive().optional(), sort: z.enum(['latest', 'hot', 'replied']).optional().default('latest') });
 
 // ── 工具函数 ──────────────────────────────────
 function addPoints(db: any, userId: number, delta: number) {
@@ -191,7 +191,7 @@ export const postsPlugin: Plugin = {
     // ─── 我的帖子 ───
     app.get('/api/posts/my', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
-      const page = Math.max(1, Number((req.query as any).page) || 1);
+      const page = Math.min(100, Math.max(1, Number((req.query as any).page) || 1));
       const limit = 20; const offset = (page - 1) * limit;
       const posts = db.all<any>(
         `SELECT p.id,p.title,p.board_id,p.is_anonymous,p.is_private,p.created_at,
@@ -391,7 +391,7 @@ export const postsPlugin: Plugin = {
     // ─── 我的收藏 ───
     app.get('/api/favorites', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
-      const page = Math.max(1, Number((req.query as any).page) || 1);
+      const page = Math.min(100, Math.max(1, Number((req.query as any).page) || 1));
       return { posts: db.all<PostListItem>(
         `SELECT p.id,p.title,p.content,p.board_id,p.created_at,p.is_pinned,p.is_private,p.view_count,
           CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,

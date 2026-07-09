@@ -46,6 +46,8 @@ export const boardsPlugin: Plugin = {
         return reply.status(404).send({ error: '板块不存在' });
       }
 
+      const page = Math.min(100, Math.max(1, Number((request.query as any).page) || 1));
+      const limit = 20;
       const posts = db.all<{
         id: number; title: string; author_name: string;
         created_at: string; view_count: number; vote_count: number;
@@ -57,11 +59,12 @@ export const boardsPlugin: Plugin = {
          FROM posts p
          JOIN users u ON p.author_id = u.id
          WHERE p.board_id = ?
-         ORDER BY p.created_at DESC`,
-        Number(request.params.id)
+         ORDER BY p.created_at DESC
+         LIMIT ? OFFSET ?`,
+        Number(request.params.id), limit, (page - 1) * limit
       );
 
-      return posts;
+      return { posts, page, limit };
     });
   },
 };

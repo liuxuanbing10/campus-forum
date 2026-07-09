@@ -23,6 +23,7 @@
     "typescript": "^5.7.0"
   },
   "dependencies": {
+    "@fastify/helmet": "^13.1.0",
     "@fastify/rate-limit": "^11.1.0",
     "@types/better-sqlite3": "^7.6.13",
     "better-sqlite3": "^12.11.1",
