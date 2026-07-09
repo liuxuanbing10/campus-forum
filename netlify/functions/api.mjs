@@ -1,10 +1,8 @@
-import path from 'path';
-
 let appPromise = null;
 
 async function getApp() {
   if (!appPromise) {
-    const { buildApp } = await import(path.resolve(process.cwd(), 'packages/server/dist/index.js'));
+    const { buildApp } = await import('./server-dist/index.js');
     appPromise = buildApp();
   }
   return appPromise;
