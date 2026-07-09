@@ -1,4 +1,4 @@
-import { buildApp } from '../../packages/server/dist/index.js';
+import { buildApp } from '../../packages/server/src/index';
 
 let appPromise: Promise<any> | null = null;
 
@@ -9,7 +9,7 @@ async function getApp() {
   return appPromise;
 }
 
-export const handler = async function(event: any, context: any) {
+export async function handler(event: any, context: any) {
   const app = await getApp();
   await app.ready();
 
@@ -38,4 +38,4 @@ export const handler = async function(event: any, context: any) {
       body: 'Internal Server Error',
     };
   }
-};
+}
