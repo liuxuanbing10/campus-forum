@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../lib/api';
+
 import { ArrowLeft, Eye, ThumbsUp, MessageSquare, Rss } from 'lucide-react';
 import MetaManager from '../components/MetaManager';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 interface Post {
   id: number;
@@ -57,7 +60,7 @@ export default function BoardPage() {
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-[1.75rem] leading-none flex-shrink-0">{boardIcon}</span>
 
-          <a href={`/api/rss/boards/${id}`} target="_blank" rel="noopener noreferrer"
+          <a href={`${API_BASE}/api/rss/boards/${id}`} target="_blank" rel="noopener noreferrer"
              className="flex items-center gap-1 text-sm text-orange-500 hover:text-orange-600 transition-colors font-body">
             <Rss className="w-4 h-4" />
             RSS
