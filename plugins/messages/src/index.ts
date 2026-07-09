@@ -45,4 +45,15 @@ const userId=uid(req);if(!userId)return rep.status(401).send({error:'请先登�
 const r=db.get<{c:number}>('SELECT COUNT(*) as c FROM messages m JOIN conversations c ON m.conversation_id=c.id WHERE (c.user1_id=? OR c.user2_id=?) AND m.sender_id!=? AND m.is_read=0',userId,userId,userId);
 return {unreadCount:r?.c||0};
 });
+
+// 用户搜索（用于发起新对话）
+app.get('/api/search/users',async(req,rep)=>{
+const userId=uid(req);if(!userId)return rep.status(401).send({error:'请先登录'});
+const q=req.query as {q?:string};
+if(!q.q||q.q.trim().length<1)return rep.status(400).send({error:'请输入搜索关键词'});
+const kw=`%${q.q.trim()}%`;
+const users=db.all<{id:number;username:string;display_name:string|null}>(
+'SELECT id,username,display_name FROM users WHERE (username LIKE ? OR display_name LIKE ?) AND id!=? AND is_banned=0 LIMIT 10',kw,kw,userId);
+return {users};
+});
 }};export default messagesPlugin;

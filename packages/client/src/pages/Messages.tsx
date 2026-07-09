@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 import { messageApi, Conversation, Message } from '../lib/api';
 import { toastStore } from '../App';
-import { ArrowLeft, Send, MessageCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Send, MessageCircle, Loader2, Search, Plus, X } from 'lucide-react';
+import api from '../lib/api';
 
 export default function MessagesPage() {
   const { id } = useParams<{ id: string }>();
@@ -14,22 +15,47 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [showNewChat, setShowNewChat] = useState(false);
+  const [searchUser, setSearchUser] = useState('');
+  const [searchResults, setSearchResults] = useState<{ id: number; username: string; display_name?: string }[]>([]);
+  const [unreadTotal, setUnreadTotal] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const loadConversations = useCallback(() => {
+    if (!user) return;
+    messageApi.getConversations().then(r => {
+      setConversations(r.data.conversations || []);
+      const total = (r.data.conversations || []).reduce((sum: number, c: Conversation) => sum + (c.unread_count || 0), 0);
+      setUnreadTotal(total);
+    }).catch(() => {});
+  }, [user]);
 
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
-    messageApi.getConversations().then(r => {
-      setConversations(r.data.conversations || []);
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, [user]);
+    loadConversations().finally(() => setLoading(false));
+
+    // 轮询刷新会话列表（每15秒）
+    pollRef.current = setInterval(loadConversations, 15000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [user, loadConversations]);
 
   useEffect(() => {
     if (id) {
       messageApi.getMessages(parseInt(id)).then(r => {
         setMessages(r.data.messages || []);
+        loadConversations(); // 刷新未读数
       }).catch(() => toastStore.error('加载消息失败'));
+
+      // 轮询新消息（每5秒）
+      const msgPoll = setInterval(() => {
+        messageApi.getMessages(parseInt(id)).then(r => {
+          setMessages(r.data.messages || []);
+        }).catch(() => {});
+      }, 5000);
+      return () => clearInterval(msgPoll);
     }
-  }, [id]);
+  }, [id, loadConversations]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -41,8 +67,28 @@ export default function MessagesPage() {
       setText('');
       const r = await messageApi.getMessages(parseInt(id!));
       setMessages(r.data.messages || []);
+      loadConversations();
     } catch { toastStore.error('发送失败'); }
     finally { setSending(false); }
+  };
+
+  // 搜索用户
+  const handleSearchUser = async (q: string) => {
+    setSearchUser(q);
+    if (q.trim().length < 1) { setSearchResults([]); return; }
+    try {
+      const res = await api.get('/search/users', { params: { q: q.trim() } });
+      setSearchResults(res.data.users || []);
+    } catch { setSearchResults([]); }
+  };
+
+  // 发起新对话
+  const startNewChat = (userId: number) => {
+    setShowNewChat(false);
+    setSearchUser('');
+    setSearchResults([]);
+    // 发送一条空消息来创建会话，或者直接跳转
+    navigate(`/messages/${userId}`);
   };
 
   if (loading) return <div className="text-center py-12 text-campus-text-tertiary font-body">加载中...</div>;
@@ -51,11 +97,51 @@ export default function MessagesPage() {
   if (!id) {
     return (
       <div className="max-w-2xl mx-auto px-4 pt-6 pb-16">
-        <Link to="/" className="inline-flex items-center gap-1 text-sm text-campus-text-tertiary hover:text-primary transition-colors font-body mb-6">
-          <ArrowLeft className="w-4 h-4" /> 返回首页
-        </Link>
-        <h1 className="text-xl font-bold font-display mb-4 flex items-center gap-2"><MessageCircle className="w-5 h-5" /> 私信</h1>
-        {conversations.length === 0 && <p className="text-center py-12 text-campus-text-tertiary font-body">暂无会话</p>}
+        <div className="flex items-center justify-between mb-4">
+          <Link to="/" className="inline-flex items-center gap-1 text-sm text-campus-text-tertiary hover:text-primary transition-colors font-body">
+            <ArrowLeft className="w-4 h-4" /> 返回首页
+          </Link>
+          <button onClick={() => setShowNewChat(!showNewChat)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white text-sm font-body hover:bg-primary-hover transition-colors">
+            <Plus className="w-4 h-4" /> 新对话
+          </button>
+        </div>
+
+        <h1 className="text-xl font-bold font-display mb-4 flex items-center gap-2">
+          <MessageCircle className="w-5 h-5" /> 私信
+          {unreadTotal > 0 && <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{unreadTotal} 未读</span>}
+        </h1>
+
+        {/* 新对话搜索 */}
+        {showNewChat && (
+          <div className="card p-4 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold font-display">搜索用户发起新对话</h3>
+              <button onClick={() => setShowNewChat(false)} className="p-1 hover:bg-surface-hover rounded"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-campus-text-tertiary" />
+              <input value={searchUser} onChange={e => handleSearchUser(e.target.value)}
+                placeholder="搜索用户名..." className="w-full pl-9 pr-4 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
+            </div>
+            <div className="space-y-1 max-h-48 overflow-y-auto">
+              {searchResults.map(u => (
+                <button key={u.id} onClick={() => startNewChat(u.id)}
+                  className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-surface-hover transition-colors text-left">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white text-sm font-bold">
+                    {u.display_name?.[0] || u.username[0]}
+                  </div>
+                  <div>
+                    <p className="text-sm font-body">{u.display_name || u.username}</p>
+                    <p className="text-xs text-campus-text-tertiary">@{u.username}</p>
+                  </div>
+                </button>
+              ))}
+              {searchUser && searchResults.length === 0 && <p className="text-center text-xs text-campus-text-tertiary py-4 font-body">未找到用户</p>}
+            </div>
+          </div>
+        )}
+
+        {conversations.length === 0 && !showNewChat && <p className="text-center py-12 text-campus-text-tertiary font-body">暂无会话，点击"新对话"开始聊天</p>}
         <div className="space-y-2">
           {conversations.map(c => (
             <Link key={c.id} to={`/messages/${c.id}`}
