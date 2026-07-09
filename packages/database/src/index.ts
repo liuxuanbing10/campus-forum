@@ -1,20 +1,10 @@
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import { DatabaseAdapter, PreparedStatement, RunResult } from '@campus-forum/core';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type Client = any;
 type Row = any;
 type InArgs = any;
 
-import { createClient as createWebClient } from '@libsql/client/web';
-
-async function createLocalClient(dbPath: string): Promise<Client> {
-  const { createClient } = await import('@libsql/client');
-  return createClient({ url: `file:${dbPath}` });
-}
+import { createClient as createHttpClient } from '@libsql/client/http';
 
 // 将 libsql 返回行中的 BigInt 转为 number（避免 JSON 序列化报错）
 function normalizeRow(row: Row | undefined): any {
@@ -63,17 +53,11 @@ export class LibSQLAdapter implements DatabaseAdapter {
     const tursoUrl = process.env.TURSO_DATABASE_URL;
     const tursoToken = process.env.TURSO_AUTH_TOKEN;
 
-    let client: Client;
-
-    if (tursoUrl) {
-      client = createWebClient({ url: tursoUrl, authToken: tursoToken });
-    } else {
-      const resolvedPath = dbPath || path.join(__dirname, '../../data/forum.db');
-      const dir = path.dirname(resolvedPath);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      client = await createLocalClient(resolvedPath);
+    if (!tursoUrl) {
+      throw new Error('TURSO_DATABASE_URL environment variable is required');
     }
 
+    const client = createHttpClient({ url: tursoUrl, authToken: tursoToken });
     return new LibSQLAdapter(client);
   }
 

@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build:server && npx esbuild netlify/functions/api.ts --bundle --platform=node --format=esm --outfile=netlify/functions/api.mjs --external:libsql --external:@libsql/linux-x64-gnu --external:@libsql/win32-x64-msvc --external:@libsql/darwin-x64 --external:@libsql/darwin-arm64 && npm run build:client"
+  command = "npm run build:server && npm run build:client"
   publish = "packages/client/dist"
   functions = "netlify/functions"
 

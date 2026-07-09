@@ -1,4 +1,4 @@
-import { buildApp } from '../../packages/server/src/index';
+import { buildApp } from '../../packages/server/dist/index.js';
 
 let appPromise: Promise<any> | null = null;
 
