@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build:vercel"
+  command = "node --version && npm --version && npm run build:vercel"
   publish = "packages/client/dist"
 
 [functions]
