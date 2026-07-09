@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { toastStore } from '../App';
 import { ArrowLeft, Lock, ImagePlus, X } from 'lucide-react';
-import MarkdownEditor from '../components/MarkdownEditor';
 
 interface Board {
   id: number;

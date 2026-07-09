@@ -5,10 +5,6 @@ import cookie from '@fastify/cookie';
 import session from '@fastify/session';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
-import Swagger from '@fastify/swagger';
-import SwaggerUI from '@fastify/swagger-ui';
-import websocket from '@fastify/websocket';
-import WebSocket from 'ws';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -49,23 +45,6 @@ async function main() {
     timeWindow: '1 minute',
   });
 
-  // Swagger
-  await app.register(Swagger, {
-    openapi: {
-      openapi: '3.0.0',
-      info: { title: 'Campus Forum API', version: '0.1.0' },
-      components: {
-        securitySchemes: {
-          cookieAuth: { type: 'apiKey', in: 'cookie', name: 'campus_forum_session' },
-        },
-      },
-    },
-  });
-  await app.register(SwaggerUI, { routePrefix: '/docs' });
-
-  // WebSocket
-  await app.register(websocket);
-
   // 数据库
   const dbPath = path.join(__dirname, '../data/forum.db');
   const db = createDatabase(dbPath);
@@ -94,18 +73,6 @@ async function main() {
       set: (key: string, value: unknown) => config.set(key, value),
     },
     getService: () => { throw new Error('Services not yet implemented'); },
-  };
-
-  // WebSocket clients tracker + broadcast helper
-  const wsClients = new Map<number, Set<WebSocket>>();
-  (pluginCtx as any).broadcast = (userId: number, data: unknown) => {
-    const clients = wsClients.get(userId);
-    if (clients) {
-      const message = JSON.stringify(data);
-      for (const client of clients) {
-        if (client.readyState === WebSocket.OPEN) client.send(message);
-      }
-    }
   };
 
   const pluginManager = new PluginManager(pluginCtx);
@@ -147,10 +114,6 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       userId, type, message, relatedPostId || null, relatedCommentId || null, fromUserId || null, relatedTeamId || null,
     );
-    // Push real-time notification via WebSocket
-    if ((pluginCtx as any).broadcast) {
-      (pluginCtx as any).broadcast(userId, { type: 'notification', data: { type, message, relatedPostId, relatedCommentId, fromUserId, relatedTeamId } });
-    }
   };
 
   // Health check
@@ -175,24 +138,6 @@ async function main() {
       return reply.sendFile('index.html');
     });
   }
-
-  // WebSocket endpoint for real-time notifications
-  app.get('/ws', { websocket: true }, (socket: WebSocket, request) => {
-    const url = new URL(request.url, `http://${request.headers.host}`);
-    const userId = parseInt(url.searchParams.get('userId') || '0');
-
-    if (userId) {
-      if (!wsClients.has(userId)) wsClients.set(userId, new Set());
-      wsClients.get(userId)!.add(socket);
-    }
-
-    socket.on('close', () => {
-      if (userId && wsClients.has(userId)) {
-        wsClients.get(userId)!.delete(socket);
-        if (wsClients.get(userId)!.size === 0) wsClients.delete(userId);
-      }
-    });
-  });
 
   await app.listen({ port, host: '0.0.0.0' });
   console.log(`🚀 Server running at http://localhost:${port}`);

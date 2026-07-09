@@ -233,6 +233,70 @@ export function migrateSchema(db: DatabaseAdapter): void {
       UNIQUE(user_id, team_id)
     )`],
     ['add_last_replied_at', `ALTER TABLE posts ADD COLUMN last_replied_at TEXT`],
+    ['add_follows', `CREATE TABLE IF NOT EXISTS follows (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      followed_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(user_id, followed_id)
+    )`],
+    ['add_reports', `CREATE TABLE IF NOT EXISTS reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      reporter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      target_type TEXT NOT NULL CHECK(target_type IN ('post','comment')),
+      target_id INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','resolved','dismissed')),
+      handled_by INTEGER REFERENCES users(id),
+      created_at TEXT DEFAULT (datetime('now'))
+    )`],
+    ['add_post_versions', `CREATE TABLE IF NOT EXISTS post_versions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      title TEXT NOT NULL, content TEXT NOT NULL,
+      edited_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`],
+    ['add_audit_logs', `CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      action TEXT NOT NULL, target_type TEXT, target_id INTEGER,
+      detail TEXT, created_at TEXT DEFAULT (datetime('now'))
+    )`],
+    ['add_points', `ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0`],
+    ['add_last_active', `ALTER TABLE users ADD COLUMN last_active_at TEXT`],
+    ['add_edited_at', `ALTER TABLE comments ADD COLUMN edited_at TEXT`],
+    ['add_bio', `ALTER TABLE users ADD COLUMN bio TEXT`],
+    ['add_messages', `CREATE TABLE IF NOT EXISTS conversations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user1_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      user2_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      last_message TEXT, last_message_at TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(user1_id, user2_id)
+    )`],
+    ['add_messages_table', `CREATE TABLE IF NOT EXISTS messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+      sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      content TEXT NOT NULL,
+      is_read INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`],
+    ['add_oauth', `CREATE TABLE IF NOT EXISTS oauth_accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      provider TEXT NOT NULL, provider_id TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(provider, provider_id)
+    )`],
+    ['add_sensitive_words', `CREATE TABLE IF NOT EXISTS sensitive_words (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      word TEXT UNIQUE NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`],
+    ['add_is_pending', `ALTER TABLE posts ADD COLUMN is_pending INTEGER DEFAULT 0`],
+    ['add_email_verify', `ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0`],
   ];
 
   for (const [name, sql] of migrations) {

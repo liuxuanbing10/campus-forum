@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuthStore } from '../stores/auth';
 import api from '../lib/api';
-import { MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Heart, Star } from 'lucide-react';
+import { Pin, MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Heart, Star, ChevronLeft, ChevronRight, Palette } from 'lucide-react';
+import { THEMES, useThemeStore } from '../stores/theme';
 
 interface Board {
   id: number;
@@ -190,6 +191,25 @@ export default function HomePage() {
                 <div className="absolute left-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-r from-surface via-surface/80 to-transparent pointer-events-none z-20" />
                 <div className="absolute right-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-l from-surface via-surface/80 to-transparent pointer-events-none z-20" />
 
+                {boards.length > 1 && canScroll && (
+                  <>
+                    <button
+                      onClick={() => scrollToCard(Math.max(0, activeIndex - 1))}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-white/80 hover:bg-white shadow-md flex items-center justify-center text-campus-text-primary transition-all hover:scale-105 hidden sm:flex"
+                      aria-label="上一个板块"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => scrollToCard(Math.min(boards.length - 1, activeIndex + 1))}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-white/80 hover:bg-white shadow-md flex items-center justify-center text-campus-text-primary transition-all hover:scale-105 hidden sm:flex"
+                      aria-label="下一个板块"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
+
                 <div
                   ref={scrollRef}
                   onScroll={handleScroll}
@@ -259,6 +279,46 @@ export default function HomePage() {
               <p className="text-lg font-handwrite">暂无板块数据</p>
             </div>
           )}
+
+          {/* 底部快捷操作 */}
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* 创建团队 */}
+            <a
+              href="/teams/new"
+              className="group relative rounded-2xl overflow-hidden glass-card p-6 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <div className="relative z-10 flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                  <Users className="w-6 h-6" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base font-semibold font-display text-campus-text-primary mb-1">创建团队</h3>
+                  <p className="text-sm text-campus-text-tertiary font-body leading-relaxed">邀请同学一起学习、组队参赛，打造你的校园团队</p>
+                  <span className="inline-block mt-3 text-xs font-medium text-primary font-body group-hover:underline">立即创建 →</span>
+                </div>
+              </div>
+            </a>
+
+            {/* 切换主题 */}
+            <div className="group relative rounded-2xl overflow-hidden glass-card p-6 transition-all">
+              <div className="relative z-10 flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                  <Palette className="w-6 h-6" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base font-semibold font-display text-campus-text-primary mb-1">切换主题</h3>
+                  <p className="text-sm text-campus-text-tertiary font-body leading-relaxed">换个心情，选择你喜欢的论坛视觉风格</p>
+                  <div className="flex items-center gap-2 mt-3">
+                    <ThemePreview />
+                    <button
+                      onClick={(e) => { e.preventDefault(); window.location.href = '/settings?tab=appearance'; }}
+                      className="text-xs font-medium text-primary font-body hover:underline"
+                    >去设置 →</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="text-center py-12 text-campus-text-secondary">
@@ -425,5 +485,20 @@ export default function HomePage() {
         }
       `}</style>
     </div>
+  );
+}
+
+function ThemePreview() {
+  const currentId = useThemeStore((s) => s.currentTheme);
+  const theme = THEMES.find((t) => t.id === currentId) || THEMES[0];
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs text-campus-text-tertiary font-body">
+      <span>{theme.emoji}</span>
+      <span>{theme.name}</span>
+      <span className="flex gap-0.5 ml-0.5">
+        <span className="w-2.5 h-2.5 rounded-full border border-border/40" style={{ backgroundColor: theme.colors.primary }} />
+        <span className="w-2.5 h-2.5 rounded-full border border-border/40" style={{ backgroundColor: theme.colors.surface }} />
+      </span>
+    </span>
   );
 }

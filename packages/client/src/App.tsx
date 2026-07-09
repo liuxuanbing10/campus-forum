@@ -20,6 +20,9 @@ import Favorites from './pages/Favorites';
 import EditPost from './pages/EditPost';
 import Notifications from './pages/Notifications';
 import Admin from './pages/Admin';
+import UserProfile from './pages/UserProfile';
+import Messages from './pages/Messages';
+import OAuthSetup from './pages/OAuthSetup';
 import { ToastContainer, ToastProps } from './components/Toast';
 
 const Settings = lazy(() => import('./pages/Settings').catch(() => ({ default: () => <div>加载中...</div> })));
@@ -81,15 +84,19 @@ export default function App() {
           <Route path="/admin" element={<Admin />} />
           <Route path="/board/:id" element={<Board />} />
           <Route path="/post/:id" element={<PostDetail />} />
+          <Route path="/user/:id" element={<UserProfile />} />
+          <Route path="/messages" element={<Messages />} />
+          <Route path="/messages/:id" element={<Messages />} />
           <Route path="/edit-post/:id" element={<EditPost />} />
           <Route path="/new" element={<NewPost />} />
           <Route path="/teams" element={<Teams />} />
           <Route path="/teams/my" element={<MyTeams />} />
           <Route path="/teams/new" element={<CreateTeam />} />
           <Route path="/teams/:id" element={<TeamDetail />} />
-          <Route path="/teams/:id/edit" element={<EditTeam />} />
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path={"/teams/:id/edit"} element={<EditTeam />} />
+          <Route path={"*"} element={<Navigate to="/" />} />
         </Route>
+        <Route path={"/oauth/setup"} element={<OAuthSetup />} />
       </Routes>
       <ToastContainer toasts={toastList} onClose={toastStore.remove} />
     </>

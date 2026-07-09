@@ -2,7 +2,7 @@ import { Outlet, Link, useNavigate, useLocation, useSearchParams } from 'react-r
 import { useAuthStore } from '../stores/auth';
 import NotificationBell from './NotificationBell';
 import ThemeSwitcher from './ThemeSwitcher';
-import { Home, Users, Heart, Search, Shield, Menu, X } from 'lucide-react';
+import { Home, Users, Heart, Search, Shield, MessageCircle, Bell } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function Layout() {
@@ -11,16 +11,12 @@ export default function Layout() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     if (location.pathname === '/search') {
       setSearchQuery(searchParams.get('q') || '');
     }
   }, [location.pathname, searchParams]);
-
-  // Close mobile menu on route change
-  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
   const handleLogout = async () => {
     await logout();
@@ -76,25 +72,30 @@ export default function Layout() {
             <div className="hidden md:flex items-center gap-3">
             {user ? (
               <>
+                <Link to="/search" className="sm:hidden p-2 hover:bg-background rounded-lg transition-colors">
+                  <Search className="w-5 h-5 text-campus-text-secondary" />
+                </Link>
                 <NotificationBell />
-                <Link to="/favorites" className="p-2 hover:bg-background rounded-lg transition-colors">
+                <Link to="/favorites" className="hidden sm:block p-2 hover:bg-background rounded-lg transition-colors">
                   <Heart className="w-5 h-5 text-campus-text-secondary" />
                 </Link>
-                <Link to="/teams" className="flex items-center gap-1 p-2 hover:bg-background rounded-lg transition-colors">
+                <Link to="/teams" className="hidden sm:flex items-center gap-1 p-2 hover:bg-background rounded-lg transition-colors">
                   <Users className="w-5 h-5 text-campus-text-secondary" />
                 </Link>
-                <Link to="/my-posts" className="text-sm text-campus-text-secondary hover:text-primary transition-colors font-body">
-                  我的帖子
-                </Link>
+                <div className="hidden sm:block relative group">
+                  <Link to="/my-posts" className="text-sm text-campus-text-secondary hover:text-primary transition-colors font-body">
+                    我的帖子
+                  </Link>
+                </div>
                 {user.role === 'admin' && (
-                  <Link to="/admin" className="flex items-center gap-1 p-2 hover:bg-background rounded-lg transition-colors">
+                  <Link to="/admin" className="hidden sm:flex items-center gap-1 p-2 hover:bg-background rounded-lg transition-colors">
                     <Shield className="w-5 h-5 text-campus-text-secondary" />
                   </Link>
                 )}
-                <Link to="/settings" className="text-sm text-campus-text-secondary hover:text-primary transition-colors font-body">
+                <Link to="/settings" className="hidden sm:block text-sm text-campus-text-secondary hover:text-primary transition-colors font-body">
                   设置
                 </Link>
-                <span className="text-sm text-campus-text-primary font-body">
+                <span className="hidden md:inline text-sm text-campus-text-primary font-body">
                   {user.displayName}
                 </span>
                 <button
