@@ -27,7 +27,7 @@ export const searchPlugin: Plugin = {
         return { posts: [], total: 0, page: 1, limit: 20 };
       }
 
-      const page = Math.max(1, Number(query.page) || 1);
+      const page = Math.min(100, Math.max(1, Number(query.page) || 1));
       const limit = 20;
       const offset = (page - 1) * limit;
       const boardId = query.boardId ? Number(query.boardId) : undefined;

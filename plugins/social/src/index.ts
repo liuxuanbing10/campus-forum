@@ -73,7 +73,7 @@ export const socialPlugin: Plugin = {
     // ─── 管理员审核举报 ───
     app.get('/api/admin/reports', async (req, rep) => {
       const u = uid(req); if (!u || !isAdmin(db, u)) return rep.status(403).send({ error: '仅管理员可查看' });
-      const page = Math.max(1, Number((req.query as any).page) || 1);
+      const page = Math.min(100, Math.max(1, Number((req.query as any).page) || 1));
       return { reports: db.all<any>('SELECT r.*,ru.username as reporter_name FROM reports r JOIN users ru ON r.reporter_id=ru.id ORDER BY r.created_at DESC LIMIT 20 OFFSET ?', (page-1)*20), page };
     });
 
@@ -114,7 +114,7 @@ export const socialPlugin: Plugin = {
     app.get('/api/users/:id/posts', async (req, rep) => {
       const id = Number((req.params as { id: string }).id);
       if (!db.get('SELECT id FROM users WHERE id=?', id)) return rep.status(404).send({ error: '用户不存在' });
-      const page = Math.max(1, Number((req.query as any).page) || 1);
+      const page = Math.min(100, Math.max(1, Number((req.query as any).page) || 1));
       const posts = db.all<any>(`SELECT p.id,p.title,p.created_at,b.name as board_name,COALESCE(l.like_count,0) as like_count,COALESCE(c.comment_count,0) as comment_count
         FROM posts p JOIN boards b ON p.board_id=b.id
         LEFT JOIN (SELECT post_id,COUNT(*) as like_count FROM votes WHERE value=1 GROUP BY post_id) l ON l.post_id=p.id
@@ -127,7 +127,7 @@ export const socialPlugin: Plugin = {
     app.get('/api/users/:id/comments', async (req, rep) => {
       const id = Number((req.params as { id: string }).id);
       if (!db.get('SELECT id FROM users WHERE id=?', id)) return rep.status(404).send({ error: '用户不存在' });
-      const page = Math.max(1, Number((req.query as any).page) || 1);
+      const page = Math.min(100, Math.max(1, Number((req.query as any).page) || 1));
       const comments = db.all<any>(`SELECT c.id,c.content,c.created_at,p.id as post_id,p.title as post_title
         FROM comments c JOIN posts p ON c.post_id=p.id WHERE c.author_id=? AND p.is_private=0 ORDER BY c.created_at DESC LIMIT 20 OFFSET ?`, id, (page-1)*20);
       return { comments, page };
@@ -136,7 +136,7 @@ export const socialPlugin: Plugin = {
     // ─── 操作日志（管理员） ───
     app.get('/api/admin/audit-logs', async (req, rep) => {
       const u = uid(req); if (!u || !isAdmin(db, u)) return rep.status(403).send({ error: '仅管理员可查看' });
-      const page = Math.max(1, Number((req.query as any).page) || 1);
+      const page = Math.min(100, Math.max(1, Number((req.query as any).page) || 1));
       return { logs: db.all<any>('SELECT l.*,a.username as admin_name FROM audit_logs l JOIN users a ON l.admin_id=a.id ORDER BY l.created_at DESC LIMIT 30 OFFSET ?', (page-1)*30), page };
     });
   },

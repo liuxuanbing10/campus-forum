@@ -10,7 +10,7 @@ export const notificationsPlugin: Plugin = {
       const userId = (req as any).session?.userId;
       if (!userId) return rep.status(401).send({ error: '请先登录' });
       const q = req.query as { unread?: string; page?: string };
-      const page = Math.max(1, Number(q.page) || 1);
+      const page = Math.min(100, Math.max(1, Number(q.page) || 1));
       const limit = 30;
       const where = q.unread === 'true' ? 'AND n.is_read=0' : '';
 
