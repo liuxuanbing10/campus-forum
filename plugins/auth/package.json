@@ -10,7 +10,7 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@campus-forum/core": "workspace:*",
+    "@campus-forum/core": "*",
     "bcryptjs": "^2.4.3"
   },
   "devDependencies": {

@@ -40,19 +40,19 @@ export interface Plugin {
   destroy?: () => Promise<void> | void;
 }
 
-// Database adapter interface
+// Database adapter interface（异步：适配本地 SQLite 和远程 Turso）
 export interface DatabaseAdapter {
-  get<T>(sql: string, ...params: unknown[]): T | undefined;
-  all<T>(sql: string, ...params: unknown[]): T[];
-  run(sql: string, ...params: unknown[]): void;
-  exec(sql: string): void;
+  get<T>(sql: string, ...params: unknown[]): Promise<T | undefined>;
+  all<T>(sql: string, ...params: unknown[]): Promise<T[]>;
+  run(sql: string, ...params: unknown[]): Promise<void>;
+  exec(sql: string): Promise<void>;
   prepare<T>(sql: string): PreparedStatement<T>;
 }
 
 export interface PreparedStatement<T> {
-  get(...params: unknown[]): T | undefined;
-  all(...params: unknown[]): T[];
-  run(...params: unknown[]): void;
+  get(...params: unknown[]): Promise<T | undefined>;
+  all(...params: unknown[]): Promise<T[]>;
+  run(...params: unknown[]): Promise<void>;
 }
 
 // Event bus interface

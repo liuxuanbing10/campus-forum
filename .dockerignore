@@ -1,0 +1,17 @@
+node_modules
+dist
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+.env
+.git
+.gitignore
+.omo
+.playwright-mcp
+campus-forum-design-draft
+visual-qa
+*.log
+*.png
+packages/server/data
+uploads

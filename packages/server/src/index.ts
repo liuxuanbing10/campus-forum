@@ -128,16 +128,20 @@ async function main() {
     // 实际速率限制由路由 config.rateLimit 控制（在插件中配置）
   });
 
-  // 数据库
-  const dbPath = path.join(__dirname, '../data/forum.db');
-  const db = createDatabase(dbPath);
-  initializeSchema(db);
-  migrateSchema(db);
+  // 数据库（支持 DB_PATH 环境变量或 Turso 远程数据库）
+  const dbPath = process.env.DB_PATH || path.join(__dirname, '../data/forum.db');
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+  const db = await createDatabase(dbPath);
+  await initializeSchema(db);
+  await migrateSchema(db);
 
   await (await import('@campus-forum/database')).seedData(db);
 
-  // Uploads 目录
-  const uploadsDir = path.resolve(__dirname, '../../../uploads');
+  // Uploads 目录（支持 UPLOADS_DIR 环境变量）
+  const uploadsDir = process.env.UPLOADS_DIR
+    ? path.resolve(process.env.UPLOADS_DIR)
+    : path.resolve(__dirname, '../../../uploads');
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
   // Logger
@@ -188,11 +192,11 @@ async function main() {
   }
 
   // 暴露 createNotification 到 context 供其他插件调用
-  (pluginCtx as any).createNotification = (
+  (pluginCtx as any).createNotification = async (
     userId: number, type: string, message: string,
     relatedPostId?: number, relatedCommentId?: number, fromUserId?: number, relatedTeamId?: number,
   ) => {
-    db.run(
+    await db.run(
       `INSERT INTO notifications (user_id, type, message, related_post_id, related_comment_id, from_user_id, related_team_id)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       userId, type, message, relatedPostId || null, relatedCommentId || null, fromUserId || null, relatedTeamId || null,

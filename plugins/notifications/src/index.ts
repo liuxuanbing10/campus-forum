@@ -14,10 +14,10 @@ export const notificationsPlugin: Plugin = {
       const limit = 30;
       const where = q.unread === 'true' ? 'AND n.is_read=0' : '';
 
-      const unreadCount = db.get<{ count: number }>(
+      const unreadCount = await db.get<{ count: number }>(
         'SELECT COUNT(*) as count FROM notifications WHERE user_id=? AND is_read=0', userId
       );
-      const notifications = db.all<any>(
+      const notifications = await db.all<any>(
         `SELECT n.*, CASE WHEN fu.id IS NOT NULL THEN CASE WHEN nc.is_anonymous=1 THEN '匿名用户' ELSE fu.username END END as from_username,
                 p.title as post_title
          FROM notifications n
@@ -34,23 +34,23 @@ export const notificationsPlugin: Plugin = {
     app.put('/api/notifications/:id/read', async (req, rep) => {
       const userId = (req as any).session?.userId;
       if (!userId) return rep.status(401).send({ error: '请先登录' });
-      const n = db.get<{ id: number }>('SELECT id FROM notifications WHERE id=? AND user_id=?', Number((req.params as { id: string }).id), userId);
+      const n = await db.get<{ id: number }>('SELECT id FROM notifications WHERE id=? AND user_id=?', Number((req.params as { id: string }).id), userId);
       if (!n) return rep.status(404).send({ error: '通知不存在' });
-      db.run('UPDATE notifications SET is_read=1 WHERE id=?', n.id);
+      await db.run('UPDATE notifications SET is_read=1 WHERE id=?', n.id);
       return { success: true };
     });
 
     app.put('/api/notifications/read-all', async (req, rep) => {
       const userId = (req as any).session?.userId;
       if (!userId) return rep.status(401).send({ error: '请先登录' });
-      db.run('UPDATE notifications SET is_read=1 WHERE user_id=? AND is_read=0', userId);
+      await db.run('UPDATE notifications SET is_read=1 WHERE user_id=? AND is_read=0', userId);
       return { success: true, message: '全部标为已读' };
     });
 
     app.get('/api/notifications/unread-count', async (req, rep) => {
       const userId = (req as any).session?.userId;
       if (!userId) return rep.status(401).send({ error: '请先登录' });
-      const r = db.get<{ count: number }>('SELECT COUNT(*) as count FROM notifications WHERE user_id=? AND is_read=0', userId);
+      const r = await db.get<{ count: number }>('SELECT COUNT(*) as count FROM notifications WHERE user_id=? AND is_read=0', userId);
       return { unreadCount: r?.count || 0 };
     });
   },

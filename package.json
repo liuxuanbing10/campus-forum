@@ -10,6 +10,8 @@
     "dev:server": "cd packages/server && npm run dev",
     "dev:client": "cd packages/client && npm run dev",
     "build": "npm run build --workspaces",
+    "build:server": "npm run build --workspace @campus-forum/core --workspace @campus-forum/database --workspace @campus-forum/server --workspace @campus-forum/plugin-admin --workspace @campus-forum/plugin-auth --workspace @campus-forum/plugin-boards --workspace @campus-forum/plugin-export --workspace @campus-forum/plugin-messages --workspace @campus-forum/plugin-notifications --workspace @campus-forum/plugin-posts --workspace @campus-forum/plugin-rss --workspace @campus-forum/plugin-search --workspace @campus-forum/plugin-social --workspace @campus-forum/plugin-teams --workspace @campus-forum/plugin-theme-default",
+    "start:server": "node packages/server/dist/index.js",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write \"packages/**/*.{ts,tsx}\""
   },
@@ -25,8 +27,6 @@
   "dependencies": {
     "@fastify/helmet": "^13.1.0",
     "@fastify/rate-limit": "^11.1.0",
-    "@types/better-sqlite3": "^7.6.13",
-    "better-sqlite3": "^12.11.1",
     "lucide-react": "^1.23.0",
     "zod": "^4.4.3"
   }

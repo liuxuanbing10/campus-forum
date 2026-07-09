@@ -10,7 +10,7 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@campus-forum/core": "workspace:*"
+    "@campus-forum/core": "*"
   },
   "devDependencies": {
     "fastify": "^5.3.0",

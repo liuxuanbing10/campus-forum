@@ -1,7 +1,7 @@
 import { DatabaseAdapter } from '@campus-forum/core';
 
-export function initializeSchema(db: DatabaseAdapter): void {
-  db.exec(`
+export async function initializeSchema(db: DatabaseAdapter): Promise<void> {
+  await db.exec(`
     -- Users table
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -176,9 +176,9 @@ export function initializeSchema(db: DatabaseAdapter): void {
 }
 
 /** 迁移：用 _migrations 表记录已执行的迁移 */
-export function migrateSchema(db: DatabaseAdapter): void {
+export async function migrateSchema(db: DatabaseAdapter): Promise<void> {
   // 建迁移记录表
-  db.exec(`CREATE TABLE IF NOT EXISTS _migrations (
+  await db.exec(`CREATE TABLE IF NOT EXISTS _migrations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
     applied_at TEXT DEFAULT (datetime('now'))
@@ -300,11 +300,11 @@ export function migrateSchema(db: DatabaseAdapter): void {
   ];
 
   for (const [name, sql] of migrations) {
-    const done = db.get<{ id: number }>('SELECT id FROM _migrations WHERE name = ?', name);
+    const done = await db.get<{ id: number }>('SELECT id FROM _migrations WHERE name = ?', name);
     if (done) continue;
     try {
-      db.exec(sql);
-      db.run('INSERT INTO _migrations (name) VALUES (?)', name);
+      await db.exec(sql);
+      await db.run('INSERT INTO _migrations (name) VALUES (?)', name);
     } catch (err) {
       console.warn(`⚠️  迁移 ${name} 失败（可能已存在）:`, (err as Error).message);
     }

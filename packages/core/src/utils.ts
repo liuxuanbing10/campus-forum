@@ -7,8 +7,9 @@ export function uid(req: FastifyRequest): number | null {
 }
 
 // 检查用户是否是管理员
-export function isAdmin(db: DatabaseAdapter, userId: number): boolean {
-  return !!db.get<{ is_admin: number }>('SELECT is_admin FROM users WHERE id = ?', userId)?.is_admin;
+export async function isAdmin(db: DatabaseAdapter, userId: number): Promise<boolean> {
+  const row = await db.get<{ is_admin: number }>('SELECT is_admin FROM users WHERE id = ?', userId);
+  return !!row?.is_admin;
 }
 
 // 分页工具函数

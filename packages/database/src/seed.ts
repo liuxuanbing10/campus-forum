@@ -3,12 +3,12 @@ import bcrypt from 'bcryptjs';
 
 export async function seedData(db: DatabaseAdapter): Promise<void> {
   // Check if already seeded
-  const existing = db.get<{ count: number }>('SELECT COUNT(*) as count FROM users');
+  const existing = await db.get<{ count: number }>('SELECT COUNT(*) as count FROM users');
   if (existing && existing.count > 0) return;
 
   // Create admin user (password: admin123)
   const hash = await bcrypt.hash('admin123', 10);
-  db.run(
+  await db.run(
     'INSERT INTO users (username, password_hash, display_name, is_admin) VALUES (?, ?, ?, ?)',
     'admin', hash, '管理员', 1
   );
@@ -27,7 +27,7 @@ export async function seedData(db: DatabaseAdapter): Promise<void> {
   );
 
   for (const [name, desc, icon] of boards) {
-    insertBoard.run(name, desc, icon);
+    await insertBoard.run(name, desc, icon);
   }
 
   console.log('✅ Seed data inserted');

@@ -7,8 +7,8 @@ interface AdminUser {
 }
 
 function getUserId(r: any): number | null { return r.session?.userId ?? null; }
-function isAdmin(db: DatabaseAdapter, uid: number): boolean {
-  return !!db.get<{ is_admin: number }>('SELECT is_admin FROM users WHERE id = ?', uid)?.is_admin;
+async function isAdmin(db: DatabaseAdapter, uid: number): Promise<boolean> {
+  return !!(await db.get<{ is_admin: number }>('SELECT is_admin FROM users WHERE id = ?', uid))?.is_admin;
 }
 
 export const adminPlugin: Plugin = {
@@ -20,7 +20,7 @@ export const adminPlugin: Plugin = {
     const guard = async (req: any, rep: any) => {
       const uid = getUserId(req);
       if (!uid) return rep.status(401).send({ error: '请先登录' });
-      if (!isAdmin(db, uid)) return rep.status(403).send({ error: '仅管理员可操作' });
+      if (!(await isAdmin(db, uid))) return rep.status(403).send({ error: '仅管理员可操作' });
     };
 
     app.get('/api/admin/users', async (req, rep) => {
@@ -32,8 +32,8 @@ export const adminPlugin: Plugin = {
       const where = kw ? 'WHERE u.username LIKE ?' : '';
       const params: unknown[] = kw ? [kw] : [];
 
-      const total = db.get<{ count: number }>(`SELECT COUNT(*) as count FROM users u ${where}`, ...params);
-      const users = db.all<AdminUser>(
+      const total = await db.get<{ count: number }>(`SELECT COUNT(*) as count FROM users u ${where}`, ...params);
+      const users = await db.all<AdminUser>(
         `SELECT u.*, COALESCE(p.post_count,0) as post_count FROM users u
          LEFT JOIN (SELECT author_id,COUNT(*) as post_count FROM posts GROUP BY author_id) p ON p.author_id=u.id
          ${where} ORDER BY u.created_at DESC LIMIT ? OFFSET ?`,
@@ -44,7 +44,7 @@ export const adminPlugin: Plugin = {
 
     app.get('/api/admin/users/:id', async (req, rep) => {
       await guard(req, rep); if (rep.sent) return;
-      const user = db.get<any>(
+      const user = await db.get<any>(
         `SELECT u.*, COALESCE(p.post_count,0) as post_count, COALESCE(c.comment_count,0) as comment_count
          FROM users u
          LEFT JOIN (SELECT author_id,COUNT(*) as post_count FROM posts GROUP BY author_id) p ON p.author_id=u.id
@@ -58,20 +58,20 @@ export const adminPlugin: Plugin = {
       await guard(req, rep); if (rep.sent) return;
       const id = Number((req.params as { id: string }).id);
       if (id === getUserId(req)) return rep.status(400).send({ error: '不能封禁自己' });
-      const user = db.get<{ id: number; is_banned: number }>('SELECT id,is_banned FROM users WHERE id=?', id);
+      const user = await db.get<{ id: number; is_banned: number }>('SELECT id,is_banned FROM users WHERE id=?', id);
       if (!user) return rep.status(404).send({ error: '用户不存在' });
       const newVal = user.is_banned ? 0 : 1;
-      db.run("UPDATE users SET is_banned=?, updated_at=datetime('now') WHERE id=?", newVal, id);
+      await db.run("UPDATE users SET is_banned=?, updated_at=datetime('now') WHERE id=?", newVal, id);
       return { success: true, isBanned: newVal === 1, message: newVal ? '用户已被封禁' : '用户已解封' };
     });
 
     app.put('/api/admin/users/:id/role', async (req, rep) => {
       await guard(req, rep); if (rep.sent) return;
       const id = Number((req.params as { id: string }).id);
-      if (!db.get('SELECT id FROM users WHERE id=?', id)) return rep.status(404).send({ error: '用户不存在' });
+      if (!(await db.get('SELECT id FROM users WHERE id=?', id))) return rep.status(404).send({ error: '用户不存在' });
       const { role, isAdmin: makeAdmin } = req.body as { role?: string; isAdmin?: boolean };
-      if (role !== undefined) db.run('UPDATE users SET role=? WHERE id=?', role, id);
-      if (makeAdmin !== undefined) db.run('UPDATE users SET is_admin=? WHERE id=?', makeAdmin ? 1 : 0, id);
+      if (role !== undefined) await db.run('UPDATE users SET role=? WHERE id=?', role, id);
+      if (makeAdmin !== undefined) await db.run('UPDATE users SET is_admin=? WHERE id=?', makeAdmin ? 1 : 0, id);
       return { success: true, message: '用户角色已更新' };
     });
 
@@ -80,8 +80,8 @@ export const adminPlugin: Plugin = {
       await guard(req, rep); if (rep.sent) return;
       const id = Number((req.params as { id: string }).id);
       const { points, reason } = req.body as { points: number; reason?: string };
-      if (!db.get('SELECT id FROM users WHERE id=?', id)) return rep.status(404).send({ error: '用户不存在' });
-      db.run('UPDATE users SET points=COALESCE(points,0)+?, updated_at=datetime(\'now\') WHERE id=?', points, id);
+      if (!(await db.get('SELECT id FROM users WHERE id=?', id))) return rep.status(404).send({ error: '用户不存在' });
+      await db.run('UPDATE users SET points=COALESCE(points,0)+?, updated_at=datetime(\'now\') WHERE id=?', points, id);
       return { success: true, message: `积分已调整 ${points > 0 ? '+' : ''}${points} 分`, reason };
     });
 
@@ -90,40 +90,40 @@ export const adminPlugin: Plugin = {
       await guard(req, rep); if (rep.sent) return;
 
       // 总览数据
-      const totalUsers = db.get<{ c: number }>('SELECT COUNT(*) as c FROM users')?.c || 0;
-      const totalPosts = db.get<{ c: number }>('SELECT COUNT(*) as c FROM posts')?.c || 0;
-      const totalComments = db.get<{ c: number }>('SELECT COUNT(*) as c FROM comments')?.c || 0;
-      const totalTeams = db.get<{ c: number }>('SELECT COUNT(*) as c FROM teams')?.c || 0;
-      const totalBoards = db.get<{ c: number }>('SELECT COUNT(*) as c FROM boards')?.c || 0;
+      const totalUsers = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM users'))?.c || 0;
+      const totalPosts = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM posts'))?.c || 0;
+      const totalComments = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM comments'))?.c || 0;
+      const totalTeams = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM teams'))?.c || 0;
+      const totalBoards = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM boards'))?.c || 0;
 
       // 今日数据
-      const todayUsers = db.get<{ c: number }>("SELECT COUNT(*) as c FROM users WHERE date(created_at)=date('now')")?.c || 0;
-      const todayPosts = db.get<{ c: number }>("SELECT COUNT(*) as c FROM posts WHERE date(created_at)=date('now')")?.c || 0;
-      const todayComments = db.get<{ c: number }>("SELECT COUNT(*) as c FROM comments WHERE date(created_at)=date('now')")?.c || 0;
+      const todayUsers = (await db.get<{ c: number }>("SELECT COUNT(*) as c FROM users WHERE date(created_at)=date('now')"))?.c || 0;
+      const todayPosts = (await db.get<{ c: number }>("SELECT COUNT(*) as c FROM posts WHERE date(created_at)=date('now')"))?.c || 0;
+      const todayComments = (await db.get<{ c: number }>("SELECT COUNT(*) as c FROM comments WHERE date(created_at)=date('now')"))?.c || 0;
 
       // 近7天用户增长
-      const userGrowth = db.all<{ date: string; count: number }>(
+      const userGrowth = await db.all<{ date: string; count: number }>(
         `SELECT date(created_at) as date, COUNT(*) as count FROM users
          WHERE created_at >= date('now', '-7 days')
          GROUP BY date(created_at) ORDER BY date`
       );
 
       // 近7天帖子发布趋势
-      const postTrend = db.all<{ date: string; count: number }>(
+      const postTrend = await db.all<{ date: string; count: number }>(
         `SELECT date(created_at) as date, COUNT(*) as count FROM posts
          WHERE created_at >= date('now', '-7 days')
          GROUP BY date(created_at) ORDER BY date`
       );
 
       // 板块帖子分布
-      const boardDist = db.all<{ name: string; count: number }>(
+      const boardDist = await db.all<{ name: string; count: number }>(
         `SELECT b.name, COUNT(p.id) as count FROM boards b
          LEFT JOIN posts p ON p.board_id=b.id
          GROUP BY b.id ORDER BY count DESC LIMIT 10`
       );
 
       // 团队热度排行
-      const teamRanking = db.all<{ name: string; member_count: number; post_count: number }>(
+      const teamRanking = await db.all<{ name: string; member_count: number; post_count: number }>(
         `SELECT t.name,
           (SELECT COUNT(*) FROM team_members WHERE team_id=t.id AND status='approved') as member_count,
           (SELECT COUNT(*) FROM team_posts WHERE team_id=t.id) as post_count
@@ -131,7 +131,7 @@ export const adminPlugin: Plugin = {
       );
 
       // 活跃用户排行（按积分）
-      const activeUsers = db.all<{ username: string; display_name: string; points: number; post_count: number }>(
+      const activeUsers = await db.all<{ username: string; display_name: string; points: number; post_count: number }>(
         `SELECT u.username, u.display_name, COALESCE(u.points,0) as points,
           COUNT(p.id) as post_count
          FROM users u LEFT JOIN posts p ON p.author_id=u.id

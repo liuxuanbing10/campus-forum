@@ -23,7 +23,7 @@ export const boardsPlugin: Plugin = {
 
     // List all boards
     app.get('/api/boards', async () => {
-      const boards = db.all<Board>(
+      const boards = await db.all<Board>(
         `SELECT b.*, (SELECT COUNT(*) FROM posts p WHERE p.board_id = b.id) as post_count
          FROM boards b ORDER BY b.sort_order ASC`
       );
@@ -32,7 +32,7 @@ export const boardsPlugin: Plugin = {
 
     // Get single board
     app.get<{ Params: { id: string } }>('/api/boards/:id', async (request, reply) => {
-      const board = db.get<Board>('SELECT * FROM boards WHERE id = ?', Number(request.params.id));
+      const board = await db.get<Board>('SELECT * FROM boards WHERE id = ?', Number(request.params.id));
       if (!board) {
         return reply.status(404).send({ error: '板块不存在' });
       }
@@ -41,14 +41,14 @@ export const boardsPlugin: Plugin = {
 
     // Get posts in a board
     app.get<{ Params: { id: string } }>('/api/boards/:id/posts', async (request, reply) => {
-      const board = db.get<Board>('SELECT id FROM boards WHERE id = ?', Number(request.params.id));
+      const board = await db.get<Board>('SELECT id FROM boards WHERE id = ?', Number(request.params.id));
       if (!board) {
         return reply.status(404).send({ error: '板块不存在' });
       }
 
       const page = Math.min(100, Math.max(1, Number((request.query as any).page) || 1));
       const limit = 20;
-      const posts = db.all<{
+      const posts = await db.all<{
         id: number; title: string; author_name: string;
         created_at: string; view_count: number; vote_count: number;
       }>(
