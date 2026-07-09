@@ -1,10 +1,20 @@
-import { createClient, Client, Row, InArgs } from '@libsql/client';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { DatabaseAdapter, PreparedStatement, RunResult } from '@campus-forum/core';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+type Client = any;
+type Row = any;
+type InArgs = any;
+
+import { createClient as createWebClient } from '@libsql/client/web';
+
+async function createLocalClient(dbPath: string): Promise<Client> {
+  const { createClient } = await import('@libsql/client');
+  return createClient({ url: `file:${dbPath}` });
+}
 
 // 将 libsql 返回行中的 BigInt 转为 number（避免 JSON 序列化报错）
 function normalizeRow(row: Row | undefined): any {
@@ -50,27 +60,20 @@ export class LibSQLAdapter implements DatabaseAdapter {
   }
 
   static async create(dbPath?: string): Promise<LibSQLAdapter> {
-    // 支持远程 Turso（通过环境变量 TURSO_DATABASE_URL + TURSO_AUTH_TOKEN）
-    // 或本地文件（file: 协议）
     const tursoUrl = process.env.TURSO_DATABASE_URL;
     const tursoToken = process.env.TURSO_AUTH_TOKEN;
 
-    let url: string;
-    let authToken: string | undefined;
+    let client: Client;
 
     if (tursoUrl) {
-      // 远程 Turso 模式
-      url = tursoUrl;
-      authToken = tursoToken;
+      client = createWebClient({ url: tursoUrl, authToken: tursoToken });
     } else {
-      // 本地文件模式
       const resolvedPath = dbPath || path.join(__dirname, '../../data/forum.db');
       const dir = path.dirname(resolvedPath);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      url = `file:${resolvedPath}`;
+      client = await createLocalClient(resolvedPath);
     }
 
-    const client = createClient({ url, authToken });
     return new LibSQLAdapter(client);
   }
 
