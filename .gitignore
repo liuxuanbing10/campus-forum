@@ -10,6 +10,7 @@ dist/
 
 # 临时/工具文件
 .playwright-mcp/
+.omo/
 cookie.txt
 gh-api-push.py
 --css-path

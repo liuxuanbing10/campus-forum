@@ -27,7 +27,7 @@ export default function BoardPage() {
     ]).then(([boardRes, postsRes]) => {
       setBoardName(boardRes.data.name);
       setBoardIcon(boardRes.data.icon || '📁');
-      setPosts(postsRes.data);
+      setPosts(postsRes.data.posts || postsRes.data);
     }).finally(() => setLoading(false));
   }, [id]);
 

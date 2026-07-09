@@ -584,6 +584,7 @@ export const authPlugin: Plugin = {
 
       // 生产环境：使用 nodemailer 发送邮件
       try {
+        // @ts-ignore nodemailer 是可选依赖
         const nodemailer = await import('nodemailer');
         const transporter = nodemailer.createTransport({
           host: process.env.SMTP_HOST,
@@ -652,6 +653,7 @@ export const authPlugin: Plugin = {
       }
 
       try {
+        // @ts-ignore nodemailer 是可选依赖
         const nodemailer = await import('nodemailer');
         const transporter = nodemailer.createTransport({
           host: process.env.SMTP_HOST,

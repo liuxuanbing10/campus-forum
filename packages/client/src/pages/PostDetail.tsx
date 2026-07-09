@@ -135,6 +135,7 @@ export default function PostDetailPage() {
     try {
       await api.post('/votes', { postId: Number(id), value });
       fetchPost();
+      fetchStats();
     } catch { toastStore.error('点赞失败'); }
   };
 
@@ -143,6 +144,7 @@ export default function PostDetailPage() {
     try {
       await api.post('/favorites', { postId: Number(id) });
       fetchPost();
+      fetchStats();
     } catch { toastStore.error('收藏失败'); }
   };
 
@@ -159,6 +161,7 @@ export default function PostDetailPage() {
       setReplyTo(null);
       fetchComments();
       fetchPost();
+      fetchStats();
     } catch { toastStore.error('评论失败'); }
   };
 
@@ -182,7 +185,7 @@ export default function PostDetailPage() {
 
   const handleDeleteComment = async (commentId: number) => {
     if (!confirm('确定删除此评论？')) return;
-    try { await api.delete(`/comments/${commentId}`); toastStore.success('删除成功'); fetchComments(); }
+    try { await api.delete(`/comments/${commentId}`); toastStore.success('删除成功'); fetchComments(); fetchStats(); }
     catch { toastStore.error('删除失败'); }
   };
 
@@ -250,7 +253,7 @@ export default function PostDetailPage() {
           )}
         </div>
 
-        <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap text-campus-text-secondary font-body">{post.content}</div>
+        <div className="prose dark:prose-invert max-w-none text-campus-text-secondary font-body" dangerouslySetInnerHTML={{ __html: post.content }} />
 
         {images.length > 0 && (
           <div className="grid grid-cols-3 gap-2 mt-4">
