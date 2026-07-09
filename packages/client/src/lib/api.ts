@@ -261,6 +261,10 @@ export const postsApi = {
 export const authApi = {
   updateProfile: (data: UpdateProfileData) => api.put<{ success: boolean; message: string; user: User }>('/auth/me', data),
   changePassword: (data: ChangePasswordData) => api.put<{ success: boolean; message: string }>('/auth/password', data),
+  sendVerifyEmail: (email: string) => api.post<{ success: boolean; message: string; token?: string; devCode?: string }>('/auth/send-verify-email', { email }),
+  verifyEmail: (token: string, code: string) => api.post<{ success: boolean; message: string }>('/auth/verify-email', { token, code }),
+  forgotPassword: (email: string) => api.post<{ success: boolean; message: string; token?: string; devCode?: string }>('/auth/forgot-password', { email }),
+  resetPassword: (token: string, code: string, newPassword: string) => api.post<{ success: boolean; message: string }>('/auth/reset-password', { token, code, newPassword }),
 };
 
 export const teamsApi = {

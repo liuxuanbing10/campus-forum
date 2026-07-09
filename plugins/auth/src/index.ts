@@ -550,15 +550,153 @@ export const authPlugin: Plugin = {
     });
 
     // ========================================
-    // 邮箱验证
+    // 邮箱验证系统（含验证码生成与校验）
     // ========================================
+    const emailVerifyStore = new Map<string, { code: string; expiresAt: number; email: string }>();
+
+    function genVerifyCode(): string {
+      return Math.random().toString().substring(2, 8);
+    }
+
+    // 发送验证邮件（生成验证码并存储）
     app.post('/api/auth/send-verify-email', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
       const { email } = req.body as { email: string };
       if (!email || !email.includes('@')) return rep.status(400).send({ error: '邮箱格式不正确' });
+
+      // 检查邮箱是否已被其他用户使用
+      const existing = db.get<{ id: number }>('SELECT id FROM users WHERE email=? AND id!=?', email, userId);
+      if (existing) return rep.status(409).send({ error: '该邮箱已被其他用户绑定' });
+
+      // 更新邮箱
       db.run('UPDATE users SET email=? WHERE id=?', email, userId);
-      // 此处可集成 nodemailer 发送验证邮件
-      return { success: true, message: '验证邮件已发送（演示模式）' };
+
+      // 生成验证码
+      const code = genVerifyCode();
+      const token = crypto.randomBytes(16).toString('hex');
+      emailVerifyStore.set(token, { code, expiresAt: Date.now() + 10 * 60 * 1000, email });
+
+      // 开发模式：直接返回验证码（生产环境应发邮件）
+      const smtpConfigured = !!process.env.SMTP_HOST;
+      if (!smtpConfigured) {
+        return { success: true, message: '验证码已生成（开发模式）', devCode: code, token };
+      }
+
+      // 生产环境：使用 nodemailer 发送邮件
+      try {
+        const nodemailer = await import('nodemailer');
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: Number(process.env.SMTP_PORT) || 587,
+          secure: process.env.SMTP_SECURE === 'true',
+          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+        });
+        await transporter.sendMail({
+          from: process.env.SMTP_FROM || 'noreply@campus-forum.com',
+          to: email,
+          subject: '校园论坛 - 邮箱验证码',
+          html: `<div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:20px;">
+            <h2 style="color:#4f46e5;">校园论坛邮箱验证</h2>
+            <p>您的验证码是：</p>
+            <div style="font-size:32px;font-weight:bold;letter-spacing:4px;color:#4f46e5;text-align:center;padding:20px;background:#f0f0f0;border-radius:8px;">${code}</div>
+            <p style="color:#666;font-size:12px;margin-top:10px;">验证码 10 分钟内有效，如非本人操作请忽略。</p>
+          </div>`,
+        });
+        return { success: true, message: '验证邮件已发送', token };
+      } catch {
+        // 邮件发送失败，回退到开发模式
+        return { success: true, message: '验证码已生成（邮件发送失败，开发模式）', devCode: code, token };
+      }
+    });
+
+    // 校验邮箱验证码
+    app.post('/api/auth/verify-email', async (req, rep) => {
+      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+      const { token, code } = req.body as { token: string; code: string };
+      if (!token || !code) return rep.status(400).send({ error: '参数不完整' });
+
+      const store = emailVerifyStore.get(token);
+      if (!store) return rep.status(400).send({ error: 'token 无效' });
+      if (Date.now() > store.expiresAt) {
+        emailVerifyStore.delete(token);
+        return rep.status(400).send({ error: '验证码已过期，请重新获取' });
+      }
+      if (store.code !== code) return rep.status(400).send({ error: '验证码错误' });
+
+      // 标记邮箱已验证
+      db.run('UPDATE users SET email_verified=1 WHERE id=?', userId);
+      emailVerifyStore.delete(token);
+      return { success: true, message: '邮箱验证成功' };
+    });
+
+    // ========================================
+    // 密码重置（通过邮箱验证码）
+    // ========================================
+    const resetPasswordStore = new Map<string, { code: string; expiresAt: number; email: string }>();
+
+    // 发送密码重置验证码
+    app.post('/api/auth/forgot-password', async (req, rep) => {
+      const { email } = req.body as { email: string };
+      if (!email || !email.includes('@')) return rep.status(400).send({ error: '邮箱格式不正确' });
+
+      const user = db.get<{ id: number; username: string }>('SELECT id, username FROM users WHERE email=?', email);
+      if (!user) return rep.status(404).send({ error: '该邮箱未注册' });
+
+      const code = genVerifyCode();
+      const token = crypto.randomBytes(16).toString('hex');
+      resetPasswordStore.set(token, { code, expiresAt: Date.now() + 10 * 60 * 1000, email });
+
+      const smtpConfigured = !!process.env.SMTP_HOST;
+      if (!smtpConfigured) {
+        return { success: true, message: '重置验证码已生成（开发模式）', devCode: code, token };
+      }
+
+      try {
+        const nodemailer = await import('nodemailer');
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: Number(process.env.SMTP_PORT) || 587,
+          secure: process.env.SMTP_SECURE === 'true',
+          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+        });
+        await transporter.sendMail({
+          from: process.env.SMTP_FROM || 'noreply@campus-forum.com',
+          to: email,
+          subject: '校园论坛 - 密码重置验证码',
+          html: `<div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:20px;">
+            <h2 style="color:#4f46e5;">密码重置</h2>
+            <p>您正在重置密码，验证码是：</p>
+            <div style="font-size:32px;font-weight:bold;letter-spacing:4px;color:#4f46e5;text-align:center;padding:20px;background:#f0f0f0;border-radius:8px;">${code}</div>
+            <p style="color:#666;font-size:12px;margin-top:10px;">验证码 10 分钟内有效，如非本人操作请忽略并修改密码。</p>
+          </div>`,
+        });
+        return { success: true, message: '重置验证码已发送至邮箱', token };
+      } catch {
+        return { success: true, message: '验证码已生成（邮件发送失败，开发模式）', devCode: code, token };
+      }
+    });
+
+    // 重置密码
+    app.post('/api/auth/reset-password', async (req, rep) => {
+      const { token, code, newPassword } = req.body as { token: string; code: string; newPassword: string };
+      if (!token || !code || !newPassword) return rep.status(400).send({ error: '参数不完整' });
+      if (newPassword.length < 6) return rep.status(400).send({ error: '新密码长度不能少于 6 位' });
+
+      const store = resetPasswordStore.get(token);
+      if (!store) return rep.status(400).send({ error: 'token 无效' });
+      if (Date.now() > store.expiresAt) {
+        resetPasswordStore.delete(token);
+        return rep.status(400).send({ error: '验证码已过期' });
+      }
+      if (store.code !== code) return rep.status(400).send({ error: '验证码错误' });
+
+      const user = db.get<{ id: number }>('SELECT id FROM users WHERE email=?', store.email);
+      if (!user) return rep.status(404).send({ error: '用户不存在' });
+
+      const hash = await bcrypt.hash(newPassword, 10);
+      db.run("UPDATE users SET password_hash=?, updated_at=datetime('now') WHERE id=?", hash, user.id);
+      resetPasswordStore.delete(token);
+      return { success: true, message: '密码重置成功' };
     });
 
     // ========================================
