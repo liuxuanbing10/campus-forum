@@ -23,8 +23,8 @@ export default function MessagesPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const loadConversations = useCallback(() => {
-    if (!user) return;
-    messageApi.getConversations().then(r => {
+    if (!user) return Promise.resolve();
+    return messageApi.getConversations().then(r => {
       setConversations(r.data.conversations || []);
       const total = (r.data.conversations || []).reduce((sum: number, c: Conversation) => sum + (c.unread_count || 0), 0);
       setUnreadTotal(total);

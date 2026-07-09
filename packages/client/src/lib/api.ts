@@ -382,6 +382,9 @@ export interface Message {
   sender_id: number;
   content: string;
   created_at: string;
+  is_read?: number;
+  sender_name?: string;
+  sender_avatar?: string;
 }
 
 // ===== 举报 =====

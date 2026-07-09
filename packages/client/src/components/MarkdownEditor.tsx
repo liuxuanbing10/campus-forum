@@ -72,9 +72,6 @@ export default function MarkdownEditor({
     extensions: [
       StarterKit.configure({
         codeBlock: false,
-        history: {
-          depth: 100,
-        },
       }),
       Placeholder.configure({ placeholder }),
       Link.configure({
