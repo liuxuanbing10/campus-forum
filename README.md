@@ -77,6 +77,74 @@ npm run dev
 | `npm run lint` | ESLint 检查 |
 | `npm run format` | Prettier 格式化 |
 
+## 🚢 部署
+
+### Vercel 一键部署
+
+本项目已配置好 Vercel 部署，支持前后端一体化部署：
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/liuxuanbing10/campus-forum)
+
+**部署说明：**
+- 前端静态资源由 Vercel CDN 托管
+- 后端 API 通过 Vercel Serverless Functions 运行
+- 数据库使用 SQLite（文件存储在 `/tmp` 目录，注意：Vercel Serverless 环境为无状态，数据不持久化，生产环境建议改用 PostgreSQL 或 MySQL）
+
+**部署步骤：**
+1. 点击上方按钮，或在 Vercel 中导入本仓库
+2. 配置环境变量（见下方）
+3. 点击 Deploy，等待构建完成
+4. 部署成功后访问 Vercel 分配的域名即可
+
+### 本地生产部署
+
+```bash
+# 1. 安装依赖
+npm install
+
+# 2. 构建所有包
+npm run build
+
+# 3. 启动后端服务
+npm run start:server
+
+# 4. 前端静态文件位于 packages/client/dist，可用 nginx 等托管
+```
+
+### Docker 部署
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+COPY packages ./packages
+COPY plugins ./plugins
+COPY tsconfig.base.json ./
+RUN npm install && npm run build
+EXPOSE 3001
+CMD ["npm", "run", "start:server"]
+```
+
+前端构建产物 `packages/client/dist` 可单独用 Nginx 托管，也可由后端提供静态文件服务。
+
+### 环境变量
+
+| 变量名 | 说明 | 默认值 |
+|--------|------|--------|
+| `NODE_ENV` | 运行环境 | `development` |
+| `PORT` | 后端服务端口 | `3001` |
+| `DATABASE_PATH` | SQLite 数据库文件路径 | `packages/server/data/forum.db` |
+| `SESSION_SECRET` | Session 加密密钥 | （开发环境有默认值，生产环境必须修改） |
+
+### 生产环境注意事项
+
+1. **数据库迁移**：生产环境建议从 SQLite 切换到 PostgreSQL 或 MySQL，确保数据持久化和并发性能
+2. **Session 存储**：默认使用内存存储，多实例部署时需改用 Redis 等外部存储
+3. **HTTPS**：生产环境必须启用 HTTPS，Vercel 部署自动提供
+4. **速率限制**：已内置 `@fastify/rate-limit`，可根据需要调整阈值
+5. **安全头**：已内置 `@fastify/helmet`，提供基础安全防护
+6. **备份**：定期备份数据库文件，防止数据丢失
+
 ## 📝 开发指南
 
 详见 [CONTRIBUTING.md](./CONTRIBUTING.md)
