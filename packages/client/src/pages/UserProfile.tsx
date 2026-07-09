@@ -5,6 +5,7 @@ import { userApi, followApi, UserProfile as UserProfileType, UserPost, UserComme
 import { toastStore } from '../App';
 import { ArrowLeft, Calendar, Edit3, MessageCircle, Eye, ThumbsUp, Users, Award, ChevronRight } from 'lucide-react';
 import FollowButton from '../components/FollowButton';
+import LevelBadge from '../components/LevelBadge';
 
 export default function UserProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -53,7 +54,7 @@ export default function UserProfilePage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-xl font-bold font-display">{profile.displayName}</h1>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">{profile.level || '普通用户'}</span>
+              <LevelBadge points={points.points || 0} size="sm" />
             </div>
             <p className="text-sm text-campus-text-tertiary mt-1 font-body">@{profile.username}</p>
             {!isOwn && currentUser && <FollowButton userId={userId} className="mt-3" />}
@@ -76,6 +77,11 @@ export default function UserProfilePage() {
             </div>
           ))}
         </div>
+        {points.points > 0 && (
+          <div className="mt-3 flex justify-center">
+            <LevelBadge points={points.points || 0} size="md" showProgress />
+          </div>
+        )}
         <div className="text-xs text-campus-text-tertiary mt-3 font-body flex items-center gap-1">
           <Calendar className="w-3 h-3" /> {new Date(profile.created_at).toLocaleDateString('zh-CN')} 加入
         </div>

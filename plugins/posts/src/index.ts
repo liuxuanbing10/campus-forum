@@ -127,7 +127,8 @@ export const postsPlugin: Plugin = {
       const isPending = !isAdmin(db, userId) ? 1 : 0;
       db.run('INSERT INTO posts (title, content, author_id, board_id, is_anonymous, is_private, images, is_pending) VALUES (?,?,?,?,?,?,?,?)',
         title, content, userId, boardId, isAnonymous ? 1 : 0, isPrivate ? 1 : 0, images ? JSON.stringify(images) : null, isPending);
-      if(isPending) addPoints(db, userId, 0); // placeholder for future
+      // 积分：发帖+5分（管理员发帖不审核直接加分）
+      if (!isPending) addPoints(db, userId, 5);
       return { success: true, isPending: isPending === 1, post: db.get<PostRow>('SELECT id, title, content, author_id, board_id, is_anonymous, is_pending, created_at FROM posts ORDER BY id DESC LIMIT 1') };
     });
 
@@ -310,6 +311,8 @@ export const postsPlugin: Plugin = {
 
       db.run("INSERT INTO comments (content, author_id, post_id, parent_id, is_anonymous) VALUES (?,?,?,?,?)",
         content.trim(), userId, postId, parentId || null, isAnonymous ? 1 : 0);
+      // 积分：评论+2分
+      addPoints(db, userId, 2);
       // 更新帖子最新回复时间
       db.run("UPDATE posts SET last_replied_at = datetime('now') WHERE id = ?", postId);
       const comment = db.get<CommentRow>('SELECT * FROM comments ORDER BY id DESC LIMIT 1');
@@ -374,6 +377,13 @@ export const postsPlugin: Plugin = {
         if (existing.value === value) { db.run('DELETE FROM votes WHERE id=?', existing.id); return { success: true, message: `已取消${value===1?'点赞':'踩'}` }; }
         db.run('UPDATE votes SET value=? WHERE id=?', value, existing.id);
       } else { db.run(`INSERT INTO votes (user_id,${target.col},value) VALUES (?,?,?)`, userId, target.id, value); }
+      // 积分：被点赞+10分（仅帖子点赞，防止刷分）
+      if (postId && value === 1) {
+        const postAuthor = db.get<{ author_id: number }>('SELECT author_id FROM posts WHERE id = ?', postId);
+        if (postAuthor && postAuthor.author_id !== userId) {
+          addPoints(db, postAuthor.author_id, 10);
+        }
+      }
       return { success: true, message: value === 1 ? '点赞成功' : '已踩' };
     });
 

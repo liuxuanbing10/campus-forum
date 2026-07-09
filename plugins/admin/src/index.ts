@@ -74,6 +74,16 @@ export const adminPlugin: Plugin = {
       if (makeAdmin !== undefined) db.run('UPDATE users SET is_admin=? WHERE id=?', makeAdmin ? 1 : 0, id);
       return { success: true, message: '用户角色已更新' };
     });
+
+    // 管理员调整用户积分
+    app.put('/api/admin/users/:id/points', async (req, rep) => {
+      await guard(req, rep); if (rep.sent) return;
+      const id = Number((req.params as { id: string }).id);
+      const { points, reason } = req.body as { points: number; reason?: string };
+      if (!db.get('SELECT id FROM users WHERE id=?', id)) return rep.status(404).send({ error: '用户不存在' });
+      db.run('UPDATE users SET points=COALESCE(points,0)+?, updated_at=datetime(\'now\') WHERE id=?', points, id);
+      return { success: true, message: `积分已调整 ${points > 0 ? '+' : ''}${points} 分`, reason };
+    });
   },
 };
 
