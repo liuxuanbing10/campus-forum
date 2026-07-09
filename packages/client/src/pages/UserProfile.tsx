@@ -6,6 +6,7 @@ import { toastStore } from '../App';
 import { ArrowLeft, Calendar, Edit3, MessageCircle, Eye, ThumbsUp, Users, Award, ChevronRight } from 'lucide-react';
 import FollowButton from '../components/FollowButton';
 import LevelBadge from '../components/LevelBadge';
+import MetaManager from '../components/MetaManager';
 
 export default function UserProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -40,6 +41,14 @@ export default function UserProfilePage() {
   const isOwn = currentUser?.id === userId;
 
   return (
+    <>
+      <MetaManager
+        title={`${profile.displayName || profile.username} 的个人主页`}
+        description={`${profile.displayName} 的校园论坛个人主页，查看其发布的帖子和评论`}
+        keywords={`${profile.username},个人主页,校园论坛`}
+        ogType="profile"
+        canonical={`${window.location.origin}/user/${id}`}
+      />
     <div className="max-w-4xl mx-auto px-4 pt-6 pb-16">
       <Link to="/" className="inline-flex items-center gap-1 text-sm text-campus-text-tertiary hover:text-primary transition-colors font-body mb-6">
         <ArrowLeft className="w-4 h-4" /> 返回首页
@@ -131,5 +140,6 @@ export default function UserProfilePage() {
         .tab-btn:hover:not(.active) { background: var(--color-surface-hover); }
       `}</style>
     </div>
+    </>
   );
 }

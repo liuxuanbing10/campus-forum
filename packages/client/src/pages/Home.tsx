@@ -3,6 +3,7 @@ import { useAuthStore } from '../stores/auth';
 import api from '../lib/api';
 import { Pin, MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Heart, Star, ChevronLeft, ChevronRight, Palette } from 'lucide-react';
 import { THEMES, useThemeStore } from '../stores/theme';
+import MetaManager from '../components/MetaManager';
 
 interface Board {
   id: number;
@@ -131,6 +132,13 @@ export default function HomePage() {
   }
 
   return (
+    <>
+      <MetaManager
+        title="首页"
+        description="校园论坛 - 分享知识，连接校园。交流学习心得，分享校园生活，结识志同道合的朋友。"
+        keywords="校园论坛,社区,交流,校园生活,学习,讨论"
+        ogType="website"
+      />
     <div className="page-enter">
       <div className="relative py-16 sm:py-20 px-4 bg-gradient-to-b from-primary-light/50 to-surface text-center overflow-hidden">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -485,6 +493,7 @@ export default function HomePage() {
         }
       `}</style>
     </div>
+    </>
   );
 }
 

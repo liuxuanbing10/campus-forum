@@ -7,6 +7,7 @@ import { ArrowLeft, Eye, ThumbsUp, Heart, MessageCircle, Edit3, Trash2, X, Share
 import FollowButton from '../components/FollowButton';
 import ReportDialog from '../components/ReportDialog';
 import ShareModal from '../components/ShareModal';
+import MetaManager from '../components/MetaManager';
 
 interface PostDetail {
   id: number; title: string; content: string; board_id: number; board_name: string;
@@ -191,6 +192,16 @@ export default function PostDetailPage() {
   const images: string[] = Array.isArray(post.images) ? post.images : [];
 
   return (
+    <>
+      <MetaManager
+        title={post.title}
+        description={post.content.substring(0, 150).replace(/[#*`]/g, '')}
+        keywords={`${post.board_name},${post.title}`}
+        ogType="article"
+        ogTitle={post.title}
+        ogDescription={post.content.substring(0, 200).replace(/[#*`]/g, '')}
+        canonical={`${window.location.origin}/post/${id}`}
+      />
     <div className="max-w-3xl mx-auto">
       <Link to={`/board/${post.board_id}`} className="inline-flex items-center gap-1 text-sm text-campus-text-tertiary hover:text-primary transition-colors font-body">
         <ArrowLeft className="w-4 h-4" /> 返回 {post.board_name}
@@ -332,5 +343,6 @@ export default function PostDetailPage() {
       {showShare && <ShareModal postId={post.id} title={post.title} onClose={() => setShowShare(false)} />}
       {showReport && <ReportDialog targetType={showReport.type} targetId={showReport.id} onClose={() => setShowReport(null)} />}
     </div>
+    </>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../lib/api';
 import { ArrowLeft, Eye, ThumbsUp, MessageSquare, Rss } from 'lucide-react';
+import MetaManager from '../components/MetaManager';
 
 interface Post {
   id: number;
@@ -33,6 +34,14 @@ export default function BoardPage() {
   if (loading) return <div className="text-center py-12 text-campus-text-tertiary font-body">加载中...</div>;
 
   return (
+    <>
+      <MetaManager
+        title={boardName}
+        description={`${boardName} - 校园论坛板块，查看最新帖子和讨论`}
+        keywords={`${boardName},论坛板块,校园交流`}
+        ogType="website"
+        canonical={`${window.location.origin}/board/${id}`}
+      />
     <div className="max-w-6xl mx-auto px-6 pt-8 pb-16">
       {/* Breadcrumb */}
       <Link
@@ -103,5 +112,6 @@ export default function BoardPage() {
         )}
       </div>
     </div>
+    </>
   );
 }
