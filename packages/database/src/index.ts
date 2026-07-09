@@ -1,4 +1,9 @@
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { DatabaseAdapter, PreparedStatement, RunResult } from '@campus-forum/core';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type Client = any;
 type Row = any;
@@ -53,11 +58,18 @@ export class LibSQLAdapter implements DatabaseAdapter {
     const tursoUrl = process.env.TURSO_DATABASE_URL;
     const tursoToken = process.env.TURSO_AUTH_TOKEN;
 
-    if (!tursoUrl) {
-      throw new Error('TURSO_DATABASE_URL environment variable is required');
+    let client: Client;
+
+    if (tursoUrl) {
+      client = createHttpClient({ url: tursoUrl, authToken: tursoToken });
+    } else {
+      const { createClient } = await import('@libsql/client');
+      const resolvedPath = dbPath || path.join(__dirname, '../../data/forum.db');
+      const dir = path.dirname(resolvedPath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      client = createClient({ url: `file:${resolvedPath}` });
     }
 
-    const client = createHttpClient({ url: tursoUrl, authToken: tursoToken });
     return new LibSQLAdapter(client);
   }
 

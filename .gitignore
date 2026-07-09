@@ -12,6 +12,7 @@ dist/
 .playwright-mcp/
 .omo/
 cookie.txt
+cookies.txt
 gh-api-push.py
 --css-path
 
@@ -24,6 +25,10 @@ campus-forum-design-draft/
 
 # 构建缓存
 tsconfig.tsbuildinfo
+
+# Netlify Functions 构建产物
+netlify/functions/api.js
+netlify/functions/api.mjs
 
 # pnpm（项目使用 npm）
 pnpm-lock.yaml
