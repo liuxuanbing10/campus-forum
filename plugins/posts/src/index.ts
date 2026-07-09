@@ -1,10 +1,5 @@
 import { Plugin, PluginContext, uid, isAdmin, paginate } from '@campus-forum/core';
 import { z } from 'zod';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ── 类型定义 ──────────────────────────────────
 interface BoardRow { id: number; name: string; description: string; icon: string; }

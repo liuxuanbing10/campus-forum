@@ -1,13 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { Plugin, PluginContext, uid, isAdmin, signJwt } from '@campus-forum/core';
 import bcrypt from 'bcryptjs';
-import fs from 'fs';
-import path from 'path';
 import https from 'https';
-import { fileURLToPath } from 'url';
 import crypto from 'crypto';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Extend Fastify session type
 declare module 'fastify' {
