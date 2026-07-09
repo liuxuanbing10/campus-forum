@@ -7,20 +7,21 @@ import { useAuthStore } from '../stores/auth';
 
 export default function FavoritesPage() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, loading: authLoading } = useAuthStore();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       toastStore.warning('请先登录');
       navigate('/login');
       return;
     }
     loadFavorites();
-  }, [user, page]);
+  }, [user, page, authLoading]);
 
   const loadFavorites = async () => {
     try {
@@ -40,6 +41,13 @@ export default function FavoritesPage() {
   };
 
   const loadMore = () => setPage(p => p + 1);
+
+  if (authLoading) return (
+    <div className="text-center py-12">
+      <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
+      <p className="text-campus-text-secondary">加载中...</p>
+    </div>
+  );
 
   if (!user) return null;
 

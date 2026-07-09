@@ -9,13 +9,21 @@ type AdminTab = 'stats' | 'users' | 'pending' | 'words' | 'reports' | 'logs';
 
 export default function AdminPage() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, loading: authLoading } = useAuthStore();
   const [activeTab, setActiveTab] = useState<AdminTab>('users');
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) { toastStore.warning('请先登录'); navigate('/login'); return; }
     if (user.role !== 'admin') { toastStore.error('无权访问'); navigate('/'); }
-  }, [user]);
+  }, [user, authLoading]);
+
+  if (authLoading) return (
+    <div className="text-center py-12">
+      <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
+      <p className="text-campus-text-secondary">加载中...</p>
+    </div>
+  );
 
   if (!user || user.role !== 'admin') return null;
 

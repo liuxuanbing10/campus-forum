@@ -7,7 +7,7 @@ import { useAuthStore } from '../stores/auth';
 
 export default function CreateTeam() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, loading: authLoading } = useAuthStore();
   const [form, setForm] = useState<CreateTeamData>({
     name: '',
     description: '',
@@ -22,6 +22,13 @@ export default function CreateTeam() {
   useEffect(() => {
     teamsApi.getCategories().then(res => setCategories(res.data.categories)).catch(() => {});
   }, []);
+
+  if (authLoading) return (
+    <div className="text-center py-12">
+      <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
+      <p className="text-campus-text-secondary">加载中...</p>
+    </div>
+  );
 
   if (!user) {
     toastStore.warning('请先登录');

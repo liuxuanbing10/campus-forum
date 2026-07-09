@@ -10,7 +10,7 @@ import { wsService } from '../lib/websocket';
 export default function MessagesPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, loading: authLoading } = useAuthStore();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,9 +32,10 @@ export default function MessagesPage() {
   }, [user]);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) { navigate('/login'); return; }
     loadConversations().finally(() => setLoading(false));
-  }, [user, loadConversations]);
+  }, [user, authLoading, loadConversations]);
 
   useEffect(() => {
     if (id) {
@@ -100,6 +101,13 @@ export default function MessagesPage() {
     // 发送一条空消息来创建会话，或者直接跳转
     navigate(`/messages/${userId}`);
   };
+
+  if (authLoading) return (
+    <div className="text-center py-12">
+      <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
+      <p className="text-campus-text-secondary">加载中...</p>
+    </div>
+  );
 
   if (loading) return <div className="text-center py-12 text-campus-text-tertiary font-body">加载中...</div>;
 

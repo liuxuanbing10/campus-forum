@@ -25,7 +25,7 @@ const getNotificationIcon = (type: string) => {
 
 export default function NotificationsPage() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, loading: authLoading } = useAuthStore();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -61,6 +61,7 @@ export default function NotificationsPage() {
   }, [user]);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       toastStore.warning('请先登录');
       navigate('/login');
@@ -68,7 +69,7 @@ export default function NotificationsPage() {
     }
     fetchNotifications();
     fetchUnreadCount();
-  }, [user, page, fetchNotifications, fetchUnreadCount]);
+  }, [user, page, authLoading, fetchNotifications, fetchUnreadCount]);
 
   const handleMarkAllRead = async () => {
     try {
@@ -99,6 +100,13 @@ export default function NotificationsPage() {
   };
 
   const loadMore = () => setPage(p => p + 1);
+
+  if (authLoading) return (
+    <div className="text-center py-12">
+      <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
+      <p className="text-campus-text-secondary">加载中...</p>
+    </div>
+  );
 
   if (!user) return null;
 
