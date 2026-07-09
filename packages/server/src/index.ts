@@ -114,10 +114,7 @@ export async function buildApp() {
   });
 
   // 数据库（支持 DB_PATH 环境变量或 Turso 远程数据库）
-  const dbPath = process.env.DB_PATH || path.join(__dirname, '../data/forum.db');
-  const dbDir = path.dirname(dbPath);
-  if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
-  const db = await createDatabase(dbPath);
+  const db = await createDatabase();
   await initializeSchema(db);
   await migrateSchema(db);
 
