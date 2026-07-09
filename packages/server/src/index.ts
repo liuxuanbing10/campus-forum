@@ -1,17 +1,25 @@
-import 'dotenv/config';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import { PluginManager, SimpleEventBus, PluginContext, Logger } from '@campus-forum/core';
 import { createDatabase, initializeSchema, migrateSchema } from '@campus-forum/database';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+if (!process.env.NETLIFY) {
+  import('dotenv/config');
+}
+
+let __dirname: string;
+try {
+  __dirname = path.dirname(fileURLToPath(import.meta.url));
+} catch {
+  __dirname = process.cwd();
+}
 
 // ── 爬虫 User-Agent 黑名单 ──────────────────────
 const BOT_UA_PATTERNS = [
