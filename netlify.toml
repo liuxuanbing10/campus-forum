@@ -1,18 +1,9 @@
 [build]
-  command = "node --version && npm --version && npm run build:vercel"
+  command = "npm run build:client"
   publish = "packages/client/dist"
-
-[functions]
-  directory = "netlify/functions"
-  node_bundler = "esbuild"
 
 [build.environment]
   NODE_VERSION = "20"
-
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
-  status = 200
 
 [[redirects]]
   from = "/*"
