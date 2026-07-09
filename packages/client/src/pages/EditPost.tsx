@@ -4,6 +4,7 @@ import api, { postsApi } from '../lib/api';
 import { toastStore } from '../App';
 import { ArrowLeft, Edit3, Lock, ImagePlus, X } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
+import MarkdownEditor from '../components/MarkdownEditor';
 
 interface Board {
   id: number;
@@ -185,12 +186,10 @@ export default function EditPostPage() {
             <label className="block text-sm font-medium text-campus-text-secondary mb-2 font-body">
               内容
             </label>
-            <textarea
-              value={content}
-              onChange={e => setContent(e.target.value)}
-              className="input min-h-[200px] resize-none p-4"
+            <MarkdownEditor
+              content={content}
+              onChange={setContent}
               placeholder="请输入内容"
-              required
             />
           </div>
 

@@ -4,6 +4,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import Highlight from '@tiptap/extension-highlight'
 import { common, createLowlight } from 'lowlight'
 import {
   Bold,
@@ -17,7 +18,13 @@ import {
   Heading2,
   CodeSquare,
   Minus,
+  Undo,
+  Redo,
+  Strikethrough,
+  Highlighter,
 } from 'lucide-react'
+import api from '../lib/api'
+import { toastStore } from '../App'
 
 const lowlight = createLowlight(common)
 
@@ -65,6 +72,9 @@ export default function MarkdownEditor({
     extensions: [
       StarterKit.configure({
         codeBlock: false,
+        history: {
+          depth: 100,
+        },
       }),
       Placeholder.configure({ placeholder }),
       Link.configure({
@@ -75,6 +85,9 @@ export default function MarkdownEditor({
         HTMLAttributes: { class: 'max-w-full rounded-lg my-2' },
       }),
       CodeBlockLowlight.configure({ lowlight }),
+      Highlight.configure({
+        multicolor: false,
+      }),
     ],
     content,
     onUpdate: ({ editor }) => {
@@ -94,14 +107,59 @@ export default function MarkdownEditor({
     if (url) editor.chain().focus().setLink({ href: url }).run()
   }
 
-  const addImage = () => {
-    const url = window.prompt('图片 URL:')
-    if (url) editor.chain().focus().setImage({ src: url }).run()
+  const addImage = async () => {
+    // 创建文件输入
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+
+      if (file.size > 5 * 1024 * 1024) {
+        toastStore.warning('图片不能超过5MB')
+        return
+      }
+
+      try {
+        // 读取并上传图片
+        const reader = new FileReader()
+        reader.onload = async () => {
+          const base64 = reader.result as string
+          try {
+            const res = await api.post('/upload', { image: base64, filename: file.name })
+            editor.chain().focus().setImage({ src: res.data.url }).run()
+            toastStore.success('图片上传成功')
+          } catch {
+            toastStore.error('图片上传失败')
+          }
+        }
+        reader.readAsDataURL(file)
+      } catch {
+        toastStore.error('图片读取失败')
+      }
+    }
+
+    input.click()
   }
 
   return (
     <div className="border border-border rounded-xl bg-surface overflow-hidden">
       <div className="flex flex-wrap gap-0.5 p-2 border-b border-border bg-surface/50">
+        <ToolbarButton
+          onClick={() => editor.chain().focus().undo().run()}
+          disabled={!editor.can().undo()}
+        >
+          <Undo size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().redo().run()}
+          disabled={!editor.can().redo()}
+        >
+          <Redo size={16} />
+        </ToolbarButton>
+        <div className="w-px h-6 bg-border mx-1 self-center" />
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           active={editor.isActive('heading', { level: 2 })}
@@ -119,6 +177,18 @@ export default function MarkdownEditor({
           active={editor.isActive('italic')}
         >
           <Italic size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          active={editor.isActive('strike')}
+        >
+          <Strikethrough size={16} />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => editor.chain().focus().toggleHighlight().run()}
+          active={editor.isActive('highlight')}
+        >
+          <Highlighter size={16} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleCode().run()}
