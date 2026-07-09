@@ -1,10 +1,35 @@
 import { buildApp } from '../../packages/server/src/index';
+import { boardsPlugin } from '../../plugins/boards/src/index';
+import { postsPlugin } from '../../plugins/posts/src/index';
+import { authPlugin } from '../../plugins/auth/src/index';
+import { adminPlugin } from '../../plugins/admin/src/index';
+import { notificationsPlugin } from '../../plugins/notifications/src/index';
+import { searchPlugin } from '../../plugins/search/src/index';
+import { messagesPlugin } from '../../plugins/messages/src/index';
+import { teamsPlugin } from '../../plugins/teams/src/index';
+import { socialPlugin } from '../../plugins/social/src/index';
+import { rssPlugin } from '../../plugins/rss/src/index';
+import { exportPlugin } from '../../plugins/export/src/index';
 
 let appPromise: Promise<any> | null = null;
 
 async function getApp() {
   if (!appPromise) {
-    appPromise = buildApp();
+    appPromise = buildApp({
+      plugins: [
+        boardsPlugin,
+        postsPlugin,
+        authPlugin,
+        adminPlugin,
+        notificationsPlugin,
+        searchPlugin,
+        messagesPlugin,
+        teamsPlugin,
+        socialPlugin,
+        rssPlugin,
+        exportPlugin,
+      ],
+    });
   }
   return appPromise;
 }

@@ -61,7 +61,7 @@ function isSuspiciousUA(ua: string | undefined): boolean {
 // ── 可公开访问的路径（无需验证 UA 或额外限流）────
 const PUBLIC_ASSET_PATHS = ['/uploads/', '/health'];
 
-export async function buildApp() {
+export async function buildApp(options?: { plugins?: any[] }) {
   const app = Fastify({
     logger: true,
     bodyLimit: 1024 * 1024, // 请求体最大 1MB
@@ -148,29 +148,37 @@ export async function buildApp() {
 
   const pluginManager = new PluginManager(pluginCtx);
 
-  // 插件自动发现：扫描 plugins/ 目录
-  const pluginsDir = path.resolve(__dirname, '../../../plugins');
-  if (fs.existsSync(pluginsDir)) {
-    const entries = fs.readdirSync(pluginsDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      const pkgPath = path.join(pluginsDir, entry.name, 'package.json');
-      const distPath = path.join(pluginsDir, entry.name, 'dist', 'index.js');
-      if (!fs.existsSync(pkgPath) || !fs.existsSync(distPath)) continue;
-      try {
-        const fileUrl = 'file:///' + distPath.replace(/\\/g, '/');
-        const mod = await import(fileUrl);
-        // 查找 export 的 Plugin 对象
-        const exportKeys = Object.keys(mod);
-        const pluginKey = exportKeys.find(k => k.endsWith('Plugin') || k === 'default');
-        if (pluginKey) {
-          const plugin = mod[pluginKey];
-          if (plugin && plugin.manifest) {
-            await pluginManager.register(plugin);
+  if (options?.plugins && options.plugins.length > 0) {
+    for (const plugin of options.plugins) {
+      if (plugin && plugin.manifest) {
+        await pluginManager.register(plugin);
+      }
+    }
+  } else {
+    // 插件自动发现：扫描 plugins/ 目录
+    const pluginsDir = path.resolve(__dirname, '../../../plugins');
+    if (fs.existsSync(pluginsDir)) {
+      const entries = fs.readdirSync(pluginsDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const pkgPath = path.join(pluginsDir, entry.name, 'package.json');
+        const distPath = path.join(pluginsDir, entry.name, 'dist', 'index.js');
+        if (!fs.existsSync(pkgPath) || !fs.existsSync(distPath)) continue;
+        try {
+          const fileUrl = 'file:///' + distPath.replace(/\\/g, '/');
+          const mod = await import(fileUrl);
+          // 查找 export 的 Plugin 对象
+          const exportKeys = Object.keys(mod);
+          const pluginKey = exportKeys.find(k => k.endsWith('Plugin') || k === 'default');
+          if (pluginKey) {
+            const plugin = mod[pluginKey];
+            if (plugin && plugin.manifest) {
+              await pluginManager.register(plugin);
+            }
           }
+        } catch (err) {
+          console.warn(`⚠️  插件 ${entry.name} 加载失败:`, (err as Error).message);
         }
-      } catch (err) {
-        console.warn(`⚠️  插件 ${entry.name} 加载失败:`, (err as Error).message);
       }
     }
   }
