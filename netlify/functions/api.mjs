@@ -1,16 +1,19 @@
-const path = require('path');
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let appPromise = null;
 
 async function getApp() {
   if (!appPromise) {
-    const { buildApp } = await import(path.join(process.cwd(), 'packages/server/dist/index.js'));
+    const { buildApp } = await import(path.resolve(__dirname, '../../packages/server/dist/index.js'));
     appPromise = buildApp();
   }
   return appPromise;
 }
 
-exports.handler = async function(event, context) {
+export const handler = async function(event, context) {
   const app = await getApp();
   await app.ready();
 
