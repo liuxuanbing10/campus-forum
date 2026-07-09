@@ -208,7 +208,7 @@ async function main() {
   await app.register(fastifyWebSocket);
 
   // WebSocket 连接管理
-  const wsConnections = new Map<number, Set<WebSocket>>();
+  const wsConnections = new Map<number, Set<any>>();
 
   // 暴露 WebSocket 广播能力到 context
   (pluginCtx as any).sendToUser = (userId: number, event: string, data: any) => {
@@ -240,10 +240,10 @@ async function main() {
   };
 
   // WebSocket 路由
-  app.get('/ws', { websocket: true }, (connection, req) => {
+  app.get('/ws', { websocket: true }, (socket, req) => {
     const userId = (req.session as any)?.userId;
     if (!userId) {
-      connection.socket.close(401, 'Unauthorized');
+      socket.close(401, 'Unauthorized');
       return;
     }
 
@@ -251,16 +251,16 @@ async function main() {
     if (!wsConnections.has(userId)) {
       wsConnections.set(userId, new Set());
     }
-    wsConnections.get(userId)!.add(connection.socket);
+    wsConnections.get(userId)!.add(socket);
 
     // 发送在线状态
-    connection.socket.send(JSON.stringify({ event: 'connected', data: { userId } }));
+    socket.send(JSON.stringify({ event: 'connected', data: { userId } }));
 
     // 清理连接
-    connection.socket.on('close', () => {
+    socket.on('close', () => {
       const sockets = wsConnections.get(userId);
       if (sockets) {
-        sockets.delete(connection.socket);
+        sockets.delete(socket);
         if (sockets.size === 0) {
           wsConnections.delete(userId);
         }
@@ -268,11 +268,11 @@ async function main() {
     });
 
     // 监听消息
-    connection.socket.on('message', (message) => {
+    socket.on('message', (message) => {
       try {
         const data = JSON.parse(message.toString());
         if (data.type === 'ping') {
-          connection.socket.send(JSON.stringify({ event: 'pong' }));
+          socket.send(JSON.stringify({ event: 'pong' }));
         }
       } catch {
         // ignore invalid messages
@@ -283,6 +283,15 @@ async function main() {
   // Health check
   app.get('/api/health', async () => {
     return { status: 'ok', plugins: pluginManager.listPlugins() };
+  });
+
+  // robots.txt — 禁止爬虫爬 API
+  app.get('/robots.txt', async (_req, reply) => {
+    reply.header('Content-Type', 'text/plain');
+    return `User-agent: *
+Disallow: /api/
+Disallow: /uploads/
+`;
   });
 
   // Serve uploads
