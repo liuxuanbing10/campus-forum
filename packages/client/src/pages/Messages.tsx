@@ -5,6 +5,7 @@ import { messageApi, Conversation, Message } from '../lib/api';
 import { toastStore } from '../App';
 import { ArrowLeft, Send, MessageCircle, Loader2, Search, Plus, X } from 'lucide-react';
 import api from '../lib/api';
+import { wsService } from '../lib/websocket';
 
 export default function MessagesPage() {
   const { id } = useParams<{ id: string }>();
@@ -20,7 +21,6 @@ export default function MessagesPage() {
   const [searchResults, setSearchResults] = useState<{ id: number; username: string; display_name?: string }[]>([]);
   const [unreadTotal, setUnreadTotal] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadConversations = useCallback(() => {
     if (!user) return;
@@ -34,30 +34,40 @@ export default function MessagesPage() {
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
     loadConversations().finally(() => setLoading(false));
-
-    // 轮询刷新会话列表（每15秒）
-    pollRef.current = setInterval(loadConversations, 15000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [user, loadConversations]);
 
   useEffect(() => {
     if (id) {
       messageApi.getMessages(parseInt(id)).then(r => {
         setMessages(r.data.messages || []);
-        loadConversations(); // 刷新未读数
+        loadConversations();
       }).catch(() => toastStore.error('加载消息失败'));
-
-      // 轮询新消息（每5秒）
-      const msgPoll = setInterval(() => {
-        messageApi.getMessages(parseInt(id)).then(r => {
-          setMessages(r.data.messages || []);
-        }).catch(() => {});
-      }, 5000);
-      return () => clearInterval(msgPoll);
     }
   }, [id, loadConversations]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  // WebSocket 实时消息监听
+  useEffect(() => {
+    const handleNewMessage = (data: { conversationId: number; senderId: number; senderName: string; content: string }) => {
+      if (id && parseInt(id) === data.conversationId) {
+        const newMessage: Message = {
+          id: Date.now(),
+          conversation_id: data.conversationId,
+          sender_id: data.senderId,
+          content: data.content,
+          created_at: new Date().toISOString(),
+          is_read: 1,
+          sender_name: data.senderName,
+        };
+        setMessages(prev => [...prev, newMessage]);
+      }
+      loadConversations();
+    };
+
+    wsService.on('new_message', handleNewMessage);
+    return () => wsService.off('new_message', handleNewMessage);
+  }, [id, loadConversations]);
 
   const handleSend = async () => {
     if (!text.trim()) return;

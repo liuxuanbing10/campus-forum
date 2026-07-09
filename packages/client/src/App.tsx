@@ -25,6 +25,7 @@ import UserProfile from './pages/UserProfile';
 import Messages from './pages/Messages';
 import OAuthSetup from './pages/OAuthSetup';
 import { ToastContainer, ToastProps } from './components/Toast';
+import { wsService } from './lib/websocket';
 
 const Settings = lazy(() => import('./pages/Settings').catch(() => ({ default: () => <div>加载中...</div> })));
 
@@ -56,6 +57,7 @@ export const toastStore = {
 export default function App() {
   const fetchUser = useAuthStore(s => s.fetchUser);
   const initTheme = useThemeStore(s => s.initTheme);
+  const user = useAuthStore(s => s.user);
   const [, setTick] = useState(0);
 
   const forceUpdate = useCallback(() => setTick(t => t + 1), []);
@@ -64,6 +66,15 @@ export default function App() {
     initTheme();
     fetchUser();
   }, [initTheme, fetchUser]);
+
+  useEffect(() => {
+    if (user) {
+      wsService.connect();
+    } else {
+      wsService.disconnect();
+    }
+    return () => { wsService.disconnect(); };
+  }, [user]);
 
   useEffect(() => {
     listeners.add(forceUpdate);

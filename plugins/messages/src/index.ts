@@ -11,13 +11,22 @@ const {receiverId,content}=req.body as {receiverId:number;content:string};
 if(!receiverId||!content||!content.trim())return rep.status(400).send({error:'参数不完整'});
 if(receiverId===userId)return rep.status(400).send({error:'不能给自己发消息'});
 if(!db.get('SELECT id FROM users WHERE id=?',receiverId))return rep.status(404).send({error:'用户不存在'});
-// 找或创建会话
 const u1=Math.min(userId,receiverId),u2=Math.max(userId,receiverId);
 let conv=db.get<{id:number}>('SELECT id FROM conversations WHERE user1_id=? AND user2_id=?',u1,u2);
 if(!conv){db.run('INSERT INTO conversations (user1_id,user2_id) VALUES (?,?)',u1,u2);conv=db.get<{id:number}>('SELECT id FROM conversations ORDER BY id DESC LIMIT 1')!;}
 db.run('INSERT INTO messages (conversation_id,sender_id,content) VALUES (?,?,?)',conv.id,userId,content.trim());
 db.run("UPDATE conversations SET last_message=?,last_message_at=datetime('now') WHERE id=?",content.trim(),conv.id);
-return {success:true,message:'发送成功'};
+
+// WebSocket 实时推送
+const sender = db.get<{username:string,display_name:string|null}>('SELECT username,display_name FROM users WHERE id=?',userId);
+(ctx as any).sendToUser?.(receiverId,'new_message',{
+  conversationId: conv.id,
+  senderId: userId,
+  senderName: sender?.display_name || sender?.username,
+  content: content.trim(),
+});
+
+return {success:true,message:'发送成功',conversationId:conv.id};
 });
 
 app.get('/api/conversations',async(req,rep)=>{

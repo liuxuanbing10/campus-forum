@@ -6,6 +6,7 @@ import session from '@fastify/session';
 import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
+import fastifyWebSocket from '@fastify/websocket';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -196,7 +197,88 @@ async function main() {
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       userId, type, message, relatedPostId || null, relatedCommentId || null, fromUserId || null, relatedTeamId || null,
     );
+
+    // WebSocket 实时推送通知
+    (pluginCtx as any).sendToUser?.(userId, 'new_notification', {
+      userId, type, message, relatedPostId, relatedCommentId, fromUserId, relatedTeamId,
+    });
   };
+
+  // ── WebSocket 支持 ──────────────────────────────
+  await app.register(fastifyWebSocket);
+
+  // WebSocket 连接管理
+  const wsConnections = new Map<number, Set<WebSocket>>();
+
+  // 暴露 WebSocket 广播能力到 context
+  (pluginCtx as any).sendToUser = (userId: number, event: string, data: any) => {
+    const sockets = wsConnections.get(userId);
+    if (sockets) {
+      sockets.forEach(socket => {
+        try {
+          socket.send(JSON.stringify({ event, data }));
+        } catch {
+          sockets.delete(socket);
+        }
+      });
+    }
+  };
+
+  (pluginCtx as any).sendToUsers = (userIds: number[], event: string, data: any) => {
+    userIds.forEach(userId => {
+      const sockets = wsConnections.get(userId);
+      if (sockets) {
+        sockets.forEach(socket => {
+          try {
+            socket.send(JSON.stringify({ event, data }));
+          } catch {
+            sockets.delete(socket);
+          }
+        });
+      }
+    });
+  };
+
+  // WebSocket 路由
+  app.get('/ws', { websocket: true }, (connection, req) => {
+    const userId = (req.session as any)?.userId;
+    if (!userId) {
+      connection.socket.close(401, 'Unauthorized');
+      return;
+    }
+
+    // 注册连接
+    if (!wsConnections.has(userId)) {
+      wsConnections.set(userId, new Set());
+    }
+    wsConnections.get(userId)!.add(connection.socket);
+
+    // 发送在线状态
+    connection.socket.send(JSON.stringify({ event: 'connected', data: { userId } }));
+
+    // 清理连接
+    connection.socket.on('close', () => {
+      const sockets = wsConnections.get(userId);
+      if (sockets) {
+        sockets.delete(connection.socket);
+        if (sockets.size === 0) {
+          wsConnections.delete(userId);
+        }
+      }
+    });
+
+    // 监听消息
+    connection.socket.on('message', (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        if (data.type === 'ping') {
+          connection.socket.send(JSON.stringify({ event: 'pong' }));
+        }
+      } catch {
+        // ignore invalid messages
+      }
+    });
+  });
 
   // Health check
   app.get('/api/health', async () => {
