@@ -79,7 +79,7 @@ export async function buildApp(options?: { plugins?: any[] }) {
   }
   await app.register(sessionPlugin, {
     secret: sessionSecret,
-    cookie: { secure: false, maxAge: 7 * 24 * 60 * 60 * 1000 },
+    cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 60 * 60 * 1000 },
     saveUninitialized: false,
   });
 
@@ -209,4 +209,7 @@ async function main() {
   console.log(`🚀 Server running at http://localhost:${port}`);
 }
 
-main().catch(console.error);
+// ponytail: only listen on port when running standalone; Vercel uses the handler export
+if (!process.env.VERCEL) {
+  main().catch(console.error);
+}

@@ -4,7 +4,7 @@ let appPromise: Promise<any> | null = null;
 
 async function getApp() {
   if (!appPromise) {
-    const { buildApp } = await import('../packages/server/src/index.js');
+    const { buildApp } = await import('../packages/server/dist/index.js');
     appPromise = buildApp();
   }
   return appPromise;

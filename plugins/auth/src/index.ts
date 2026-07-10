@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { Plugin, PluginContext, uid, isAdmin } from '@campus-forum/core';
+import { Plugin, PluginContext, uid, isAdmin, signJwt } from '@campus-forum/core';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
@@ -147,10 +147,14 @@ export const authPlugin: Plugin = {
         await request.session.save();
       }
 
+      // 7. 生成 JWT token
+      const token = user ? signJwt({ userId: user.id, username: user.username }) : undefined;
+
       return {
         success: true,
         message: '注册成功',
         user: { id: user?.id, username },
+        token,
       };
     });
 
@@ -185,10 +189,14 @@ export const authPlugin: Plugin = {
       request.session.username = user.username;
       await request.session.save();
 
+      // 4. 生成 JWT token
+      const token = signJwt({ userId: user.id, username: user.username });
+
       return {
         success: true,
         message: '登录成功',
         user: { id: user.id, username: user.username },
+        token,
       };
     });
 
