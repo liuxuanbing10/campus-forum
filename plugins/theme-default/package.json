@@ -10,7 +10,7 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@campus-forum/core": "*"
+    "@campus-forum/core": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0"
