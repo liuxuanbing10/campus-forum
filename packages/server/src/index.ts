@@ -105,7 +105,7 @@ export async function buildApp(options?: { plugins?: any[] }) {
   });
 
   // 数据库（支持 DB_PATH 环境变量或 Turso 远程数据库）
-  const db = createDatabase();
+  const db = await createDatabase();
   await (await import('@campus-forum/database')).seedData(db);
 
   // Logger
