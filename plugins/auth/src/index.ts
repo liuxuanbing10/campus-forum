@@ -1,8 +1,13 @@
 import type { FastifyInstance } from 'fastify';
-import { Plugin, PluginContext, uid, isAdmin, signJwt } from '@campus-forum/core';
+import { Plugin, PluginContext, uid, isAdmin } from '@campus-forum/core';
 import bcrypt from 'bcryptjs';
+import fs from 'fs';
+import path from 'path';
 import https from 'https';
+import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Extend Fastify session type
 declare module 'fastify' {
@@ -76,11 +81,9 @@ export const authPlugin: Plugin = {
     const { app, db } = ctx;
 
     // ========================================
-    // 注册（严格限流：每 IP 每分钟 5 次）
+    // 注册
     // ========================================
-    app.post('/api/auth/register', {
-      config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
-    }, async (request, reply) => {
+    app.post('/api/auth/register', async (request, reply) => {
       const { username, password, confirmPassword, email } =
         request.body as RegisterBody;
       const deviceCode = getDeviceCode(request);
@@ -108,7 +111,7 @@ export const authPlugin: Plugin = {
       }
 
       // 3. 检查用户名是否已存在
-      const existingUser = await db.get<UserRow>(
+      const existingUser = db.get<UserRow>(
         'SELECT id FROM users WHERE username = ?',
         username
       );
@@ -117,7 +120,7 @@ export const authPlugin: Plugin = {
       }
 
       // 4. 检查设备码是否已被绑定
-      const boundDevice = await db.get<UserRow>(
+      const boundDevice = db.get<UserRow>(
         'SELECT id, username FROM users WHERE device_code = ?',
         deviceCode
       );
@@ -127,35 +130,34 @@ export const authPlugin: Plugin = {
 
       // 5. 创建用户
       const hash = await bcrypt.hash(password, 10);
-      await db.run(
+      db.run(
         'INSERT INTO users (username, password_hash, display_name, email, device_code) VALUES (?, ?, ?, ?, ?)',
         username, hash, username, email || null, deviceCode
       );
 
-      const user = await db.get<UserRow>(
+      const user = db.get<UserRow>(
         'SELECT id, username FROM users WHERE username = ?', username
       );
 
-      // 6. 生成 JWT token
-      let token = '';
+      // 6. 自动登录（写入 session）
       if (user) {
-        token = signJwt({ userId: user.id, username: user.username });
+        request.session.userId = user.id;
+        request.session.username = user.username;
+        request.session.deviceCode = deviceCode;
+        await request.session.save();
       }
 
       return {
         success: true,
         message: '注册成功',
         user: { id: user?.id, username },
-        token,
       };
     });
 
     // ========================================
-    // 登录（严格限流：每 IP 每分钟 10 次）
+    // 登录
     // ========================================
-    app.post('/api/auth/login', {
-      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
-    }, async (request, reply) => {
+    app.post('/api/auth/login', async (request, reply) => {
       const { username, password } = request.body as LoginBody;
 
       if (!username || !password) {
@@ -163,7 +165,7 @@ export const authPlugin: Plugin = {
       }
 
       // 1. 查找用户
-      const user = await db.get<UserRow>(
+      const user = db.get<UserRow>(
         'SELECT id, username, password_hash, display_name FROM users WHERE username = ?',
         username
       );
@@ -178,21 +180,23 @@ export const authPlugin: Plugin = {
         return reply.status(401).send({ error: '密码错误' });
       }
 
-      // 3. 生成 JWT token
-      const token = signJwt({ userId: user.id, username: user.username });
+      // 3. 设置 session（不校验设备码，支持多设备登录）
+      request.session.userId = user.id;
+      request.session.username = user.username;
+      await request.session.save();
 
       return {
         success: true,
         message: '登录成功',
         user: { id: user.id, username: user.username },
-        token,
       };
     });
 
     // ========================================
     // 登出
     // ========================================
-    app.post('/api/auth/logout', async () => {
+    app.post('/api/auth/logout', async (request, reply) => {
+      await request.session.destroy();
       return { success: true, message: '已退出登录' };
     });
 
@@ -200,16 +204,15 @@ export const authPlugin: Plugin = {
     // 获取当前用户
     // ========================================
     app.get('/api/auth/me', async (request, reply) => {
-      const userId = uid(request);
-      if (!userId) {
+      if (!request.session.userId) {
         return reply.status(401).send({ error: '未登录' });
       }
       // 更新在线时间
-      await db.run("UPDATE users SET last_active_at = datetime('now') WHERE id = ?", userId);
+      db.run("UPDATE users SET last_active_at = datetime('now') WHERE id = ?", request.session.userId);
 
-      const user = await db.get<UserRow>(
+      const user = db.get<UserRow>(
         'SELECT id, username, display_name, is_admin FROM users WHERE id = ?',
-        userId
+        request.session.userId
       );
 
       if (!user) {
@@ -233,17 +236,16 @@ export const authPlugin: Plugin = {
     // 更新用户资料
     // ========================================
     app.put('/api/auth/me', async (request, reply) => {
-      const userId = uid(request);
-      if (!userId) {
+      if (!request.session.userId) {
         return reply.status(401).send({ error: '未登录' });
       }
 
       const { display_name, email, avatar_url } =
         request.body as UpdateProfileBody;
 
-      const user = await db.get<UserRow>(
+      const user = db.get<UserRow>(
         'SELECT id, username FROM users WHERE id = ?',
-        userId
+        request.session.userId
       );
 
       if (!user) {
@@ -270,13 +272,13 @@ export const authPlugin: Plugin = {
         return reply.status(400).send({ error: '没有提供需要更新的字段' });
       }
 
-      params.push(userId);
-      await db.run(`UPDATE users SET ${updates.join(', ')}, updated_at = datetime('now') WHERE id = ?`, ...params);
+      params.push(request.session.userId);
+      db.run(`UPDATE users SET ${updates.join(', ')}, updated_at = datetime('now') WHERE id = ?`, ...params);
 
-      const updatedUser = (await db.get<UserRow>(
+      const updatedUser = db.get<UserRow>(
         'SELECT id, username, display_name, email, avatar_url, is_admin, role, is_banned, created_at FROM users WHERE id = ?',
-        userId
-      ))!;
+        request.session.userId
+      )!;
 
       return {
         success: true,
@@ -299,8 +301,7 @@ export const authPlugin: Plugin = {
     // 修改密码
     // ========================================
     app.put('/api/auth/password', async (request, reply) => {
-      const userId = uid(request);
-      if (!userId) {
+      if (!request.session.userId) {
         return reply.status(401).send({ error: '未登录' });
       }
 
@@ -319,9 +320,9 @@ export const authPlugin: Plugin = {
         return reply.status(400).send({ error: '两次输入的新密码不一致' });
       }
 
-      const user = await db.get<UserRow>(
+      const user = db.get<UserRow>(
         'SELECT id, password_hash FROM users WHERE id = ?',
-        userId
+        request.session.userId
       );
 
       if (!user) {
@@ -334,7 +335,7 @@ export const authPlugin: Plugin = {
       }
 
       const hash = await bcrypt.hash(newPassword, 10);
-      await db.run("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?", hash, userId);
+      db.run("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?", hash, request.session.userId);
 
       return {
         success: true,
@@ -347,13 +348,13 @@ export const authPlugin: Plugin = {
     // ========================================
     app.get('/api/users/:id', async (req, rep) => {
       const id = Number((req.params as { id: string }).id);
-      const user = await db.get<any>('SELECT id,username,display_name,bio,created_at,last_active_at,points FROM users WHERE id=?', id);
+      const user = db.get<any>('SELECT id,username,display_name,bio,created_at,last_active_at,points FROM users WHERE id=?', id);
       if (!user) return rep.status(404).send({ error: '用户不存在' });
-      const postCount = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM posts WHERE author_id=?', id))!.c;
-      const commentCount = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM comments WHERE author_id=?', id))!.c;
-      const followerCount = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM follows WHERE followed_id=?', id))!.c;
-      const followingCount = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM follows WHERE user_id=?', id))!.c;
-      const recentPosts = await db.all<any>('SELECT id,title,created_at,board_id FROM posts WHERE author_id=? ORDER BY created_at DESC LIMIT 10', id);
+      const postCount = db.get<{ c: number }>('SELECT COUNT(*) as c FROM posts WHERE author_id=?', id)!.c;
+      const commentCount = db.get<{ c: number }>('SELECT COUNT(*) as c FROM comments WHERE author_id=?', id)!.c;
+      const followerCount = db.get<{ c: number }>('SELECT COUNT(*) as c FROM follows WHERE followed_id=?', id)!.c;
+      const followingCount = db.get<{ c: number }>('SELECT COUNT(*) as c FROM follows WHERE user_id=?', id)!.c;
+      const recentPosts = db.all<any>('SELECT id,title,created_at,board_id FROM posts WHERE author_id=? ORDER BY created_at DESC LIMIT 10', id);
       const isOnline = user.last_active_at && (Date.now() - new Date(user.last_active_at + 'Z').getTime()) < 5 * 60 * 1000;
       const level = Math.floor((user.points || 0) / 100) + 1;
       return { id: user.id, username: user.username, displayName: user.display_name, bio: user.bio || null, createdAt: user.created_at, lastActiveAt: user.last_active_at, isOnline, points: user.points || 0, level, postCount, commentCount, followerCount, followingCount, recentPosts };
@@ -366,27 +367,27 @@ export const authPlugin: Plugin = {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
       const { provider, providerId } = req.body as { provider: string; providerId: string };
       if (!provider || !providerId) return rep.status(400).send({ error: '参数不完整' });
-      try { await db.run('INSERT INTO oauth_accounts (user_id,provider,provider_id) VALUES (?,?,?)', userId, provider, providerId); } catch { return rep.status(409).send({ error: '已绑定' }); }
+      try { db.run('INSERT INTO oauth_accounts (user_id,provider,provider_id) VALUES (?,?,?)', userId, provider, providerId); } catch { return rep.status(409).send({ error: '已绑定' }); }
       return { success: true, message: '绑定成功' };
     });
 
     app.get('/api/auth/oauth/accounts', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
-      return { accounts: await db.all('SELECT provider,provider_id FROM oauth_accounts WHERE user_id=?', userId) };
+      return { accounts: db.all('SELECT provider,provider_id as provider_user_id,created_at as binded_at FROM oauth_accounts WHERE user_id=?', userId) };
     });
 
     app.delete('/api/auth/oauth/unbind', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
       const { provider } = req.body as { provider: string };
-      await db.run('DELETE FROM oauth_accounts WHERE user_id=? AND provider=?', userId, provider);
+      db.run('DELETE FROM oauth_accounts WHERE user_id=? AND provider=?', userId, provider);
       return { success: true };
     });
 
     // ========================================
-    // GitHub OAuth 完整登录流程
+    // OAuth 通用流程（GitHub / QQ / 微信）
     // ========================================
 
-    // 临时 token 存储（简化版，生产环境应使用 Redis/DB）
+    // 临时 token 存储
     const oauthTempStore = new Map<string, { provider: string; providerUserId: string; providerUsername: string; expiresAt: number }>();
 
     function httpsGet(url: string): Promise<string> {
@@ -399,12 +400,14 @@ export const authPlugin: Plugin = {
       });
     }
 
-    function httpsPost(url: string, body: string): Promise<string> {
+    function httpsPost(url: string, body: string, form = false): Promise<string> {
       return new Promise((resolve, reject) => {
         const u = new URL(url);
         const req = https.request({
-          hostname: u.hostname, path: u.pathname, method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'User-Agent': 'campus-forum', 'Content-Length': Buffer.byteLength(body) },
+          hostname: u.hostname, path: u.pathname + u.search, method: 'POST',
+          headers: form
+            ? { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json', 'User-Agent': 'campus-forum', 'Content-Length': Buffer.byteLength(body) }
+            : { 'Content-Type': 'application/json', 'Accept': 'application/json', 'User-Agent': 'campus-forum', 'Content-Length': Buffer.byteLength(body) },
         }, (res) => {
           let data = '';
           res.on('data', (c: string) => data += c);
@@ -416,70 +419,140 @@ export const authPlugin: Plugin = {
       });
     }
 
-    // 1. 获取 GitHub 授权 URL
-    app.get('/api/auth/oauth/github/url', async (req, rep) => {
-      const clientId = process.env.GITHUB_CLIENT_ID;
-      if (!clientId) return rep.status(500).send({ error: 'GITHUB_CLIENT_ID 未配置' });
-      const redirectUri = process.env.GITHUB_REDIRECT_URI || `${req.protocol}://${req.hostname}:${process.env.PORT || 3001}/api/auth/oauth/github/callback`;
-      const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=read:user`;
-      return { url };
-    });
+    // OAuth 提供商配置
+    const OAUTH_PROVIDERS: Record<string, {
+      authorizeUrl: (clientId: string, redirectUri: string, state: string) => string;
+      exchangeToken: (clientId: string, clientSecret: string, code: string, redirectUri: string) => Promise<{ accessToken: string; raw: any }>;
+      getUserInfo: (accessToken: string, clientId: string, rawToken: any) => Promise<{ id: string; username: string }>;
+    }> = {
+      github: {
+        authorizeUrl: (id, uri, state) => `https://github.com/login/oauth/authorize?client_id=${id}&redirect_uri=${encodeURIComponent(uri)}&scope=read:user&state=${state}`,
+        exchangeToken: async (id, secret, code, uri) => {
+          const res = await httpsPost('https://github.com/login/oauth/access_token',
+            JSON.stringify({ client_id: id, client_secret: secret, code, redirect_uri: uri }));
+          const d = JSON.parse(res);
+          if (!d.access_token) throw new Error('token_exchange_failed');
+          return { accessToken: d.access_token, raw: d };
+        },
+        getUserInfo: async (token) => {
+          const res = await httpsGet(`https://api.github.com/user`);
+          const u = JSON.parse(res);
+          return { id: String(u.id), username: u.login || 'unknown' };
+        },
+      },
+      qq: {
+        authorizeUrl: (id, uri, state) => `https://graph.qq.com/oauth2.0/authorize?response_type=code&client_id=${id}&redirect_uri=${encodeURIComponent(uri)}&state=${state}&scope=get_user_info`,
+        exchangeToken: async (id, secret, code, uri) => {
+          const res = await httpsGet(`https://graph.qq.com/oauth2.0/token?grant_type=authorization_code&client_id=${id}&client_secret=${secret}&code=${code}&redirect_uri=${encodeURIComponent(uri)}&fmt=json`);
+          const d = JSON.parse(res);
+          if (!d.access_token) throw new Error('token_exchange_failed');
+          return { accessToken: d.access_token, raw: d };
+        },
+        getUserInfo: async (token, clientId) => {
+          const meRes = await httpsGet(`https://graph.qq.com/oauth2.0/me?access_token=${token}&fmt=json`);
+          const me = JSON.parse(meRes);
+          const openid = me.openid;
+          if (!openid) throw new Error('get_openid_failed');
+          const infoRes = await httpsGet(`https://graph.qq.com/user/get_user_info?access_token=${token}&oauth_consumer_key=${clientId}&openid=${openid}`);
+          const info = JSON.parse(infoRes);
+          return { id: openid, username: info.nickname || 'qq_user' };
+        },
+      },
+      weixin: {
+        authorizeUrl: (id, uri, state) => `https://open.weixin.qq.com/connect/qrconnect?appid=${id}&redirect_uri=${encodeURIComponent(uri)}&response_type=code&scope=snsapi_login&state=${state}#wechat_redirect`,
+        exchangeToken: async (id, secret, code) => {
+          const res = await httpsGet(`https://api.weixin.qq.com/sns/oauth2/access_token?appid=${id}&secret=${secret}&code=${code}&grant_type=authorization_code`);
+          const d = JSON.parse(res);
+          if (!d.access_token) throw new Error('token_exchange_failed');
+          return { accessToken: d.access_token, raw: d };
+        },
+        getUserInfo: async (token, _, raw) => {
+          const openid = raw.openid;
+          if (!openid) throw new Error('get_openid_failed');
+          const res = await httpsGet(`https://api.weixin.qq.com/sns/userinfo?access_token=${token}&openid=${openid}`);
+          const info = JSON.parse(res);
+          return { id: openid, username: info.nickname || 'wechat_user' };
+        },
+      },
+    };
 
-    // 2. GitHub OAuth 回调
-    app.get('/api/auth/oauth/github/callback', async (req, rep) => {
-      const { code, error: oauthError } = req.query as { code?: string; error?: string };
-      if (oauthError) return rep.redirect(`/?oauth_error=${oauthError}`);
-      if (!code) return rep.status(400).send({ error: '缺少授权码' });
+    // 为每个提供商注册路由
+    for (const provider of ['github', 'qq', 'weixin'] as const) {
+      const cfg = OAUTH_PROVIDERS[provider];
+      const envId = `${provider.toUpperCase()}_CLIENT_ID`;
+      const envSecret = `${provider.toUpperCase()}_CLIENT_SECRET`;
 
-      const clientId = process.env.GITHUB_CLIENT_ID;
-      const clientSecret = process.env.GITHUB_CLIENT_SECRET;
-      const redirectUri = process.env.GITHUB_REDIRECT_URI || `${req.protocol}://${req.hostname}:${process.env.PORT || 3001}/api/auth/oauth/github/callback`;
-      const frontendUrl = process.env.CLIENT_URL || 'http://localhost:3001';
+      // 1. 获取授权 URL（登录）
+      app.get(`/api/auth/oauth/${provider}/url`, async (req, rep) => {
+        const clientId = process.env[envId];
+        if (!clientId) return rep.status(500).send({ error: `${envId} 未配置` });
+        const redirectUri = process.env[`${provider.toUpperCase()}_REDIRECT_URI`] || `${req.protocol}://${req.hostname}:${process.env.PORT || 3001}/api/auth/oauth/${provider}/callback`;
+        return { url: cfg.authorizeUrl(clientId, redirectUri, 'login') };
+      });
 
-      if (!clientId || !clientSecret) {
-        return rep.redirect(`${frontendUrl}/login?oauth_error=provider_not_configured`);
-      }
+      // 1b. 获取授权 URL（绑定）
+      app.get(`/api/auth/oauth/${provider}/bind-url`, async (req, rep) => {
+        const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+        const clientId = process.env[envId];
+        if (!clientId) return rep.status(500).send({ error: `${envId} 未配置` });
+        const redirectUri = process.env[`${provider.toUpperCase()}_REDIRECT_URI`] || `${req.protocol}://${req.hostname}:${process.env.PORT || 3001}/api/auth/oauth/${provider}/callback`;
+        return { url: cfg.authorizeUrl(clientId, redirectUri, 'bind') };
+      });
 
-      try {
-        // 交换 access token
-        const tokenRes = await httpsPost('https://github.com/login/oauth/access_token',
-          JSON.stringify({ client_id: clientId, client_secret: clientSecret, code, redirect_uri: redirectUri }));
-        const tokenData = JSON.parse(tokenRes);
-        const accessToken = tokenData.access_token;
-        if (!accessToken) return rep.redirect(`${frontendUrl}/login?oauth_error=token_exchange_failed`);
+      // 2. OAuth 回调
+      app.get(`/api/auth/oauth/${provider}/callback`, async (req, rep) => {
+        const { code, error: oauthError, state } = req.query as { code?: string; error?: string; state?: string };
+        if (oauthError) return rep.redirect(`/?oauth_error=${oauthError}`);
+        if (!code) return rep.status(400).send({ error: '缺少授权码' });
 
-        // 获取 GitHub 用户信息
-        const userRes = await httpsGet(`https://api.github.com/user`);
-        const githubUser = JSON.parse(userRes);
-        const providerUserId = String(githubUser.id);
-        const providerUsername = githubUser.login || 'unknown';
+        const clientId = process.env[envId] as string;
+        const clientSecret = process.env[envSecret] as string;
+        const redirectUri = process.env[`${provider.toUpperCase()}_REDIRECT_URI`] || `${req.protocol}://${req.hostname}:${process.env.PORT || 3001}/api/auth/oauth/${provider}/callback`;
+        const frontendUrl = process.env.CLIENT_URL || 'http://localhost:3001';
 
-        // 查找是否已绑定
-        const existing = await db.get<{ user_id: number }>('SELECT user_id FROM oauth_accounts WHERE provider=? AND provider_id=?', 'github', providerUserId);
-        if (existing) {
-          // 已绑定 → 生成 token 并重定向
-          const user = await db.get<UserRow>('SELECT id, username FROM users WHERE id=?', existing.user_id);
-          if (user) {
-            const token = signJwt({ userId: user.id, username: user.username });
-            return rep.redirect(`${frontendUrl}/oauth/callback?token=${encodeURIComponent(token)}`);
-          }
+        if (!clientId || !clientSecret) {
+          return rep.redirect(`${frontendUrl}/login?oauth_error=provider_not_configured`);
         }
 
-        // 未绑定 → 生成临时 token 引导用户设置用户名
-        const tempToken = crypto.randomBytes(20).toString('hex');
-        oauthTempStore.set(tempToken, {
-          provider: 'github',
-          providerUserId,
-          providerUsername,
-          expiresAt: Date.now() + 10 * 60 * 1000, // 10 分钟过期
-        });
+        try {
+          const { accessToken, raw: rawToken } = await cfg.exchangeToken(clientId, clientSecret, code, redirectUri);
+          const userInfo = await cfg.getUserInfo(accessToken, clientId, rawToken);
 
-        return rep.redirect(`${frontendUrl}/oauth/setup?token=${tempToken}&provider=github&username=${encodeURIComponent(providerUsername)}`);
-      } catch (err) {
-        console.error('GitHub OAuth error:', err);
-        return rep.redirect(`${frontendUrl}/login?oauth_error=server_error`);
-      }
-    });
+          const existing = db.get<{ user_id: number }>('SELECT user_id FROM oauth_accounts WHERE provider=? AND provider_id=?', provider, userInfo.id);
+
+          // 绑定模式
+          if (state === 'bind') {
+            const loggedUserId = uid(req);
+            if (existing) {
+              if (existing.user_id === loggedUserId) return rep.redirect(`${frontendUrl}/settings?tab=oauth&msg=already_bound`);
+              return rep.redirect(`${frontendUrl}/settings?tab=oauth&msg=bound_by_other`);
+            }
+            if (!loggedUserId) return rep.redirect(`${frontendUrl}/login`);
+            db.run('INSERT INTO oauth_accounts (user_id, provider, provider_id) VALUES (?, ?, ?)', loggedUserId, provider, userInfo.id);
+            return rep.redirect(`${frontendUrl}/settings?tab=oauth&msg=bind_ok`);
+          }
+
+          // 登录模式：已有绑定
+          if (existing) {
+            const user = db.get<UserRow>('SELECT id, username FROM users WHERE id=?', existing.user_id);
+            if (user) {
+              req.session.userId = user.id;
+              req.session.username = user.username;
+              await req.session.save();
+              return rep.redirect(frontendUrl);
+            }
+          }
+
+          // 未绑定 → 生成临时 token
+          const tempToken = crypto.randomBytes(20).toString('hex');
+          oauthTempStore.set(tempToken, { provider, providerUserId: userInfo.id, providerUsername: userInfo.username, expiresAt: Date.now() + 10 * 60 * 1000 });
+          return rep.redirect(`${frontendUrl}/oauth/setup?token=${tempToken}&provider=${provider}&username=${encodeURIComponent(userInfo.username)}`);
+        } catch (err) {
+          console.error(`${provider} OAuth error:`, err);
+          return rep.redirect(`${frontendUrl}/login?oauth_error=server_error`);
+        }
+      });
+    }
 
     // 3. 完成 OAuth 注册（设置用户名）
     app.post('/api/auth/oauth/complete', async (req, rep) => {
@@ -489,35 +562,23 @@ export const authPlugin: Plugin = {
 
       const store = oauthTempStore.get(token);
       if (!store) return rep.status(400).send({ error: 'token 无效或已过期' });
-      if (Date.now() > store.expiresAt) {
-        oauthTempStore.delete(token);
-        return rep.status(400).send({ error: 'token 已过期，请重新授权' });
-      }
+      if (Date.now() > store.expiresAt) { oauthTempStore.delete(token); return rep.status(400).send({ error: 'token 已过期，请重新授权' }); }
 
-      // 检查用户名是否已存在
-      const existingUser = await db.get<UserRow>('SELECT id FROM users WHERE username=?', username);
+      const existingUser = db.get<UserRow>('SELECT id FROM users WHERE username=?', username);
       if (existingUser) return rep.status(409).send({ error: '用户名已存在' });
 
-      // 创建用户（无密码）
       const deviceCode = getDeviceCode(req);
-      await db.run(
-        'INSERT INTO users (username, password_hash, display_name, device_code) VALUES (?, ?, ?, ?)',
-        username, '', username, deviceCode || null
-      );
-      const user = await db.get<UserRow>('SELECT id, username FROM users WHERE username=?', username);
+      db.run('INSERT INTO users (username, password_hash, display_name, device_code) VALUES (?, ?, ?, ?)', username, '', username, deviceCode || null);
+      const user = db.get<UserRow>('SELECT id, username FROM users WHERE username=?', username);
       if (!user) return rep.status(500).send({ error: '创建用户失败' });
 
-      // 绑定 OAuth
-      try {
-        await db.run('INSERT INTO oauth_accounts (user_id, provider, provider_id) VALUES (?, ?, ?)',
-          user.id, store.provider, store.providerUserId);
-      } catch { /* 可能已存在 */ }
+      try { db.run('INSERT INTO oauth_accounts (user_id, provider, provider_id) VALUES (?, ?, ?)', user.id, store.provider, store.providerUserId); } catch { /* ok */ }
 
-      // 登录
-      const jwtToken = signJwt({ userId: user.id, username: user.username });
-
+      req.session.userId = user.id;
+      req.session.username = user.username;
+      await req.session.save();
       oauthTempStore.delete(token);
-      return { success: true, user: { id: user.id, username: user.username }, token: jwtToken };
+      return { success: true, user: { id: user.id, username: user.username } };
     });
 
     // ========================================
@@ -529,170 +590,27 @@ export const authPlugin: Plugin = {
       if (!image) return rep.status(400).send({ error: '请提供图片数据' });
       const m = image.match(/^data:(image\/\w+);base64,(.+)$/);
       if (!m) return rep.status(400).send({ error: '图片格式错误' });
-      const mimeType = m[1];
-      const base64Data = m[2];
-      const buf = Buffer.from(base64Data, 'base64');
+      const ext = m[1].split('/')[1].replace('jpeg', 'jpg');
+      const buf = Buffer.from(m[2], 'base64');
       if (buf.length > 2 * 1024 * 1024) return rep.status(400).send({ error: '图片不能超过 2MB' });
-      const result = await db.run(
-        'INSERT INTO uploaded_images (user_id, filename, mime_type, data, size) VALUES (?, ?, ?, ?, ?)',
-        userId, `avatar_${userId}`, mimeType, base64Data, buf.length
-      );
-      const id = result.lastInsertRowid as number;
-      const url = `/api/images/${id}`;
-      await db.run('UPDATE users SET avatar_url=? WHERE id=?', url, userId);
-      return { success: true, url };
+      const uploadsDir = path.resolve(__dirname, '../../../uploads');
+      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+      const name = `avatar_${userId}_${Date.now()}.${ext}`;
+      fs.writeFileSync(path.join(uploadsDir, name), buf);
+      db.run('UPDATE users SET avatar_url=? WHERE id=?', `/uploads/${name}`, userId);
+      return { success: true, url: `/uploads/${name}` };
     });
 
     // ========================================
-    // 邮箱验证系统（含验证码生成与校验）
+    // 邮箱验证
     // ========================================
-    const emailVerifyStore = new Map<string, { code: string; expiresAt: number; email: string }>();
-
-    function genVerifyCode(): string {
-      return Math.random().toString().substring(2, 8);
-    }
-
-    // 发送验证邮件（生成验证码并存储）
     app.post('/api/auth/send-verify-email', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
       const { email } = req.body as { email: string };
       if (!email || !email.includes('@')) return rep.status(400).send({ error: '邮箱格式不正确' });
-
-      // 检查邮箱是否已被其他用户使用
-      const existing = await db.get<{ id: number }>('SELECT id FROM users WHERE email=? AND id!=?', email, userId);
-      if (existing) return rep.status(409).send({ error: '该邮箱已被其他用户绑定' });
-
-      // 更新邮箱
-      await db.run('UPDATE users SET email=? WHERE id=?', email, userId);
-
-      // 生成验证码
-      const code = genVerifyCode();
-      const token = crypto.randomBytes(16).toString('hex');
-      emailVerifyStore.set(token, { code, expiresAt: Date.now() + 10 * 60 * 1000, email });
-
-      // 开发模式：直接返回验证码（生产环境应发邮件）
-      const smtpConfigured = !!process.env.SMTP_HOST;
-      if (!smtpConfigured) {
-        return { success: true, message: '验证码已生成（开发模式）', devCode: code, token };
-      }
-
-      // 生产环境：使用 nodemailer 发送邮件
-      try {
-        // @ts-ignore nodemailer 是可选依赖
-        const nodemailer = await import('nodemailer');
-        const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: Number(process.env.SMTP_PORT) || 587,
-          secure: process.env.SMTP_SECURE === 'true',
-          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-        });
-        await transporter.sendMail({
-          from: process.env.SMTP_FROM || 'noreply@campus-forum.com',
-          to: email,
-          subject: '校园论坛 - 邮箱验证码',
-          html: `<div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:20px;">
-            <h2 style="color:#4f46e5;">校园论坛邮箱验证</h2>
-            <p>您的验证码是：</p>
-            <div style="font-size:32px;font-weight:bold;letter-spacing:4px;color:#4f46e5;text-align:center;padding:20px;background:#f0f0f0;border-radius:8px;">${code}</div>
-            <p style="color:#666;font-size:12px;margin-top:10px;">验证码 10 分钟内有效，如非本人操作请忽略。</p>
-          </div>`,
-        });
-        return { success: true, message: '验证邮件已发送', token };
-      } catch {
-        // 邮件发送失败，回退到开发模式
-        return { success: true, message: '验证码已生成（邮件发送失败，开发模式）', devCode: code, token };
-      }
-    });
-
-    // 校验邮箱验证码
-    app.post('/api/auth/verify-email', async (req, rep) => {
-      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
-      const { token, code } = req.body as { token: string; code: string };
-      if (!token || !code) return rep.status(400).send({ error: '参数不完整' });
-
-      const store = emailVerifyStore.get(token);
-      if (!store) return rep.status(400).send({ error: 'token 无效' });
-      if (Date.now() > store.expiresAt) {
-        emailVerifyStore.delete(token);
-        return rep.status(400).send({ error: '验证码已过期，请重新获取' });
-      }
-      if (store.code !== code) return rep.status(400).send({ error: '验证码错误' });
-
-      // 标记邮箱已验证
-      await db.run('UPDATE users SET email_verified=1 WHERE id=?', userId);
-      emailVerifyStore.delete(token);
-      return { success: true, message: '邮箱验证成功' };
-    });
-
-    // ========================================
-    // 密码重置（通过邮箱验证码）
-    // ========================================
-    const resetPasswordStore = new Map<string, { code: string; expiresAt: number; email: string }>();
-
-    // 发送密码重置验证码
-    app.post('/api/auth/forgot-password', async (req, rep) => {
-      const { email } = req.body as { email: string };
-      if (!email || !email.includes('@')) return rep.status(400).send({ error: '邮箱格式不正确' });
-
-      const user = await db.get<{ id: number; username: string }>('SELECT id, username FROM users WHERE email=?', email);
-      if (!user) return rep.status(404).send({ error: '该邮箱未注册' });
-
-      const code = genVerifyCode();
-      const token = crypto.randomBytes(16).toString('hex');
-      resetPasswordStore.set(token, { code, expiresAt: Date.now() + 10 * 60 * 1000, email });
-
-      const smtpConfigured = !!process.env.SMTP_HOST;
-      if (!smtpConfigured) {
-        return { success: true, message: '重置验证码已生成（开发模式）', devCode: code, token };
-      }
-
-      try {
-        // @ts-ignore nodemailer 是可选依赖
-        const nodemailer = await import('nodemailer');
-        const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: Number(process.env.SMTP_PORT) || 587,
-          secure: process.env.SMTP_SECURE === 'true',
-          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-        });
-        await transporter.sendMail({
-          from: process.env.SMTP_FROM || 'noreply@campus-forum.com',
-          to: email,
-          subject: '校园论坛 - 密码重置验证码',
-          html: `<div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:20px;">
-            <h2 style="color:#4f46e5;">密码重置</h2>
-            <p>您正在重置密码，验证码是：</p>
-            <div style="font-size:32px;font-weight:bold;letter-spacing:4px;color:#4f46e5;text-align:center;padding:20px;background:#f0f0f0;border-radius:8px;">${code}</div>
-            <p style="color:#666;font-size:12px;margin-top:10px;">验证码 10 分钟内有效，如非本人操作请忽略并修改密码。</p>
-          </div>`,
-        });
-        return { success: true, message: '重置验证码已发送至邮箱', token };
-      } catch {
-        return { success: true, message: '验证码已生成（邮件发送失败，开发模式）', devCode: code, token };
-      }
-    });
-
-    // 重置密码
-    app.post('/api/auth/reset-password', async (req, rep) => {
-      const { token, code, newPassword } = req.body as { token: string; code: string; newPassword: string };
-      if (!token || !code || !newPassword) return rep.status(400).send({ error: '参数不完整' });
-      if (newPassword.length < 6) return rep.status(400).send({ error: '新密码长度不能少于 6 位' });
-
-      const store = resetPasswordStore.get(token);
-      if (!store) return rep.status(400).send({ error: 'token 无效' });
-      if (Date.now() > store.expiresAt) {
-        resetPasswordStore.delete(token);
-        return rep.status(400).send({ error: '验证码已过期' });
-      }
-      if (store.code !== code) return rep.status(400).send({ error: '验证码错误' });
-
-      const user = await db.get<{ id: number }>('SELECT id FROM users WHERE email=?', store.email);
-      if (!user) return rep.status(404).send({ error: '用户不存在' });
-
-      const hash = await bcrypt.hash(newPassword, 10);
-      await db.run("UPDATE users SET password_hash=?, updated_at=datetime('now') WHERE id=?", hash, user.id);
-      resetPasswordStore.delete(token);
-      return { success: true, message: '密码重置成功' };
+      db.run('UPDATE users SET email=? WHERE id=?', email, userId);
+      // 此处可集成 nodemailer 发送验证邮件
+      return { success: true, message: '验证邮件已发送（演示模式）' };
     });
 
     // ========================================

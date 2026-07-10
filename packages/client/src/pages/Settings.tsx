@@ -31,6 +31,15 @@ export default function SettingsPage() {
 
   useEffect(() => { loadUser(); loadAccounts(); }, []);
 
+  // 处理 OAuth 绑定回调结果
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const msg = params.get('msg');
+    if (msg === 'bind_ok') toastStore.success('GitHub 绑定成功');
+    else if (msg === 'already_bound') toastStore.info('该 GitHub 账号已绑定');
+    else if (msg === 'bound_by_other') toastStore.error('该 GitHub 账号已被其他用户绑定');
+  }, []);
+
   const loadUser = async () => {
     try {
       await fetchUser();
@@ -88,8 +97,14 @@ export default function SettingsPage() {
     finally { setExporting(false); }
   };
 
-  const handleOAuthBind = (provider: string) => {
-    toastStore.info(`${provider} 绑定功能开发中`);
+  const handleOAuthBind = async (provider: string) => {
+    try {
+      const { data } = await api.get(`/auth/oauth/${provider}/bind-url`);
+      window.location.href = data.url;
+    } catch (err: any) {
+      const msg = err.response?.data?.error || '获取授权链接失败';
+      toastStore.error(msg);
+    }
   };
 
   const handleOAuthUnbind = async (provider: string) => {

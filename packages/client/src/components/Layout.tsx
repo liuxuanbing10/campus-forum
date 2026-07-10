@@ -129,6 +129,9 @@ export default function Layout() {
             {user ? (
               <>
                 <div className="text-xs text-campus-text-tertiary px-3 pt-1 font-body">{user.displayName}</div>
+                <Link to="/notifications" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
+                  <Bell className="w-4 h-4" /> 通知
+                </Link>
                 <Link to="/favorites" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
                   <Heart className="w-4 h-4" /> 我的收藏
                 </Link>
