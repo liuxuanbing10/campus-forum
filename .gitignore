@@ -36,3 +36,6 @@ netlify/functions/api.mjs
 # pnpm（项目使用 npm）
 pnpm-lock.yaml
 pnpm-workspace.yaml
+
+.vercel
+.env*
