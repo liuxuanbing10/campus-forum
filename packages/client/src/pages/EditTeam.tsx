@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, Lock, Unlock, Tag, EyeOff } from 'lucide-react';
-import { teamsApi, Team, UpdateTeamData, TeamCategory } from '../lib/api';
+import { teamsApi } from '../lib/api';
+import type { Team, UpdateTeamData, TeamCategory } from '@campus-forum/core';
 import { toastStore } from '../App';
 
 export default function EditTeam() {

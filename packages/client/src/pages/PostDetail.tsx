@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
-import api, { postsApi, PostStats, commentApi, versionApi, reportApi } from '../lib/api';
+import api, { postsApi, commentApi, versionApi, reportApi } from '../lib/api';
+import type { PostStats } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { ArrowLeft, Eye, ThumbsUp, Heart, MessageCircle, Edit3, Trash2, X, Share2, Lock, Unlock, Pin, PinOff, Flag, History, Check, Copy } from 'lucide-react';
 import FollowButton from '../components/FollowButton';

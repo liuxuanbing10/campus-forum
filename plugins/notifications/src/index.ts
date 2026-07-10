@@ -1,4 +1,4 @@
-import { Plugin, PluginContext } from '@campus-forum/core';
+import { Plugin, PluginContext, uid } from '@campus-forum/core';
 
 export const notificationsPlugin: Plugin = {
   manifest: { name: 'notifications', version: '0.1.0', description: '通知系统', author: 'campus-forum' },
@@ -7,7 +7,7 @@ export const notificationsPlugin: Plugin = {
     const { app, db } = ctx;
 
     app.get('/api/notifications', async (req, rep) => {
-      const userId = (req as any).session?.userId;
+      const userId = uid(req);
       if (!userId) return rep.status(401).send({ error: '请先登录' });
       const q = req.query as { unread?: string; page?: string };
       const page = Math.min(100, Math.max(1, Number(q.page) || 1));
@@ -32,7 +32,7 @@ export const notificationsPlugin: Plugin = {
     });
 
     app.put('/api/notifications/:id/read', async (req, rep) => {
-      const userId = (req as any).session?.userId;
+      const userId = uid(req);
       if (!userId) return rep.status(401).send({ error: '请先登录' });
       const n = await db.get<{ id: number }>('SELECT id FROM notifications WHERE id=? AND user_id=?', Number((req.params as { id: string }).id), userId);
       if (!n) return rep.status(404).send({ error: '通知不存在' });
@@ -41,14 +41,14 @@ export const notificationsPlugin: Plugin = {
     });
 
     app.put('/api/notifications/read-all', async (req, rep) => {
-      const userId = (req as any).session?.userId;
+      const userId = uid(req);
       if (!userId) return rep.status(401).send({ error: '请先登录' });
       await db.run('UPDATE notifications SET is_read=1 WHERE user_id=? AND is_read=0', userId);
       return { success: true, message: '全部标为已读' };
     });
 
     app.get('/api/notifications/unread-count', async (req, rep) => {
-      const userId = (req as any).session?.userId;
+      const userId = uid(req);
       if (!userId) return rep.status(401).send({ error: '请先登录' });
       const r = await db.get<{ count: number }>('SELECT COUNT(*) as count FROM notifications WHERE user_id=? AND is_read=0', userId);
       return { unreadCount: r?.count || 0 };

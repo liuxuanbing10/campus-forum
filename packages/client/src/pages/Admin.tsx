@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, ArrowLeft, Search, Ban, UserCog, MoreVertical, UserX, UserCheck, FileText, Flag, History, AlertTriangle, Loader2, Trash2, Check, X, BarChart3, TrendingUp, Users, MessageSquare, Folder, Trophy } from 'lucide-react';
-import { adminApi, adminExtendedApi, AdminUser, PendingPost, SensitiveWord, AdminReport, AuditLog, AdminStats } from '../lib/api';
+import { adminApi, adminExtendedApi } from '../lib/api';
+import type { AdminUser, PendingPost, SensitiveWord, AdminReport, AuditLog, AdminStats } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 

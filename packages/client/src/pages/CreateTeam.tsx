@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, Lock, Unlock, Tag, EyeOff } from 'lucide-react';
-import { teamsApi, CreateTeamData, TeamCategory } from '../lib/api';
+import { teamsApi } from '../lib/api';
+import type { CreateTeamData, TeamCategory } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 

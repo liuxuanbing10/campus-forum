@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, ArrowLeft, CheckCheck, MessageCircle, Heart, UserPlus, AtSign, AlertCircle } from 'lucide-react';
-import { notificationsApi, Notification } from '../lib/api';
+import { notificationsApi } from '../lib/api';
+import type { Notification } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 

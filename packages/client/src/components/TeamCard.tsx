@@ -1,5 +1,6 @@
 import { Users, Lock, Unlock, Calendar, Heart, FileText } from 'lucide-react';
-import { Team, teamsApi } from '../lib/api';
+import { teamsApi } from '../lib/api';
+import type { Team } from '@campus-forum/core';
 import { useState } from 'react';
 import { toastStore } from '../App';
 

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Search, ArrowLeft, MessageCircle, Eye, ThumbsUp, Clock, Hash } from 'lucide-react';
-import { searchApi, SearchResult } from '../lib/api';
+import { searchApi } from '../lib/api';
+import type { SearchResult } from '@campus-forum/core';
 import { toastStore } from '../App';
 
 export default function SearchPage() {

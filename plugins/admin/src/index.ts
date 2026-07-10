@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, DatabaseAdapter } from '@campus-forum/core';
+import { Plugin, PluginContext, DatabaseAdapter, uid as getUid } from '@campus-forum/core';
 
 interface AdminUser {
   id: number; username: string; display_name: string | null;
@@ -6,9 +6,8 @@ interface AdminUser {
   created_at: string; device_code: string | null; post_count: number;
 }
 
-function getUserId(r: any): number | null { return r.session?.userId ?? null; }
-async function isAdmin(db: DatabaseAdapter, uid: number): Promise<boolean> {
-  return !!(await db.get<{ is_admin: number }>('SELECT is_admin FROM users WHERE id = ?', uid))?.is_admin;
+async function checkIsAdmin(db: DatabaseAdapter, userId: number): Promise<boolean> {
+  return !!(await db.get<{ is_admin: number }>('SELECT is_admin FROM users WHERE id = ?', userId))?.is_admin;
 }
 
 export const adminPlugin: Plugin = {
@@ -18,9 +17,9 @@ export const adminPlugin: Plugin = {
     const { app, db } = ctx;
 
     const guard = async (req: any, rep: any) => {
-      const uid = getUserId(req);
-      if (!uid) return rep.status(401).send({ error: '请先登录' });
-      if (!(await isAdmin(db, uid))) return rep.status(403).send({ error: '仅管理员可操作' });
+      const userId = getUid(req);
+      if (!userId) return rep.status(401).send({ error: '请先登录' });
+      if (!(await checkIsAdmin(db, userId))) return rep.status(403).send({ error: '仅管理员可操作' });
     };
 
     app.get('/api/admin/users', async (req, rep) => {
@@ -57,7 +56,7 @@ export const adminPlugin: Plugin = {
     app.put('/api/admin/users/:id/ban', async (req, rep) => {
       await guard(req, rep); if (rep.sent) return;
       const id = Number((req.params as { id: string }).id);
-      if (id === getUserId(req)) return rep.status(400).send({ error: '不能封禁自己' });
+      if (id === getUid(req)) return rep.status(400).send({ error: '不能封禁自己' });
       const user = await db.get<{ id: number; is_banned: number }>('SELECT id,is_banned FROM users WHERE id=?', id);
       if (!user) return rep.status(404).send({ error: '用户不存在' });
       const newVal = user.is_banned ? 0 : 1;

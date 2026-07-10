@@ -1,5 +1,5 @@
 import { User, Crown, Shield, UserCircle } from 'lucide-react';
-import { TeamMember } from '../lib/api';
+import type { TeamMember } from '@campus-forum/core';
 
 interface TeamMemberListProps {
   members: TeamMember[];

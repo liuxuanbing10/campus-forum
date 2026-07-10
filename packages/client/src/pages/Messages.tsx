@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
-import { messageApi, Conversation, Message } from '../lib/api';
+import { messageApi } from '../lib/api';
+import type { Conversation, Message } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { ArrowLeft, Send, MessageCircle, Loader2, Search, Plus, X } from 'lucide-react';
 import api from '../lib/api';

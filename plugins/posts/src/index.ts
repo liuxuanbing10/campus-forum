@@ -72,6 +72,41 @@ async function notify(ctx: PluginContext, userId: number, type: string, message:
   try { await (ctx as any).createNotification?.(userId, type, message, postId, commentId, fromUserId); } catch {}
 }
 
+// ── SQL 构建 ──────────────────────────────────
+// ponytail: extracts the common JOINs and field patterns shared by 3 post-list queries
+function buildPostListSql(opts: {
+  withContent?: boolean;
+  withFavorites?: boolean;
+  extraFields?: string[];
+  fromOverride?: string;
+  where?: string;
+  orderBy?: string;
+  limit?: boolean;
+}) {
+  const fields = [
+    'p.id', 'p.title', 'p.board_id', 'p.is_anonymous', 'p.is_pinned', 'p.is_private', 'p.created_at',
+    opts.withContent ? 'p.content' : '',
+    'p.view_count',
+    `CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name`,
+    'b.name as board_name',
+    'COALESCE(v.like_count,0) as like_count',
+    'COALESCE(c.comment_count,0) as comment_count',
+    opts.withFavorites ? `CASE WHEN f.id IS NOT NULL THEN 1 ELSE 0 END as is_favorited` : '',
+    ...(opts.extraFields || []),
+  ].filter(Boolean).join(',');
+  const from = opts.fromOverride || 'posts p';
+  const joins = `JOIN users u ON p.author_id=u.id JOIN boards b ON p.board_id=b.id
+         LEFT JOIN (SELECT post_id,COUNT(*) as like_count FROM votes WHERE value=1 GROUP BY post_id) v ON v.post_id=p.id
+         LEFT JOIN (SELECT post_id,COUNT(*) as comment_count FROM comments GROUP BY post_id) c ON c.post_id=p.id`;
+  const favoritesJoin = opts.withFavorites
+    ? `\n         LEFT JOIN favorites f ON f.post_id=p.id AND f.user_id=?`
+    : '';
+  const where = opts.where ? ` ${opts.where}` : '';
+  const orderBy = opts.orderBy ? ` ${opts.orderBy}` : '';
+  const limitClause = opts.limit ? ' LIMIT ? OFFSET ?' : '';
+  return `SELECT ${fields}\n         FROM ${from} ${joins}${favoritesJoin}${where}${orderBy}${limitClause}`;
+}
+
 // ── 插件 ──────────────────────────────────────
 export const postsPlugin: Plugin = {
   manifest: { name: 'posts', version: '0.4.0', description: '帖子管理 + zod 校验 + 完整类型', author: 'campus-forum' },
@@ -190,13 +225,7 @@ export const postsPlugin: Plugin = {
       const page = Math.min(100, Math.max(1, Number((req.query as any).page) || 1));
       const limit = 20; const offset = (page - 1) * limit;
       const posts = await db.all<any>(
-        `SELECT p.id,p.title,p.board_id,p.is_anonymous,p.is_private,p.created_at,
-          CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,
-          b.name as board_name, COALESCE(v.like_count,0) as like_count, COALESCE(c.comment_count,0) as comment_count
-         FROM posts p JOIN users u ON p.author_id=u.id JOIN boards b ON p.board_id=b.id
-         LEFT JOIN (SELECT post_id,COUNT(*) as like_count FROM votes WHERE value=1 GROUP BY post_id) v ON v.post_id=p.id
-         LEFT JOIN (SELECT post_id,COUNT(*) as comment_count FROM comments GROUP BY post_id) c ON c.post_id=p.id
-         WHERE p.author_id=? ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
+        buildPostListSql({ where: 'WHERE p.author_id=?', orderBy: 'ORDER BY p.created_at DESC', limit: true }),
         userId, limit, offset
       );
       return { posts, page, limit };
@@ -218,14 +247,7 @@ export const postsPlugin: Plugin = {
         : sort === 'replied' ? 'ORDER BY p.is_pinned DESC, COALESCE(p.last_replied_at, p.created_at) DESC'
                              : 'ORDER BY p.is_pinned DESC, p.created_at DESC';
       params.unshift(userIdVal);
-      const sql = `SELECT p.id,p.title,p.content,p.board_id,p.is_anonymous,p.is_pinned,p.is_private,p.images,p.created_at,p.view_count,
-        CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,
-        b.name as board_name, COALESCE(v.like_count,0) as like_count, COALESCE(c.comment_count,0) as comment_count,
-        CASE WHEN f.id IS NOT NULL THEN 1 ELSE 0 END as is_favorited
-        FROM posts p JOIN users u ON p.author_id=u.id JOIN boards b ON p.board_id=b.id
-        LEFT JOIN (SELECT post_id,COUNT(*) as like_count FROM votes WHERE value=1 GROUP BY post_id) v ON v.post_id=p.id
-        LEFT JOIN (SELECT post_id,COUNT(*) as comment_count FROM comments GROUP BY post_id) c ON c.post_id=p.id
-        LEFT JOIN favorites f ON f.post_id=p.id AND f.user_id=? ${where} ${orderBy} LIMIT ? OFFSET ?`;
+      const sql = buildPostListSql({ withContent: true, withFavorites: true, where, orderBy, limit: true });
       params.push(limit, offset);
       return { posts: await db.all<PostListItem>(sql, ...params), page, limit };
     });
@@ -413,15 +435,8 @@ export const postsPlugin: Plugin = {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
       const page = Math.min(100, Math.max(1, Number((req.query as any).page) || 1));
       return { posts: await db.all<PostListItem>(
-        `SELECT p.id,p.title,p.content,p.board_id,p.created_at,p.is_pinned,p.is_private,p.view_count,
-          CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,
-          b.name as board_name, COALESCE(v.like_count,0) as like_count,
-          COALESCE(c.comment_count,0) as comment_count, COALESCE(f2.is_favorited,0) as is_favorited
-         FROM favorites f JOIN posts p ON f.post_id=p.id JOIN users u ON p.author_id=u.id JOIN boards b ON p.board_id=b.id
-         LEFT JOIN (SELECT post_id,COUNT(*) as like_count FROM votes WHERE value=1 GROUP BY post_id) v ON v.post_id=p.id
-         LEFT JOIN (SELECT post_id,COUNT(*) as comment_count FROM comments GROUP BY post_id) c ON c.post_id=p.id
-         LEFT JOIN (SELECT post_id,1 as is_favorited FROM favorites WHERE user_id=?) f2 ON f2.post_id=p.id
-         WHERE f.user_id=? ORDER BY f.created_at DESC LIMIT 20 OFFSET ?`, userId, userId, (page-1)*20), page, limit: 20 };
+        buildPostListSql({ withContent: true, extraFields: ['COALESCE((SELECT 1 FROM favorites WHERE post_id=p.id AND user_id=?),0) as is_favorited'], fromOverride: 'favorites f JOIN posts p ON f.post_id=p.id', where: 'WHERE f.user_id=?', orderBy: 'ORDER BY f.created_at DESC', limit: true }),
+        userId, userId, (page-1)*20), page, limit: 20 };
     });
 
     // ─── 分享 ───

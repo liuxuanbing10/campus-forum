@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
-import { userApi, followApi, UserProfile as UserProfileType, UserPost, UserComment } from '../lib/api';
+import { userApi, followApi } from '../lib/api';
+import type { UserProfile as UserProfileType, UserPost, UserComment } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { ArrowLeft, Calendar, Edit3, MessageCircle, Eye, ThumbsUp, Users, Award, ChevronRight } from 'lucide-react';
 import FollowButton from '../components/FollowButton';

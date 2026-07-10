@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Filter, ArrowUpDown } from 'lucide-react';
-import { teamsApi, Team, TeamCategory } from '../lib/api';
+import { teamsApi } from '../lib/api';
+import type { Team, TeamCategory } from '@campus-forum/core';
 import TeamCard from '../components/TeamCard';
 import { toastStore } from '../App';
 

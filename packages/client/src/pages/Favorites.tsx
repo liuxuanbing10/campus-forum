@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Heart, MessageCircle, Eye, ArrowLeft, Clock, Hash } from 'lucide-react';
-import { favoritesApi, Post } from '../lib/api';
+import { favoritesApi } from '../lib/api';
+import type { Post } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 

@@ -5,7 +5,8 @@ import {
   UserPlus, UserMinus, Crown, Shield, Heart, Copy,
   FileText, Megaphone, Plus, Trash2, Pin, Check, X
 } from 'lucide-react';
-import { teamsApi, Team, TeamMember, TeamAnnouncement, TeamPost } from '../lib/api';
+import { teamsApi } from '../lib/api';
+import type { Team, TeamMember, TeamAnnouncement, TeamPost } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 

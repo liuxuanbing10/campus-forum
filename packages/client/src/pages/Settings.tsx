@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/auth';
-import { authApi, User, default as api, oauthApi, exportApi, avatarApi, OAuthAccount } from '../lib/api';
+import api, { authApi, oauthApi, exportApi, avatarApi } from '../lib/api';
+import type { User, OAuthAccount } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { Eye, EyeOff, User as UserIcon, Mail, Edit3, Check, X, Lock, RefreshCw, Upload, Download, Link2, Unlink, Loader2, Palette } from 'lucide-react';
 import { THEMES, useThemeStore } from '../stores/theme';

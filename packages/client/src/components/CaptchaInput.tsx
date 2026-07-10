@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { captchaApi, CaptchaData } from '../lib/api';
+import { captchaApi } from '../lib/api';
+import type { CaptchaData } from '@campus-forum/core';
 import { RefreshCw, Loader2, ShieldQuestion } from 'lucide-react';
 
 interface Props {

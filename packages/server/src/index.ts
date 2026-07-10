@@ -21,42 +21,7 @@ try {
   __dirname = process.cwd();
 }
 
-// ── 爬虫 User-Agent 黑名单 ──────────────────────
-const BOT_UA_PATTERNS = [
-  'python-requests', 'python-httpx', 'aiohttp',
-  'curl/', 'wget/', 'libcurl',
-  'scrapy', 'nutch', 'go-http-client',
-  'okhttp', 'apache-httpclient', 'java/',
-  'axios/', 'node-fetch', 'urllib',
-  'php/', 'perl/',
-  'ruby/', 'nethttp',
-  'httpx/', 'http-client',
-  'selenium', 'playwright', 'puppeteer',
-  'httpie', 'fetch-some-requests',
-  'fasthttp', 'restsharp', 'restclient',
-];
-
-const SUSPICIOUS_UA_PATTERNS = [
-  'bot', 'crawler', 'spider', 'scraper', 'scrape',
-  'dataforseo', 'ahrefsbot', 'semrush', 'majestic',
-  'zgrab', 'masscan', 'nmap',
-];
-
-function isSuspiciousUA(ua: string | undefined): boolean {
-  if (!ua) return true; // 无 UA 直接拦截
-  const lowered = ua.toLowerCase();
-  // 黑名单精确匹配
-  if (BOT_UA_PATTERNS.some(p => lowered.includes(p))) return true;
-  // 可疑关键词 — 但放过常见浏览器的包含
-  if (SUSPICIOUS_UA_PATTERNS.some(p => lowered.includes(p))) {
-    // 如果同时包含 Mozilla 则放行（模拟浏览器的爬虫）
-    if (lowered.includes('mozilla') && lowered.includes('applewebkit')) return false;
-    return true;
-  }
-  // 空的或过短的 UA → 拦截
-  if (ua.length < 10) return true;
-  return false;
-}
+import { isSuspiciousUA, BOT_UA_PATTERNS, SUSPICIOUS_UA_PATTERNS } from './bot-config.js';
 
 // ── 可公开访问的路径（无需验证 UA 或额外限流）────
 const PUBLIC_ASSET_PATHS = ['/uploads/', '/health'];
