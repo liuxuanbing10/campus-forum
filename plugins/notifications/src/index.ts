@@ -47,6 +47,18 @@ export const notificationsPlugin: Plugin = {
       return { success: true, message: '全部标为已读' };
     });
 
+    app.get('/api/notifications/debug', async (req, rep) => {
+      const token = (req as any).headers?.authorization || (req as any).headers?.Authorization;
+      const userId = uid(req);
+      return {
+        hasAuthHeader: !!token,
+        authHeaderStart: token ? token.substring(0, 20) + '...' : null,
+        userId,
+        uidType: typeof uid,
+        headersKeys: Object.keys((req as any).headers || {}),
+      };
+    });
+
     app.get('/api/notifications/unread-count', async (req, rep) => {
       const userId = uid(req);
       if (!userId) return rep.status(401).send({ error: '请先登录' });
