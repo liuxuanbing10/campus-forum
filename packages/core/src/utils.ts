@@ -55,11 +55,7 @@ export function verifyJwt(token: string): Record<string, unknown> | null {
 }
 
 export function getTokenFromRequest(req: FastifyRequest): string | null {
-  const headers = req.headers as Record<string, string | undefined>;
-  const allKeys = Object.keys(headers).join(', ');
-  console.log('[DEBUG] Headers keys:', allKeys);
-  const authHeader = headers.authorization || headers.Authorization || headers['authorization'] || headers['AUTHORIZATION'];
-  console.log('[DEBUG] Authorization header:', authHeader || 'NOT FOUND');
+  const authHeader = req.headers.authorization;
   if (authHeader?.startsWith('Bearer ')) {
     return authHeader.substring(7);
   }

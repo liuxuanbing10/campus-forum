@@ -42,36 +42,16 @@ export async function handler(event: any, context: any) {
   const method = event.httpMethod;
   const body = event.body ? (event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body) : undefined;
 
-  const normalizedHeaders: Record<string, string> = {};
+  const headers: Record<string, string> = {};
   for (const [key, value] of Object.entries(event.headers)) {
-    normalizedHeaders[key.toLowerCase()] = value;
+    headers[key.toLowerCase()] = value;
   }
-
-  if (url === '/api/debug/headers') {
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        url, 
-        method, 
-        headers: normalizedHeaders,
-        rawHeaders: Object.keys(event.headers).reduce((acc: Record<string, string>, key) => { 
-          acc[key] = event.headers[key]; 
-          return acc; 
-        }, {}),
-        hasAuth: !!normalizedHeaders['authorization'],
-        authValue: normalizedHeaders['authorization'] || 'NOT FOUND'
-      }),
-    };
-  }
-
-  console.log('[DEBUG] Request:', { url, method, hasAuth: !!normalizedHeaders['authorization'] });
 
   try {
     const response = await app.inject({
       method,
       url,
-      headers: normalizedHeaders,
+      headers,
       body,
     });
 
