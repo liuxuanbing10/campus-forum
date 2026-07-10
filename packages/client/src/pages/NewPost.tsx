@@ -81,7 +81,7 @@ export default function NewPostPage() {
         images: images.length > 0 ? images : undefined,
       });
       toastStore.success('发帖成功！');
-      navigate('/');
+      navigate(`/board/${boardId}`);
     } catch (err: any) {
       const errMsg = err.response?.data?.error || '发帖失败';
       toastStore.error(errMsg);
