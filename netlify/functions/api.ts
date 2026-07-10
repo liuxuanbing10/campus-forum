@@ -43,6 +43,21 @@ export async function handler(event: any, context: any) {
   const headers = event.headers;
   const body = event.body ? (event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body) : undefined;
 
+  if (url === '/api/debug/headers') {
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        url, 
+        method, 
+        headers: Object.keys(headers).reduce((acc: Record<string, string>, key) => { 
+          acc[key] = headers[key]; 
+          return acc; 
+        }, {})
+      }),
+    };
+  }
+
   try {
     const response = await app.inject({
       method,
