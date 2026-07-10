@@ -55,7 +55,8 @@ export function verifyJwt(token: string): Record<string, unknown> | null {
 }
 
 export function getTokenFromRequest(req: FastifyRequest): string | null {
-  const authHeader = req.headers.authorization;
+  const headers = req.headers as Record<string, string | undefined>;
+  const authHeader = headers.authorization || headers.Authorization;
   if (authHeader?.startsWith('Bearer ')) {
     return authHeader.substring(7);
   }
