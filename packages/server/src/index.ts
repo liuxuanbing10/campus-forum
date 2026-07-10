@@ -209,14 +209,19 @@ Disallow: /api/
 `;
   });
 
-  // Serve client in production
-  if (process.env.NODE_ENV === 'production') {
+  // Serve client in production（可通过 SERVE_STATIC=false 禁用，用于 API-only 部署）
+  if (process.env.NODE_ENV === 'production' && process.env.SERVE_STATIC !== 'false') {
     await app.register(fastifyStatic, {
       root: path.join(__dirname, '../../client/dist'),
     });
     app.setNotFoundHandler(async (request, reply) => {
       if (request.url.startsWith('/api/')) return reply.status(404).send({ error: 'Not found' });
       return reply.sendFile('index.html');
+    });
+  } else {
+    // API-only 模式：所有非 API 路径返回 404
+    app.setNotFoundHandler(async (request, reply) => {
+      return reply.status(404).send({ error: 'Not found' });
     });
   }
 

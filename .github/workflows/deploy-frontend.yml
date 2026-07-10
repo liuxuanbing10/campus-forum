@@ -36,6 +36,7 @@ jobs:
         run: npm run build:client
         env:
           VITE_API_URL: https://magenta-torrone-fe81ec.netlify.app/api
+          VITE_BASE_PATH: /campus-forum/
 
       - name: SPA fallback
         run: cp packages/client/dist/index.html packages/client/dist/404.html

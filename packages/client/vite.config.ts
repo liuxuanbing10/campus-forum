@@ -3,9 +3,10 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
-// GitHub Pages 部署在子路径 /campus-forum/ 下，生产环境需设置 base
+// 通过 VITE_BASE_PATH 环境变量控制 base path
+// GitHub Pages 部署时设置为 /campus-forum/，Netlify 部署时默认为 /
 export default defineConfig(({ mode }) => ({
-  base: mode === 'production' ? '/campus-forum/' : '/',
+  base: process.env.VITE_BASE_PATH || '/',
   plugins: [
     react(),
     VitePWA({
@@ -19,8 +20,8 @@ export default defineConfig(({ mode }) => ({
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
-        scope: '/campus-forum/',
-        start_url: '/campus-forum/',
+        scope: process.env.VITE_BASE_PATH || '/',
+        start_url: process.env.VITE_BASE_PATH || '/',
         icons: [
           {
             src: 'pwa-192x192.png',

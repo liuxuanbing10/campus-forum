@@ -5,9 +5,9 @@ import { HelmetProvider } from 'react-helmet-async';
 import App from './App';
 import './styles/globals.css';
 
-// GitHub Pages 部署在子路径 /campus-forum/ 下，生产环境需设置 basename
-const isProd = import.meta.env.PROD;
-const basename = isProd ? '/campus-forum' : '/';
+// GitHub Pages 部署在子路径 /campus-forum/ 下，通过 VITE_BASE_PATH 控制 basename
+const basePath = import.meta.env.BASE_URL;
+const basename = basePath !== '/' ? basePath.replace(/\/$/, '') : '/';
 
 // PWA 注册（容错处理，防止开发环境报错导致页面空白）
 if (typeof window !== 'undefined') {
