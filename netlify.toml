@@ -1,9 +1,13 @@
 [build]
-  command = "npm install -g pnpm && pnpm install --no-optional --ignore-scripts && pnpm --filter @campus-forum/client run build"
+  command = "npm install && npm run build --workspace=packages/client"
   publish = "packages/client/dist"
+  functions = "netlify/functions"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
+
+[functions]
+  node_bundler = "none"
 
 [[redirects]]
   from = "/api/*"
