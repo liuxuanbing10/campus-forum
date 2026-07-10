@@ -1,5 +1,5 @@
 [build]
-  command = "npm install -g pnpm && pnpm install && pnpm run build:client"
+  command = "npm install -g pnpm && pnpm install --no-optional --ignore-scripts && pnpm --filter @campus-forum/client run build"
   publish = "packages/client/dist"
 
 [build.environment]
