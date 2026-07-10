@@ -10,7 +10,7 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@campus-forum/core": "workspace:*",
+    "@campus-forum/core": "*",
     "zod": "^3.23.0"
   },
   "devDependencies": {
