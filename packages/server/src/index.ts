@@ -8,7 +8,7 @@ import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import { PluginManager, SimpleEventBus, PluginContext, Logger } from '@campus-forum/core';
-import { createDatabase, initializeSchema, migrateSchema } from '@campus-forum/database';
+import { createDatabase, seedData } from '@campus-forum/database';
 
 if (!process.env.NETLIFY) {
   import('dotenv/config');
@@ -100,6 +100,24 @@ export async function buildApp(options?: { plugins?: any[] }) {
   // ── Cookie ─────────────────────────
   await app.register(cookie);
 
+  // ── Session ────────────────────────
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (!sessionSecret || sessionSecret.length < 32) {
+    console.error('❌ SESSION_SECRET 环境变量未设置或长度不足 32 字符');
+    process.exit(1);
+  }
+  let sessionPlugin: any;
+  try {
+    sessionPlugin = (await import('@fastify/session' as string)).default;
+  } catch {
+    try { sessionPlugin = (await import('@fastify/secure-session' as string)).default; } catch {}
+  }
+  await app.register(sessionPlugin, {
+    secret: sessionSecret,
+    cookie: { secure: false, maxAge: 7 * 24 * 60 * 60 * 1000 },
+    saveUninitialized: false,
+  });
+
   // ── 限流 ─────────────────────────────────────
   await app.register(rateLimit, {
     global: true,
@@ -122,10 +140,7 @@ export async function buildApp(options?: { plugins?: any[] }) {
   });
 
   // 数据库（支持 DB_PATH 环境变量或 Turso 远程数据库）
-  const db = await createDatabase();
-  await initializeSchema(db);
-  await migrateSchema(db);
-
+  const db = createDatabase();
   await (await import('@campus-forum/database')).seedData(db);
 
   // Logger
