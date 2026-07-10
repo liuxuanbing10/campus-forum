@@ -40,8 +40,12 @@ export async function handler(event: any, context: any) {
 
   const url = event.path + (event.rawQuery ? '?' + event.rawQuery : '');
   const method = event.httpMethod;
-  const headers = event.headers;
   const body = event.body ? (event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body) : undefined;
+
+  const normalizedHeaders: Record<string, string> = {};
+  for (const [key, value] of Object.entries(event.headers)) {
+    normalizedHeaders[key.toLowerCase()] = value;
+  }
 
   if (url === '/api/debug/headers') {
     return {
@@ -50,8 +54,9 @@ export async function handler(event: any, context: any) {
       body: JSON.stringify({ 
         url, 
         method, 
-        headers: Object.keys(headers).reduce((acc: Record<string, string>, key) => { 
-          acc[key] = headers[key]; 
+        headers: normalizedHeaders,
+        rawHeaders: Object.keys(event.headers).reduce((acc: Record<string, string>, key) => { 
+          acc[key] = event.headers[key]; 
           return acc; 
         }, {})
       }),
@@ -62,7 +67,7 @@ export async function handler(event: any, context: any) {
     const response = await app.inject({
       method,
       url,
-      headers,
+      headers: normalizedHeaders,
       body,
     });
 
