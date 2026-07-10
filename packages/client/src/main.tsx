@@ -5,6 +5,10 @@ import { HelmetProvider } from 'react-helmet-async';
 import App from './App';
 import './styles/globals.css';
 
+// GitHub Pages 部署在子路径 /campus-forum/ 下，生产环境需设置 basename
+const isProd = import.meta.env.PROD;
+const basename = isProd ? '/campus-forum' : '/';
+
 // PWA 注册（容错处理，防止开发环境报错导致页面空白）
 if (typeof window !== 'undefined') {
   import('virtual:pwa-register')
@@ -27,7 +31,7 @@ if (typeof window !== 'undefined') {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <HelmetProvider>
         <App />
       </HelmetProvider>

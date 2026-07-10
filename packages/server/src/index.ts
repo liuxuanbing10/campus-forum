@@ -9,6 +9,7 @@ import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import { PluginManager, SimpleEventBus, PluginContext, Logger } from '@campus-forum/core';
 import { createDatabase, seedData } from '@campus-forum/database';
+import { TursoSessionStore } from './session-store.js';
 
 if (!process.env.NETLIFY) {
   import('dotenv/config');
@@ -43,8 +44,25 @@ export async function buildApp(options?: { plugins?: any[] }) {
   });
 
   // ── CORS ────────────────────────────────────
+  // 支持多个前端来源：本地开发、Netlify 部署、GitHub Pages 部署
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'https://magenta-torrone-fe81ec.netlify.app',
+    'https://liuxuanbing10.github.io',
+  ];
+  // 额外允许通过 CLIENT_URL 环境变量配置
+  if (process.env.CLIENT_URL && !allowedOrigins.includes(process.env.CLIENT_URL)) {
+    allowedOrigins.push(process.env.CLIENT_URL);
+  }
   await app.register(cors, {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (origin, cb) => {
+      // 允许无 origin 的请求（如 curl、同源请求）
+      if (!origin || allowedOrigins.includes(origin)) {
+        cb(null, true);
+      } else {
+        cb(new Error('CORS 不允许的来源: ' + origin), false);
+      }
+    },
     credentials: true,
   });
 
@@ -65,22 +83,12 @@ export async function buildApp(options?: { plugins?: any[] }) {
   // ── Cookie ─────────────────────────
   await app.register(cookie);
 
-  // ── Session ────────────────────────
+  // ── Session (deferred — needs db for TursoSessionStore) ──
   const sessionSecret = process.env.SESSION_SECRET || process.env.JWT_SECRET || 'dev-session-secret-fallback-32chars!!';
+  const sessionMaxAge = 7 * 24 * 60 * 60 * 1000;
   if (sessionSecret.length < 32) {
     console.warn('⚠️ SESSION_SECRET 长度不足 32 字符，使用默认值');
   }
-  let sessionPlugin: any;
-  try {
-    sessionPlugin = (await import('@fastify/session' as string)).default;
-  } catch {
-    try { sessionPlugin = (await import('@fastify/secure-session' as string)).default; } catch {}
-  }
-  await app.register(sessionPlugin, {
-    secret: sessionSecret,
-    cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 60 * 60 * 1000 },
-    saveUninitialized: false,
-  });
 
   // ── 限流 ─────────────────────────────────────
   await app.register(rateLimit, {
@@ -106,6 +114,20 @@ export async function buildApp(options?: { plugins?: any[] }) {
   // 数据库（支持 DB_PATH 环境变量或 Turso 远程数据库）
   const db = await createDatabase();
   await (await import('@campus-forum/database')).seedData(db);
+
+  // ── Session with Turso-backed store ─────────────
+  let sessionPlugin: any;
+  try {
+    sessionPlugin = (await import('@fastify/session' as string)).default;
+  } catch {
+    try { sessionPlugin = (await import('@fastify/secure-session' as string)).default; } catch {}
+  }
+  await app.register(sessionPlugin, {
+    secret: sessionSecret,
+    cookie: { secure: process.env.NODE_ENV === 'production', maxAge: sessionMaxAge },
+    saveUninitialized: false,
+    store: new TursoSessionStore(db, sessionMaxAge),
+  });
 
   // Logger
   const logger: Logger = {

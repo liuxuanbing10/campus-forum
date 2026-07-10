@@ -7,7 +7,13 @@ import https from 'https';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// ponytail: import.meta.url is undefined when bundled as CJS by esbuild
+let __dirname: string;
+try {
+  __dirname = path.dirname(fileURLToPath(import.meta.url));
+} catch {
+  __dirname = process.cwd();
+}
 
 // Extend Fastify session type
 declare module 'fastify' {
@@ -111,7 +117,7 @@ export const authPlugin: Plugin = {
       }
 
       // 3. 检查用户名是否已存在
-      const existingUser = db.get<UserRow>(
+      const existingUser = await db.get<UserRow>(
         'SELECT id FROM users WHERE username = ?',
         username
       );
@@ -120,7 +126,7 @@ export const authPlugin: Plugin = {
       }
 
       // 4. 检查设备码是否已被绑定
-      const boundDevice = db.get<UserRow>(
+      const boundDevice = await db.get<UserRow>(
         'SELECT id, username FROM users WHERE device_code = ?',
         deviceCode
       );
@@ -135,7 +141,7 @@ export const authPlugin: Plugin = {
         username, hash, username, email || null, deviceCode
       );
 
-      const user = db.get<UserRow>(
+      const user = await db.get<UserRow>(
         'SELECT id, username FROM users WHERE username = ?', username
       );
 
@@ -168,7 +174,7 @@ export const authPlugin: Plugin = {
       }
 
       // 1. 查找用户
-      const user = db.get<UserRow>(
+      const user = await db.get<UserRow>(
         'SELECT id, username, password_hash, display_name FROM users WHERE username = ?',
         username
       );
@@ -216,7 +222,7 @@ export const authPlugin: Plugin = {
       // 更新在线时间
       db.run("UPDATE users SET last_active_at = datetime('now') WHERE id = ?", request.session.userId);
 
-      const user = db.get<UserRow>(
+      const user = await db.get<UserRow>(
         'SELECT id, username, display_name, is_admin FROM users WHERE id = ?',
         request.session.userId
       );
@@ -249,7 +255,7 @@ export const authPlugin: Plugin = {
       const { display_name, email, avatar_url } =
         request.body as UpdateProfileBody;
 
-      const user = db.get<UserRow>(
+      const user = await db.get<UserRow>(
         'SELECT id, username FROM users WHERE id = ?',
         request.session.userId
       );
@@ -281,10 +287,10 @@ export const authPlugin: Plugin = {
       params.push(request.session.userId);
       db.run(`UPDATE users SET ${updates.join(', ')}, updated_at = datetime('now') WHERE id = ?`, ...params);
 
-      const updatedUser = db.get<UserRow>(
+      const updatedUser = (await db.get<UserRow>(
         'SELECT id, username, display_name, email, avatar_url, is_admin, role, is_banned, created_at FROM users WHERE id = ?',
         request.session.userId
-      )!;
+      ))!;
 
       return {
         success: true,
@@ -326,7 +332,7 @@ export const authPlugin: Plugin = {
         return reply.status(400).send({ error: '两次输入的新密码不一致' });
       }
 
-      const user = db.get<UserRow>(
+      const user = await db.get<UserRow>(
         'SELECT id, password_hash FROM users WHERE id = ?',
         request.session.userId
       );
@@ -354,13 +360,13 @@ export const authPlugin: Plugin = {
     // ========================================
     app.get('/api/users/:id', async (req, rep) => {
       const id = Number((req.params as { id: string }).id);
-      const user = db.get<any>('SELECT id,username,display_name,bio,created_at,last_active_at,points FROM users WHERE id=?', id);
+      const user = await db.get<any>('SELECT id,username,display_name,bio,created_at,last_active_at,points FROM users WHERE id=?', id);
       if (!user) return rep.status(404).send({ error: '用户不存在' });
-      const postCount = db.get<{ c: number }>('SELECT COUNT(*) as c FROM posts WHERE author_id=?', id)!.c;
-      const commentCount = db.get<{ c: number }>('SELECT COUNT(*) as c FROM comments WHERE author_id=?', id)!.c;
-      const followerCount = db.get<{ c: number }>('SELECT COUNT(*) as c FROM follows WHERE followed_id=?', id)!.c;
-      const followingCount = db.get<{ c: number }>('SELECT COUNT(*) as c FROM follows WHERE user_id=?', id)!.c;
-      const recentPosts = db.all<any>('SELECT id,title,created_at,board_id FROM posts WHERE author_id=? ORDER BY created_at DESC LIMIT 10', id);
+      const postCount = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM posts WHERE author_id=?', id))!.c;
+      const commentCount = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM comments WHERE author_id=?', id))!.c;
+      const followerCount = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM follows WHERE followed_id=?', id))!.c;
+      const followingCount = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM follows WHERE user_id=?', id))!.c;
+      const recentPosts = await db.all<any>('SELECT id,title,created_at,board_id FROM posts WHERE author_id=? ORDER BY created_at DESC LIMIT 10', id);
       const isOnline = user.last_active_at && (Date.now() - new Date(user.last_active_at + 'Z').getTime()) < 5 * 60 * 1000;
       const level = Math.floor((user.points || 0) / 100) + 1;
       return { id: user.id, username: user.username, displayName: user.display_name, bio: user.bio || null, createdAt: user.created_at, lastActiveAt: user.last_active_at, isOnline, points: user.points || 0, level, postCount, commentCount, followerCount, followingCount, recentPosts };
@@ -379,7 +385,7 @@ export const authPlugin: Plugin = {
 
     app.get('/api/auth/oauth/accounts', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
-      return { accounts: db.all('SELECT provider,provider_id as provider_user_id,created_at as binded_at FROM oauth_accounts WHERE user_id=?', userId) };
+      return { accounts: await db.all('SELECT provider,provider_id as provider_user_id,created_at as binded_at FROM oauth_accounts WHERE user_id=?', userId) };
     });
 
     app.delete('/api/auth/oauth/unbind', async (req, rep) => {
@@ -524,7 +530,7 @@ export const authPlugin: Plugin = {
           const { accessToken, raw: rawToken } = await cfg.exchangeToken(clientId, clientSecret, code, redirectUri);
           const userInfo = await cfg.getUserInfo(accessToken, clientId, rawToken);
 
-          const existing = db.get<{ user_id: number }>('SELECT user_id FROM oauth_accounts WHERE provider=? AND provider_id=?', provider, userInfo.id);
+          const existing = await db.get<{ user_id: number }>('SELECT user_id FROM oauth_accounts WHERE provider=? AND provider_id=?', provider, userInfo.id);
 
           // 绑定模式
           if (state === 'bind') {
@@ -540,7 +546,7 @@ export const authPlugin: Plugin = {
 
           // 登录模式：已有绑定
           if (existing) {
-            const user = db.get<UserRow>('SELECT id, username FROM users WHERE id=?', existing.user_id);
+            const user = await db.get<UserRow>('SELECT id, username FROM users WHERE id=?', existing.user_id);
             if (user) {
               req.session.userId = user.id;
               req.session.username = user.username;
@@ -570,12 +576,12 @@ export const authPlugin: Plugin = {
       if (!store) return rep.status(400).send({ error: 'token 无效或已过期' });
       if (Date.now() > store.expiresAt) { oauthTempStore.delete(token); return rep.status(400).send({ error: 'token 已过期，请重新授权' }); }
 
-      const existingUser = db.get<UserRow>('SELECT id FROM users WHERE username=?', username);
+      const existingUser = await db.get<UserRow>('SELECT id FROM users WHERE username=?', username);
       if (existingUser) return rep.status(409).send({ error: '用户名已存在' });
 
       const deviceCode = getDeviceCode(req);
       db.run('INSERT INTO users (username, password_hash, display_name, device_code) VALUES (?, ?, ?, ?)', username, '', username, deviceCode || null);
-      const user = db.get<UserRow>('SELECT id, username FROM users WHERE username=?', username);
+      const user = await db.get<UserRow>('SELECT id, username FROM users WHERE username=?', username);
       if (!user) return rep.status(500).send({ error: '创建用户失败' });
 
       try { db.run('INSERT INTO oauth_accounts (user_id, provider, provider_id) VALUES (?, ?, ?)', user.id, store.provider, store.providerUserId); } catch { /* ok */ }

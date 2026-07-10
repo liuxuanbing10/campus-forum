@@ -35,7 +35,10 @@ jobs:
       - name: Build client
         run: npm run build:client
         env:
-          VITE_API_URL: http://localhost:3001
+          VITE_API_URL: https://magenta-torrone-fe81ec.netlify.app/api
+
+      - name: SPA fallback
+        run: cp packages/client/dist/index.html packages/client/dist/404.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

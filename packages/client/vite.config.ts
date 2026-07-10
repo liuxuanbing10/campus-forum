@@ -3,7 +3,9 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
-export default defineConfig({
+// GitHub Pages 部署在子路径 /campus-forum/ 下，生产环境需设置 base
+export default defineConfig(({ mode }) => ({
+  base: mode === 'production' ? '/campus-forum/' : '/',
   plugins: [
     react(),
     VitePWA({
@@ -17,8 +19,8 @@ export default defineConfig({
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
+        scope: '/campus-forum/',
+        start_url: '/campus-forum/',
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -97,4 +99,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

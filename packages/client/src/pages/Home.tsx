@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 import api from '../lib/api';
 import { Pin, MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Heart, Star, ChevronLeft, ChevronRight, Palette } from 'lucide-react';
@@ -228,9 +229,9 @@ export default function HomePage() {
                   <div className="flex-shrink-0 w-[calc(50%-7rem)] sm:w-[calc(50%-8rem)]" />
 
                   {boards.map((board, index) => (
-                    <a
+                    <Link
                       key={board.id}
-                      href={`/board/${board.id}`}
+                      to={`/board/${board.id}`}
                       className="carousel-card card-enter relative w-64 sm:w-72 flex flex-col items-start p-6 sm:p-7 rounded-2xl transition-all duration-500 ease-out snap-center -mx-4 sm:-mx-6 overflow-hidden glass-card cursor-pointer"
                       style={{
                         ...getCardStyle(index),
@@ -249,7 +250,7 @@ export default function HomePage() {
                       <span className="relative z-10 text-xs font-medium text-campus-text-tertiary font-body">
                         {board.post_count} 帖子
                       </span>
-                    </a>
+                    </Link>
                   ))}
 
                   <div className="flex-shrink-0 w-[calc(50%-8rem)] sm:w-[calc(50%-9rem)]" />
@@ -291,8 +292,8 @@ export default function HomePage() {
           {/* 底部快捷操作 */}
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* 创建团队 */}
-            <a
-              href="/teams/new"
+            <Link
+              to="/teams/new"
               className="group relative rounded-2xl overflow-hidden glass-card p-6 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <div className="relative z-10 flex items-start gap-4">
@@ -305,7 +306,7 @@ export default function HomePage() {
                   <span className="inline-block mt-3 text-xs font-medium text-primary font-body group-hover:underline">立即创建 →</span>
                 </div>
               </div>
-            </a>
+            </Link>
 
             {/* 切换主题 */}
             <div className="group relative rounded-2xl overflow-hidden glass-card p-6 transition-all">
