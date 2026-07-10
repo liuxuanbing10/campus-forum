@@ -58,10 +58,14 @@ export async function handler(event: any, context: any) {
         rawHeaders: Object.keys(event.headers).reduce((acc: Record<string, string>, key) => { 
           acc[key] = event.headers[key]; 
           return acc; 
-        }, {})
+        }, {}),
+        hasAuth: !!normalizedHeaders['authorization'],
+        authValue: normalizedHeaders['authorization'] || 'NOT FOUND'
       }),
     };
   }
+
+  console.log('[DEBUG] Request:', { url, method, hasAuth: !!normalizedHeaders['authorization'] });
 
   try {
     const response = await app.inject({
