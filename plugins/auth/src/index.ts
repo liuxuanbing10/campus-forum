@@ -212,15 +212,15 @@ export const authPlugin: Plugin = {
     // 获取当前用户
     // ========================================
     app.get('/api/auth/me', async (request, reply) => {
-      if (!request.session.userId) {
+      const userId = uid(request);
+      if (!userId) {
         return reply.status(401).send({ error: '未登录' });
       }
-      // 更新在线时间
-      await db.run("UPDATE users SET last_active_at = datetime('now') WHERE id = ?", request.session.userId);
+      await db.run("UPDATE users SET last_active_at = datetime('now') WHERE id = ?", userId);
 
       const user = await db.get<UserRow>(
         'SELECT id, username, display_name, is_admin FROM users WHERE id = ?',
-        request.session.userId
+        userId
       );
 
       if (!user) {
@@ -244,7 +244,8 @@ export const authPlugin: Plugin = {
     // 更新用户资料
     // ========================================
     app.put('/api/auth/me', async (request, reply) => {
-      if (!request.session.userId) {
+      const userId = uid(request);
+      if (!userId) {
         return reply.status(401).send({ error: '未登录' });
       }
 
@@ -253,7 +254,7 @@ export const authPlugin: Plugin = {
 
       const user = await db.get<UserRow>(
         'SELECT id, username FROM users WHERE id = ?',
-        request.session.userId
+        userId
       );
 
       if (!user) {
@@ -280,12 +281,12 @@ export const authPlugin: Plugin = {
         return reply.status(400).send({ error: '没有提供需要更新的字段' });
       }
 
-      params.push(request.session.userId);
+      params.push(userId);
       await db.run(`UPDATE users SET ${updates.join(', ')}, updated_at = datetime('now') WHERE id = ?`, ...params);
 
       const updatedUser = (await db.get<UserRow>(
         'SELECT id, username, display_name, email, avatar_url, is_admin, role, is_banned, created_at FROM users WHERE id = ?',
-        request.session.userId
+        userId
       ))!;
 
       return {
@@ -309,7 +310,8 @@ export const authPlugin: Plugin = {
     // 修改密码
     // ========================================
     app.put('/api/auth/password', async (request, reply) => {
-      if (!request.session.userId) {
+      const userId = uid(request);
+      if (!userId) {
         return reply.status(401).send({ error: '未登录' });
       }
 
@@ -330,7 +332,7 @@ export const authPlugin: Plugin = {
 
       const user = await db.get<UserRow>(
         'SELECT id, password_hash FROM users WHERE id = ?',
-        request.session.userId
+        userId
       );
 
       if (!user) {
@@ -343,7 +345,7 @@ export const authPlugin: Plugin = {
       }
 
       const hash = await bcrypt.hash(newPassword, 10);
-      await db.run("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?", hash, request.session.userId);
+      await db.run("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?", hash, userId);
 
       return {
         success: true,
