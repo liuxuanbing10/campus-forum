@@ -9,10 +9,15 @@ export async function initializeSchema(db: DatabaseAdapter): Promise<void> {
       password_hash TEXT NOT NULL,
       display_name TEXT,
       avatar_url TEXT,
+      email TEXT,
       device_code TEXT UNIQUE,
       is_admin INTEGER DEFAULT 0,
       is_banned INTEGER DEFAULT 0,
       role TEXT DEFAULT 'user',
+      bio TEXT,
+      last_active_at TEXT,
+      points INTEGER DEFAULT 0,
+      email_verified INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
@@ -175,6 +180,25 @@ export async function initializeSchema(db: DatabaseAdapter): Promise<void> {
       data TEXT NOT NULL,
       size INTEGER NOT NULL,
       created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    -- Follows
+    CREATE TABLE IF NOT EXISTS follows (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      followed_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(user_id, followed_id)
+    );
+
+    -- OAuth accounts
+    CREATE TABLE IF NOT EXISTS oauth_accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      provider TEXT NOT NULL,
+      provider_id TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(provider, provider_id)
     );
 
     -- Sessions (for express-session)

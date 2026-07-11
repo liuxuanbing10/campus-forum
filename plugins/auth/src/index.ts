@@ -136,7 +136,7 @@ export const authPlugin: Plugin = {
 
       // 5. 创建用户
       const hash = await bcrypt.hash(password, 10);
-      db.run(
+      await db.run(
         'INSERT INTO users (username, password_hash, display_name, email, device_code) VALUES (?, ?, ?, ?, ?)',
         username, hash, username, email || null, deviceCode
       );
