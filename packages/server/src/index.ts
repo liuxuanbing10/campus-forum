@@ -8,12 +8,9 @@ import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import { PluginManager, SimpleEventBus, PluginContext, Logger } from '@campus-forum/core';
-import { createDatabase, seedData } from '@campus-forum/database';
+import 'dotenv/config';
+import { createDatabase, initializeSchema, seedData } from '@campus-forum/database';
 import { TursoSessionStore } from './session-store.js';
-
-if (!process.env.NETLIFY) {
-  import('dotenv/config');
-}
 
 let __dirname: string;
 try {
@@ -47,10 +44,9 @@ export async function buildApp(options?: { plugins?: any[] }) {
   // 支持多个前端来源：本地开发、Netlify 部署、GitHub Pages 部署
   const allowedOrigins = [
     'http://localhost:5173',
-    'https://magenta-torrone-fe81ec.netlify.app',
     'https://liuxuanbing10.github.io',
   ];
-  // 额外允许通过 CLIENT_URL 环境变量配置
+  // 额外允许通过 CLIENT_URL 环境变量配置（.env 中设置）
   if (process.env.CLIENT_URL && !allowedOrigins.includes(process.env.CLIENT_URL)) {
     allowedOrigins.push(process.env.CLIENT_URL);
   }
@@ -113,7 +109,8 @@ export async function buildApp(options?: { plugins?: any[] }) {
 
   // 数据库（支持 DB_PATH 环境变量或 Turso 远程数据库）
   const db = await createDatabase();
-  await (await import('@campus-forum/database')).seedData(db);
+  await initializeSchema(db);
+  await seedData(db);
 
   // ── Session with Turso-backed store ─────────────
   let sessionPlugin: any;
