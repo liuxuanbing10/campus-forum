@@ -189,6 +189,39 @@ export const authPlugin: Plugin = {
         return reply.status(401).send({ error: '密码错误' });
       }
 
+      // 4. 检查设备黑名单（如果请求携带了 x-device-id header）
+      const deviceId = (request.headers['x-device-id'] as string) || undefined;
+      if (deviceId) {
+        const blacklisted = await db.get<{ id: number }>(
+          'SELECT id FROM device_blacklist WHERE device_id = ?',
+          deviceId
+        );
+        if (blacklisted) {
+          return reply.status(403).send({ error: '该设备已被禁止登录，请联系管理员' });
+        }
+
+        // 5. 记录/更新用户设备
+        const existingDevice = await db.get<{ id: number; is_active: number }>(
+          'SELECT id, is_active FROM user_devices WHERE user_id = ? AND device_id = ?',
+          user.id, deviceId
+        );
+        if (existingDevice) {
+          if (existingDevice.is_active === 0) {
+            return reply.status(403).send({ error: '该设备已被禁用，请联系管理员' });
+          }
+          await db.run(
+            "UPDATE user_devices SET last_login_at = datetime('now'), device_info = COALESCE(?, device_info) WHERE id = ?",
+            (request.headers['user-agent'] as string) || null, existingDevice.id
+          );
+        } else {
+          await db.run(
+            'INSERT INTO user_devices (user_id, device_id, device_name, device_info, is_active) VALUES (?, ?, ?, ?, 1)',
+            user.id, deviceId, (request.headers['user-agent'] as string)?.slice(0, 100) || null,
+            (request.headers['user-agent'] as string) || null
+          );
+        }
+      }
+
       // 3. 设置 session（不校验设备码，支持多设备登录）
       request.session.userId = user.id;
       request.session.username = user.username;
@@ -639,6 +672,40 @@ export const authPlugin: Plugin = {
       // 演示：任何 4 位字符都通过，实际应集成 reCAPTCHA 等
       if (captcha.length < 4) return rep.status(400).send({ error: '验证码错误' });
       return { success: true };
+    });
+
+    // ========================================
+    // 我的设备管理
+    // ========================================
+    app.get('/api/my-devices', async (req, rep) => {
+      const userId = uid(req);
+      if (!userId) return rep.status(401).send({ error: '请先登录' });
+      const devices = await db.all(
+        `SELECT id, user_id, device_id, device_name, device_info, is_active, last_login_at, created_at
+         FROM user_devices WHERE user_id = ? ORDER BY last_login_at DESC`,
+        userId
+      );
+      // Mark current device based on session
+      const currentDeviceCode = (req as any).session?.deviceCode;
+      return {
+        devices: (devices as any[]).map(d => ({
+          ...d,
+          is_current: currentDeviceCode ? d.device_id === currentDeviceCode : undefined,
+        })),
+      };
+    });
+
+    app.delete('/api/my-devices/:id', async (req, rep) => {
+      const userId = uid(req);
+      if (!userId) return rep.status(401).send({ error: '请先登录' });
+      const id = Number((req.params as { id: string }).id);
+      const device = await db.get<{ id: number; user_id: number }>(
+        'SELECT id, user_id FROM user_devices WHERE id = ?', id
+      );
+      if (!device) return rep.status(404).send({ error: '设备不存在' });
+      if (device.user_id !== userId) return rep.status(403).send({ error: '无权操作' });
+      await db.run('DELETE FROM user_devices WHERE id = ?', id);
+      return { success: true, message: '已退出该设备' };
     });
   },
 };

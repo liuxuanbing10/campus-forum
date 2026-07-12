@@ -148,6 +148,51 @@ export const adminPlugin: Plugin = {
         activeUsers,
       };
     });
+
+    // ─── 设备黑名单管理 ───
+    app.get('/api/admin/device-blacklist', async (req, rep) => {
+      await guard(req, rep); if (rep.sent) return;
+      const devices = await db.all('SELECT * FROM device_blacklist ORDER BY created_at DESC');
+      return { devices };
+    });
+
+    app.post('/api/admin/device-blacklist', async (req, rep) => {
+      await guard(req, rep); if (rep.sent) return;
+      const { device_id, device_name, reason } = req.body as { device_id: string; device_name?: string; reason?: string };
+      if (!device_id) return rep.status(400).send({ error: '缺少 device_id' });
+      try {
+        await db.run('INSERT INTO device_blacklist (device_id, device_name, reason, created_by) VALUES (?, ?, ?, ?)',
+          device_id, device_name || null, reason || null, getUid(req));
+        return { success: true, message: '设备已加入黑名单' };
+      } catch { return rep.status(409).send({ error: '设备已在黑名单中' }); }
+    });
+
+    app.delete('/api/admin/device-blacklist/:id', async (req, rep) => {
+      await guard(req, rep); if (rep.sent) return;
+      const id = Number((req.params as { id: string }).id);
+      const row = await db.get('SELECT id FROM device_blacklist WHERE id=?', id);
+      if (!row) return rep.status(404).send({ error: '黑名单条目不存在' });
+      await db.run('DELETE FROM device_blacklist WHERE id=?', id);
+      return { success: true, message: '已从黑名单移除' };
+    });
+
+    // ─── 用户设备列表 ───
+    app.get('/api/admin/devices', async (req, rep) => {
+      await guard(req, rep); if (rep.sent) return;
+      const q = req.query as { user_id?: string };
+      let devices;
+      if (q.user_id) {
+        devices = await db.all(
+          `SELECT ud.*, u.username FROM user_devices ud
+           JOIN users u ON u.id = ud.user_id WHERE ud.user_id = ? ORDER BY ud.last_login_at DESC`,
+          Number(q.user_id));
+      } else {
+        devices = await db.all(
+          `SELECT ud.*, u.username FROM user_devices ud
+           JOIN users u ON u.id = ud.user_id ORDER BY ud.last_login_at DESC LIMIT 200`);
+      }
+      return { devices };
+    });
   },
 };
 

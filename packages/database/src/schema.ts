@@ -333,6 +333,26 @@ export async function migrateSchema(db: DatabaseAdapter): Promise<void> {
     )`],
     ['add_is_pending', `ALTER TABLE posts ADD COLUMN is_pending INTEGER DEFAULT 0`],
     ['add_email_verify', `ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0`],
+    ['add_device_blacklist', `CREATE TABLE IF NOT EXISTS device_blacklist (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      device_id TEXT UNIQUE NOT NULL,
+      device_name TEXT,
+      reason TEXT,
+      created_by INTEGER,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (created_by) REFERENCES users(id)
+    )`],
+    ['add_user_devices', `CREATE TABLE IF NOT EXISTS user_devices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      device_id TEXT NOT NULL,
+      device_name TEXT,
+      device_info TEXT,
+      is_active INTEGER DEFAULT 1,
+      last_login_at TEXT DEFAULT (datetime('now')),
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )`],
   ];
 
   for (const [name, sql] of migrations) {

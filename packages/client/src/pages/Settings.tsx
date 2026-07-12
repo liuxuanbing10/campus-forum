@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/auth';
-import api, { authApi, oauthApi, exportApi, avatarApi } from '../lib/api';
-import type { User, OAuthAccount } from '@campus-forum/core';
+import api, { authApi, oauthApi, exportApi, avatarApi, userDeviceApi } from '../lib/api';
+import type { User, OAuthAccount, UserDevice } from '@campus-forum/core';
 import { toastStore } from '../App';
-import { Eye, EyeOff, User as UserIcon, Mail, Edit3, Check, X, Lock, RefreshCw, Upload, Download, Link2, Unlink, Loader2, Palette } from 'lucide-react';
+import { Eye, EyeOff, User as UserIcon, Mail, Edit3, Check, X, Lock, RefreshCw, Upload, Download, Link2, Unlink, Loader2, Palette, Smartphone } from 'lucide-react';
 import { THEMES, useThemeStore } from '../stores/theme';
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'oauth' | 'export' | 'appearance'>(() => {
+  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'oauth' | 'export' | 'appearance' | 'devices'>(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
     if (tab === 'appearance') return 'appearance';
@@ -127,6 +127,7 @@ export default function SettingsPage() {
         <button onClick={() => setActiveTab('oauth')} className={`px-4 py-2 rounded-lg text-sm font-body transition-colors ${activeTab === 'oauth' ? 'bg-primary text-white' : 'text-campus-text-secondary hover:bg-surface-hover'}`}>账号绑定</button>
         <button onClick={() => setActiveTab('export')} className={`px-4 py-2 rounded-lg text-sm font-body transition-colors ${activeTab === 'export' ? 'bg-primary text-white' : 'text-campus-text-secondary hover:bg-surface-hover'}`}>数据导出</button>
         <button onClick={() => setActiveTab('appearance')} className={`px-4 py-2 rounded-lg text-sm font-body transition-colors ${activeTab === 'appearance' ? 'bg-primary text-white' : 'text-campus-text-secondary hover:bg-surface-hover'}`}>界面风格</button>
+        <button onClick={() => setActiveTab('devices')} className={`px-4 py-2 rounded-lg text-sm font-body transition-colors ${activeTab === 'devices' ? 'bg-primary text-white' : 'text-campus-text-secondary hover:bg-surface-hover'}`}>设备管理</button>
       </div>
 
       {/* Avatar + Profile */}
@@ -262,6 +263,73 @@ export default function SettingsPage() {
           </h3>
           <p className="text-sm text-campus-text-tertiary mb-6 font-body">选择一个你喜欢的主题，改变论坛的整体视觉效果。</p>
           <AppearancePicker />
+        </div>
+      )}
+
+      {/* Devices Tab */}
+      {activeTab === 'devices' && <DevicesTab />}
+    </div>
+  );
+}
+
+function DevicesTab() {
+  const [devices, setDevices] = useState<(UserDevice & { is_current?: boolean })[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { loadDevices(); }, []);
+
+  const loadDevices = async () => {
+    try {
+      const { data } = await userDeviceApi.getMyDevices();
+      setDevices(data.devices || []);
+    } catch { toastStore.error('加载设备失败'); }
+    finally { setLoading(false); }
+  };
+
+  const handleRevoke = async (id: number) => {
+    if (!confirm('确定退出该设备的登录状态？')) return;
+    try {
+      await userDeviceApi.revokeDevice(id);
+      toastStore.success('已退出该设备');
+      loadDevices();
+    } catch { toastStore.error('操作失败'); }
+  };
+
+  if (loading) return <div className="text-center py-8 text-campus-text-tertiary font-body">加载中...</div>;
+
+  return (
+    <div className="card p-6">
+      <h3 className="text-lg font-semibold font-display mb-2 flex items-center gap-2">
+        <Smartphone className="w-5 h-5" /> 我的设备
+      </h3>
+      <p className="text-sm text-campus-text-tertiary mb-6 font-body">管理已登录你账号的设备，可以强制退出不认识的设备。</p>
+      {devices.length === 0 ? (
+        <p className="text-sm text-campus-text-tertiary font-body">暂无设备数据</p>
+      ) : (
+        <div className="space-y-3">
+          {devices.map(d => (
+            <div key={d.id} className="flex items-center justify-between p-4 rounded-lg bg-surface-hover">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <Smartphone className="w-4 h-4 text-campus-text-tertiary shrink-0" />
+                  <span className="text-sm font-medium font-body truncate">{d.device_name || d.device_id.slice(0, 16)}</span>
+                  {d.is_current ? (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-green-100 text-green-600 font-body">当前设备</span>
+                  ) : d.is_active === 0 ? (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-100 text-red-600 font-body">已禁用</span>
+                  ) : null}
+                </div>
+                {d.device_info && <p className="text-xs text-campus-text-tertiary mt-1 font-body">{d.device_info}</p>}
+                <p className="text-xs text-campus-text-tertiary mt-0.5 font-body">最后登录: {d.last_login_at ? new Date(d.last_login_at).toLocaleString() : '-'}</p>
+              </div>
+              {!d.is_current && d.is_active !== 0 && (
+                <button onClick={() => handleRevoke(d.id)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-body text-destructive border border-destructive hover:bg-destructive/10 transition-colors shrink-0 ml-3">
+                  退出
+                </button>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

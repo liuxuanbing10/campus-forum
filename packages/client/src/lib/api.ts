@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, UpdateProfileData, ChangePasswordData, Post, SearchResult, Notification, AdminUser, ShareInfo, PostStats, TeamCategory, Team, TeamMember, TeamAnnouncement, TeamPost, MyTeamsResponse, CreateTeamData, UpdateTeamData, UserProfile, UserPost, UserComment, FollowStatus, Conversation, Message, ReportData, OAuthAccount, PendingPost, SensitiveWord, AdminReport, AuditLog, PostVersion, CaptchaData, AdminStats } from '@campus-forum/core';
+import type { User, UpdateProfileData, ChangePasswordData, Post, SearchResult, Notification, AdminUser, ShareInfo, PostStats, TeamCategory, Team, TeamMember, TeamAnnouncement, TeamPost, MyTeamsResponse, CreateTeamData, UpdateTeamData, UserProfile, UserPost, UserComment, FollowStatus, Conversation, Message, ReportData, OAuthAccount, PendingPost, SensitiveWord, AdminReport, AuditLog, PostVersion, CaptchaData, AdminStats, DeviceBlacklistEntry, UserDevice } from '@campus-forum/core';
 
 const baseURL = import.meta.env.VITE_API_URL || '/api';
 
@@ -188,6 +188,14 @@ export const adminExtendedApi = {
   getStats: () => api.get<AdminStats>('/admin/stats'),
 };
 
+// ===== 管理员设备管理 API =====
+export const adminDeviceApi = {
+  getBlacklist: () => api.get<{ devices: DeviceBlacklistEntry[] }>('/admin/device-blacklist'),
+  addToBlacklist: (deviceId: string, deviceName?: string, reason?: string) => api.post<{ success: boolean }>('/admin/device-blacklist', { device_id: deviceId, device_name: deviceName, reason }),
+  removeFromBlacklist: (id: number) => api.delete(`/admin/device-blacklist/${id}`),
+  getAllDevices: (userId?: number) => api.get<{ devices: (UserDevice & { username?: string })[] }>('/admin/devices', { params: userId ? { user_id: userId } : {} }),
+};
+
 // ===== 编辑历史 API =====
 export const versionApi = {
   getVersions: (postId: number) => api.get<{ versions: PostVersion[] }>(`/posts/${postId}/versions`),
@@ -196,4 +204,10 @@ export const versionApi = {
 // ===== 评论 API =====
 export const commentApi = {
   update: (commentId: number, content: string) => api.put<{ success: boolean }>(`/comments/${commentId}`, { content }),
+};
+
+// ===== 我的设备 API =====
+export const userDeviceApi = {
+  getMyDevices: () => api.get<{ devices: (UserDevice & { is_current?: boolean })[] }>('/my-devices'),
+  revokeDevice: (id: number) => api.delete<{ success: boolean }>(`/my-devices/${id}`),
 };

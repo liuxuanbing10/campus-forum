@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, ArrowLeft, Search, Ban, UserCog, MoreVertical, UserX, UserCheck, FileText, Flag, History, AlertTriangle, Loader2, Trash2, Check, X, BarChart3, TrendingUp, Users, MessageSquare, Folder, Trophy } from 'lucide-react';
-import { adminApi, adminExtendedApi } from '../lib/api';
-import type { AdminUser, PendingPost, SensitiveWord, AdminReport, AuditLog, AdminStats } from '@campus-forum/core';
+import { Shield, ArrowLeft, Search, Ban, UserCog, MoreVertical, UserX, UserCheck, FileText, Flag, History, AlertTriangle, Loader2, Trash2, Check, X, BarChart3, TrendingUp, Users, MessageSquare, Folder, Trophy, Smartphone } from 'lucide-react';
+import { adminApi, adminExtendedApi, adminDeviceApi } from '../lib/api';
+import type { AdminUser, PendingPost, SensitiveWord, AdminReport, AuditLog, AdminStats, DeviceBlacklistEntry, UserDevice } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 
-type AdminTab = 'stats' | 'users' | 'pending' | 'words' | 'reports' | 'logs';
+type AdminTab = 'stats' | 'users' | 'pending' | 'words' | 'reports' | 'logs' | 'devices';
 
 export default function AdminPage() {
   const navigate = useNavigate();
@@ -42,6 +42,7 @@ export default function AdminPage() {
         <TabBtn active={activeTab === 'words'} onClick={() => setActiveTab('words')}><AlertTriangle className="w-4 h-4" />敏感词</TabBtn>
         <TabBtn active={activeTab === 'reports'} onClick={() => setActiveTab('reports')}><Flag className="w-4 h-4" />举报管理</TabBtn>
         <TabBtn active={activeTab === 'logs'} onClick={() => setActiveTab('logs')}><History className="w-4 h-4" />操作日志</TabBtn>
+        <TabBtn active={activeTab === 'devices'} onClick={() => setActiveTab('devices')}><Smartphone className="w-4 h-4" />设备</TabBtn>
       </div>
 
       {activeTab === 'stats' && <StatsTab />}
@@ -50,6 +51,7 @@ export default function AdminPage() {
       {activeTab === 'words' && <WordsTab />}
       {activeTab === 'reports' && <ReportsTab />}
       {activeTab === 'logs' && <LogsTab />}
+      {activeTab === 'devices' && <DevicesTab />}
     </div>
   );
 }
@@ -433,6 +435,123 @@ function ReportsTab() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function DevicesTab() {
+  const [blacklist, setBlacklist] = useState<DeviceBlacklistEntry[]>([]);
+  const [devices, setDevices] = useState<(UserDevice & { username?: string })[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newDeviceId, setNewDeviceId] = useState('');
+  const [newDeviceName, setNewDeviceName] = useState('');
+  const [newReason, setNewReason] = useState('');
+  const [deviceFilter, setDeviceFilter] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  useEffect(() => { loadData(); }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [blRes, devRes] = await Promise.all([
+        adminDeviceApi.getBlacklist(),
+        adminDeviceApi.getAllDevices(),
+      ]);
+      setBlacklist(blRes.data.devices || []);
+      setDevices(devRes.data.devices || []);
+    } catch { toastStore.error('加载设备数据失败'); }
+    finally { setLoading(false); }
+  };
+
+  const handleAddBlacklist = async () => {
+    if (!newDeviceId.trim()) return;
+    setAdding(true);
+    try {
+      await adminDeviceApi.addToBlacklist(newDeviceId.trim(), newDeviceName.trim() || undefined, newReason.trim() || undefined);
+      toastStore.success('已加入黑名单');
+      setNewDeviceId(''); setNewDeviceName(''); setNewReason('');
+      loadData();
+    } catch { toastStore.error('操作失败'); }
+    finally { setAdding(false); }
+  };
+
+  const handleRemoveBlacklist = async (id: number) => {
+    if (!confirm('确定从黑名单移除？')) return;
+    try { await adminDeviceApi.removeFromBlacklist(id); toastStore.success('已移除'); loadData(); }
+    catch { toastStore.error('操作失败'); }
+  };
+
+  const filteredDevices = deviceFilter
+    ? devices.filter(d => d.user_id === Number(deviceFilter) || d.username?.includes(deviceFilter))
+    : devices;
+
+  if (loading) return <div className="text-center py-8 text-campus-text-tertiary font-body">加载中...</div>;
+
+  return (
+    <div className="space-y-6">
+      {/* 黑名单管理 */}
+      <div className="card p-4">
+        <h3 className="text-sm font-semibold font-display mb-3">设备黑名单</h3>
+        <div className="flex gap-2 mb-3 flex-wrap">
+          <input value={newDeviceId} onChange={e => setNewDeviceId(e.target.value)} placeholder="设备ID (必填)"
+            className="flex-1 min-w-[200px] px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
+          <input value={newDeviceName} onChange={e => setNewDeviceName(e.target.value)} placeholder="设备名称"
+            className="w-40 px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
+          <input value={newReason} onChange={e => setNewReason(e.target.value)} placeholder="拉黑原因"
+            className="w-40 px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
+          <button onClick={handleAddBlacklist} disabled={adding || !newDeviceId.trim()}
+            className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-body hover:bg-primary-hover disabled:opacity-50">
+            {adding ? '添加中...' : '加入黑名单'}
+          </button>
+        </div>
+        {blacklist.length === 0 ? (
+          <p className="text-sm text-campus-text-tertiary font-body">暂无黑名单设备</p>
+        ) : (
+          <div className="space-y-2">
+            {blacklist.map(b => (
+              <div key={b.id} className="flex items-center justify-between p-2 rounded-lg bg-surface-hover">
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-mono font-body">{b.device_id}</span>
+                  {b.device_name && <span className="text-xs text-campus-text-secondary ml-2 font-body">({b.device_name})</span>}
+                  {b.reason && <span className="text-xs text-campus-text-tertiary ml-2 font-body">— {b.reason}</span>}
+                </div>
+                <button onClick={() => handleRemoveBlacklist(b.id)} className="p-1 hover:bg-surface-hover rounded text-destructive shrink-0">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 用户设备列表 */}
+      <div className="card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold font-display">用户设备列表</h3>
+          <input value={deviceFilter} onChange={e => setDeviceFilter(e.target.value)} placeholder="按用户ID/名称筛选"
+            className="w-48 px-3 py-1.5 rounded-lg bg-surface-hover border border-border text-xs font-body focus:outline-none focus:border-primary" />
+        </div>
+        {filteredDevices.length === 0 ? (
+          <p className="text-sm text-campus-text-tertiary font-body">暂无设备数据</p>
+        ) : (
+          <div className="space-y-2">
+            {filteredDevices.map(d => (
+              <div key={d.id} className="flex items-center justify-between p-2 rounded-lg bg-surface-hover">
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium font-body">{d.username || `用户#${d.user_id}`}</span>
+                  <span className="text-xs text-campus-text-tertiary ml-2 font-mono">{d.device_id.slice(0, 16)}...</span>
+                  {d.device_name && <span className="text-xs text-campus-text-secondary ml-2 font-body">{d.device_name}</span>}
+                  {d.is_active === 0 && <span className="text-xs text-destructive ml-2 font-body">已禁用</span>}
+                </div>
+                <span className="text-xs text-campus-text-tertiary font-body shrink-0">
+                  {d.last_login_at ? new Date(d.last_login_at).toLocaleString() : '-'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

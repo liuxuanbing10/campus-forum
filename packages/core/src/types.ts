@@ -430,3 +430,23 @@ export interface AdminStats {
   teamRanking: { name: string; member_count: number; post_count: number }[];
   activeUsers: { username: string; display_name: string; points: number; post_count: number }[];
 }
+
+export interface DeviceBlacklistEntry {
+  id: number;
+  device_id: string;
+  device_name?: string;
+  reason?: string;
+  created_by?: number;
+  created_at: string;
+}
+
+export interface UserDevice {
+  id: number;
+  user_id: number;
+  device_id: string;
+  device_name?: string;
+  device_info?: string;
+  is_active: number;
+  last_login_at: string;
+  created_at: string;
+}

@@ -44,4 +44,6 @@ export type {
   PostVersion,
   CaptchaData,
   AdminStats,
+  DeviceBlacklistEntry,
+  UserDevice,
 } from './types.js';
