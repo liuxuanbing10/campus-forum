@@ -9,8 +9,8 @@
 const STORAGE_KEY = 'campus_device_id';
 
 function generateUUID(): string {
-  // crypto.randomUUID requires secure context (HTTPS/localhost), fallback for plain HTTP
-  if (crypto.randomUUID) return crypto.randomUUID();
+  // ponytail: try/catch — crypto.randomUUID exists on HTTP but throws DOMException
+  try { if (crypto.randomUUID) return crypto.randomUUID(); } catch {}
   // v4 UUID via getRandomValues
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
