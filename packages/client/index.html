@@ -13,7 +13,10 @@
     <title>校园论坛</title>
     <link rel="preconnect" href="https://fonts.loli.net" />
     <link rel="preconnect" href="https://gstatic.loli.net" crossorigin />
-    <link href="https://fonts.loli.net/css2?family=Nunito:wght@400;600;700;800&family=DM+Sans:wght@400;500;700&family=LXGW+WenKai+TC&family=Ma+Shan+Zheng&family=ZCOOL+KuaiLe&family=Long+Cang&family=ZCOOL+XiaoWei&family=Caveat:wght@400;700&family=Liu+Jian+Mao+Cao&display=swap" rel="stylesheet" />
+    <!-- Critical fonts: load sync -->
+    <link href="https://fonts.loli.net/css2?family=Nunito:wght@400;600;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+    <!-- Decorative fonts: load async (non-blocking) -->
+    <link href="https://fonts.loli.net/css2?family=LXGW+WenKai+TC&family=Ma+Shan+Zheng&family=ZCOOL+KuaiLe&family=Long+Cang&family=ZCOOL+XiaoWei&family=Liu+Jian+Mao+Cao&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
   </head>
   <body>
     <div id="root"></div>

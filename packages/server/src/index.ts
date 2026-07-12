@@ -121,7 +121,7 @@ export async function buildApp(options?: { plugins?: any[] }) {
   }
   await app.register(sessionPlugin, {
     secret: sessionSecret,
-    cookie: { secure: process.env.NODE_ENV === 'production', maxAge: sessionMaxAge },
+    cookie: { secure: false, maxAge: sessionMaxAge },
     saveUninitialized: false,
     store: new TursoSessionStore(db, sessionMaxAge),
   });

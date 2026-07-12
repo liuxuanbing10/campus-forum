@@ -216,15 +216,20 @@ export const authPlugin: Plugin = {
     // 获取当前用户
     // ========================================
     app.get('/api/auth/me', async (request, reply) => {
-      if (!request.session.userId) {
+      // Try session first, then JWT fallback (for non-HTTPS environments where secure cookies don't work)
+      let userId = request.session.userId;
+      if (!userId) {
+        userId = uid(request) ?? undefined;
+      }
+      if (!userId) {
         return reply.status(401).send({ error: '未登录' });
       }
       // 更新在线时间
-      db.run("UPDATE users SET last_active_at = datetime('now') WHERE id = ?", request.session.userId);
+      db.run("UPDATE users SET last_active_at = datetime('now') WHERE id = ?", userId);
 
       const user = await db.get<UserRow>(
         'SELECT id, username, display_name, is_admin FROM users WHERE id = ?',
-        request.session.userId
+        userId
       );
 
       if (!user) {

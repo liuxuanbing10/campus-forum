@@ -44,6 +44,7 @@ export async function initializeSchema(db: DatabaseAdapter): Promise<void> {
       is_anonymous INTEGER DEFAULT 0,
       is_pinned INTEGER DEFAULT 0,
       is_private INTEGER DEFAULT 0,
+      is_pending INTEGER DEFAULT 0,
       view_count INTEGER DEFAULT 0,
       images TEXT,
       created_at TEXT DEFAULT (datetime('now')),
