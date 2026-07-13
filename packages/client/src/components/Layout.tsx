@@ -2,8 +2,10 @@ import { Outlet, Link, useNavigate, useLocation, useSearchParams } from 'react-r
 import { useAuthStore } from '../stores/auth';
 import NotificationBell from './NotificationBell';
 import ThemeSwitcher from './ThemeSwitcher';
-import { Home, Users, Heart, Search, Shield, MessageCircle, Bell, X, Menu } from 'lucide-react';
+import { Home, Users, Heart, Search, Shield, MessageCircle, Bell, X, Menu, Download } from 'lucide-react';
 import { useState, useEffect } from 'react';
+
+// ponytail: inline PWA install — no separate hook/component for one event listener + one button
 
 export default function Layout() {
   const { user, logout } = useAuthStore();
@@ -12,6 +14,18 @@ export default function Layout() {
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [canInstall, setCanInstall] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setCanInstall(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
 
   useEffect(() => {
     if (location.pathname === '/search') {
@@ -28,6 +42,14 @@ export default function Layout() {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+  };
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') setCanInstall(false);
+    setDeferredPrompt(null);
   };
 
   return (
@@ -62,6 +84,11 @@ export default function Layout() {
 
           <nav className="flex items-center gap-3">
             <ThemeSwitcher />
+            {canInstall && (
+              <button onClick={handleInstall} title="安装应用" className="p-2 hover:bg-background rounded-lg transition-colors">
+                <Download className="w-5 h-5 text-primary" />
+              </button>
+            )}
             {/* Mobile hamburger */}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
