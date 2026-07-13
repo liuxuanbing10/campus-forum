@@ -595,6 +595,20 @@ function ReportsTab() {
   );
 }
 
+function parseBrowser(ua?: string | null): string {
+  if (!ua) return '未知浏览器';
+  const patterns: [RegExp, string][] = [
+    [/Edg(?:e|A|iOS)?\/(\d+)/, 'Edge $1'],
+    [/OPR\/(\d+)/, 'Opera $1'],
+    [/Chrome\/(\d+)/, 'Chrome $1'],
+    [/Firefox\/(\d+)/, 'Firefox $1'],
+    [/Version\/(\d+).*Safari/, 'Safari $1'],
+    [/Safari\/(\d+)/, 'Safari $1'],
+  ];
+  for (const [re, name] of patterns) { const m = ua.match(re); if (m) return name; }
+  return '未知浏览器';
+}
+
 function DevicesTab() {
   const [blacklist, setBlacklist] = useState<DeviceBlacklistEntry[]>([]);
   const [devices, setDevices] = useState<(UserDevice & { username?: string })[]>([]);
@@ -639,7 +653,11 @@ function DevicesTab() {
   };
 
   const filteredDevices = deviceFilter
-    ? devices.filter(d => d.user_id === Number(deviceFilter) || d.username?.includes(deviceFilter))
+    ? devices.filter(d => {
+        const f = deviceFilter.toLowerCase();
+        const browser = parseBrowser(d.device_name || d.device_info).toLowerCase();
+        return d.username?.toLowerCase().includes(f) || browser.includes(f);
+      })
     : devices;
 
   if (loading) return <div className="text-center py-8 text-campus-text-tertiary font-body">加载中...</div>;
@@ -685,7 +703,7 @@ function DevicesTab() {
       <div className="card p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold font-display">用户设备列表</h3>
-          <input value={deviceFilter} onChange={e => setDeviceFilter(e.target.value)} placeholder="按用户ID/名称筛选"
+          <input value={deviceFilter} onChange={e => setDeviceFilter(e.target.value)} placeholder="搜索用户名/浏览器"
             className="w-48 px-3 py-1.5 rounded-lg bg-surface-hover border border-border text-xs font-body focus:outline-none focus:border-primary" />
         </div>
         {filteredDevices.length === 0 ? (
@@ -693,14 +711,9 @@ function DevicesTab() {
         ) : (
           <div className="space-y-2">
             {filteredDevices.map(d => (
-              <div key={d.id} className="flex items-center justify-between p-2 rounded-lg bg-surface-hover">
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium font-body">{d.username || `用户#${d.user_id}`}</span>
-                  <span className="text-xs text-campus-text-tertiary ml-2 font-mono">{d.device_id.slice(0, 16)}...</span>
-                  {d.device_name && <span className="text-xs text-campus-text-secondary ml-2 font-body">{d.device_name}</span>}
-                  {d.is_active === 0 && <span className="text-xs text-destructive ml-2 font-body">已禁用</span>}
-                </div>
-                <span className="text-xs text-campus-text-tertiary font-body shrink-0">
+              <div key={d.id} className="flex items-center justify-between p-2 rounded-lg bg-surface-hover text-sm font-body">
+                <span className="text-campus-text-primary">{d.username || '未知用户'} 在 {parseBrowser(d.device_name || d.device_info)} 的设备上</span>
+                <span className="text-campus-text-tertiary shrink-0 text-xs">
                   {d.last_login_at ? new Date(d.last_login_at).toLocaleString() : '-'}
                 </span>
               </div>
