@@ -58,8 +58,9 @@ export const adminPlugin: Plugin = {
       await guard(req, rep); if (rep.sent) return;
       const id = Number((req.params as { id: string }).id);
       if (id === getUid(req)) return rep.status(400).send({ error: '不能封禁自己' });
-      const user = await db.get<{ id: number; is_banned: number }>('SELECT id,is_banned FROM users WHERE id=?', id);
+      const user = await db.get<{ id: number; is_banned: number; is_admin: number }>('SELECT id,is_banned,is_admin FROM users WHERE id=?', id);
       if (!user) return rep.status(404).send({ error: '用户不存在' });
+      if (user.is_admin) return rep.status(400).send({ error: '不能封禁管理员账号' });
       const { duration, reason, ban } = req.body as { duration?: number; reason?: string; ban?: boolean };
       // 解封: ban=false 或当前已封禁且未传 duration
       const isUnban = ban === false || (user.is_banned === 1 && duration === undefined);
@@ -85,7 +86,9 @@ export const adminPlugin: Plugin = {
     app.put('/api/admin/users/:id/role', async (req, rep) => {
       await guard(req, rep); if (rep.sent) return;
       const id = Number((req.params as { id: string }).id);
-      if (!(await db.get('SELECT id FROM users WHERE id=?', id))) return rep.status(404).send({ error: '用户不存在' });
+      const target = await db.get<{ id: number; is_admin: number }>('SELECT id,is_admin FROM users WHERE id=?', id);
+      if (!target) return rep.status(404).send({ error: '用户不存在' });
+      if (target.is_admin) return rep.status(400).send({ error: '不能修改管理员账号的角色' });
       const { role, isAdmin: makeAdmin } = req.body as { role?: string; isAdmin?: boolean };
       if (role !== undefined) await db.run('UPDATE users SET role=? WHERE id=?', role, id);
       if (makeAdmin !== undefined) await db.run('UPDATE users SET is_admin=? WHERE id=?', makeAdmin ? 1 : 0, id);
@@ -127,10 +130,17 @@ export const adminPlugin: Plugin = {
       const { ids } = req.body as { ids?: number[] };
       if (!ids?.length) return rep.status(400).send({ error: '请选择要删除的用户' });
       const selfId = getUid(req);
-      const filtered = ids.filter(id => id !== selfId);
+      let filtered = ids.filter(id => id !== selfId);
       if (!filtered.length) return rep.status(400).send({ error: '不能删除自己' });
+      // 排除管理员账号
       const placeholders = filtered.map(() => '?').join(',');
-      await db.run(`DELETE FROM users WHERE id IN (${placeholders})`, ...filtered);
+      const admins = await db.all<{ id: number }>(`SELECT id FROM users WHERE id IN (${placeholders}) AND is_admin=1`, ...filtered);
+      const adminIds = new Set(admins.map(a => a.id));
+      const skippedAdmins = adminIds.size;
+      filtered = filtered.filter(id => !adminIds.has(id));
+      if (!filtered.length) return rep.status(400).send({ error: '不能删除管理员账号' });
+      const ph2 = filtered.map(() => '?').join(',');
+      await db.run(`DELETE FROM users WHERE id IN (${ph2})`, ...filtered);
       return { success: true, message: `已删除 ${filtered.length} 个用户`, skipped: ids.length - filtered.length };
     });
 
@@ -140,11 +150,17 @@ export const adminPlugin: Plugin = {
       const { ids, ban, duration, reason } = req.body as { ids?: number[]; ban?: boolean; duration?: number; reason?: string };
       if (!ids?.length) return rep.status(400).send({ error: '请选择用户' });
       const selfId = getUid(req);
-      const filtered = ids.filter(id => id !== selfId);
+      let filtered = ids.filter(id => id !== selfId);
       if (!filtered.length) return rep.status(400).send({ error: '不能操作自己' });
+      // 排除管理员账号
       const placeholders = filtered.map(() => '?').join(',');
+      const admins = await db.all<{ id: number }>(`SELECT id FROM users WHERE id IN (${placeholders}) AND is_admin=1`, ...filtered);
+      const adminIds = new Set(admins.map(a => a.id));
+      filtered = filtered.filter(id => !adminIds.has(id));
+      if (!filtered.length) return rep.status(400).send({ error: '不能封禁管理员账号' });
+      const ph2 = filtered.map(() => '?').join(',');
       if (!ban) {
-        await db.run(`UPDATE users SET is_banned=0, banned_until=NULL, ban_reason=NULL, updated_at=datetime('now') WHERE id IN (${placeholders})`, ...filtered);
+        await db.run(`UPDATE users SET is_banned=0, banned_until=NULL, ban_reason=NULL, updated_at=datetime('now') WHERE id IN (${ph2})`, ...filtered);
         return { success: true, message: `已解封 ${filtered.length} 个用户`, skipped: ids.length - filtered.length };
       }
       let bannedUntil: string | null = null;
@@ -152,7 +168,7 @@ export const adminPlugin: Plugin = {
         bannedUntil = new Date(Date.now() + duration * 86400000).toISOString().slice(0, 19).replace('T', ' ');
       }
       await db.run(
-        `UPDATE users SET is_banned=1, banned_until=?, ban_reason=?, updated_at=datetime('now') WHERE id IN (${placeholders})`,
+        `UPDATE users SET is_banned=1, banned_until=?, ban_reason=?, updated_at=datetime('now') WHERE id IN (${ph2})`,
         bannedUntil, reason?.trim() || null, ...filtered
       );
       const msg = bannedUntil ? `已放逐 ${filtered.length} 个用户 ${duration} 天` : `已永久封禁 ${filtered.length} 个用户`;
