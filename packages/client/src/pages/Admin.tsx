@@ -241,6 +241,10 @@ function UsersTab() {
   const [total, setTotal] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [hasMore, setHasMore] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newUser, setNewUser] = useState({ username: '', password: '', display_name: '', email: '', role: 'user' });
 
   useEffect(() => { loadUsers(); }, [page, searchQuery]);
 
@@ -266,20 +270,122 @@ function UsersTab() {
     catch { toastStore.error('操作失败'); }
   };
 
+  const toggleSelect = (id: number) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.size === users.length) setSelected(new Set());
+    else setSelected(new Set(users.map(u => u.id)));
+  };
+
+  const handleBatchBan = async () => {
+    if (!selected.size) return;
+    try {
+      const res = await adminApi.batchBanUsers([...selected], true);
+      toastStore.success(res.data.message); setSelected(new Set()); loadUsers();
+    } catch { toastStore.error('批量封禁失败'); }
+  };
+
+  const handleBatchDelete = async () => {
+    if (!selected.size || !confirm(`确定删除 ${selected.size} 个用户？此操作不可撤销。`)) return;
+    try {
+      const res = await adminApi.batchDeleteUsers([...selected]);
+      toastStore.success(res.data.message); setSelected(new Set()); loadUsers();
+    } catch { toastStore.error('批量删除失败'); }
+  };
+
+  const handleCreate = async () => {
+    if (!newUser.username.trim() || !newUser.password) { toastStore.error('用户名和密码必填'); return; }
+    setCreating(true);
+    try {
+      await adminApi.createUser(newUser);
+      toastStore.success('用户创建成功');
+      setShowCreate(false); setNewUser({ username: '', password: '', display_name: '', email: '', role: 'user' });
+      setPage(1); loadUsers();
+    } catch (e: any) { toastStore.error(e.response?.data?.error || '创建失败'); }
+    finally { setCreating(false); }
+  };
+
   return (
     <div>
+      {/* 搜索栏 + 创建按钮 */}
       <div className="flex gap-2 mb-4">
         <input value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
           placeholder="搜索用户..." className="flex-1 px-4 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
         <Search className="w-5 h-5 text-campus-text-tertiary -ml-8 self-center" />
+        <button onClick={() => setShowCreate(!showCreate)}
+          className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-body hover:bg-primary-hover whitespace-nowrap">
+          {showCreate ? '取消' : '+ 创建用户'}
+        </button>
       </div>
+
+      {/* 创建用户表单 */}
+      {showCreate && (
+        <div className="card p-4 mb-4">
+          <h3 className="text-sm font-semibold font-display mb-3">创建新用户</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <input value={newUser.username} onChange={e => setNewUser(p => ({ ...p, username: e.target.value }))}
+              placeholder="用户名 *" className="px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
+            <input type="password" value={newUser.password} onChange={e => setNewUser(p => ({ ...p, password: e.target.value }))}
+              placeholder="密码 *（至少6位）" className="px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
+            <input value={newUser.display_name} onChange={e => setNewUser(p => ({ ...p, display_name: e.target.value }))}
+              placeholder="显示名称" className="px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
+            <input type="email" value={newUser.email} onChange={e => setNewUser(p => ({ ...p, email: e.target.value }))}
+              placeholder="邮箱" className="px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
+            <select value={newUser.role} onChange={e => setNewUser(p => ({ ...p, role: e.target.value }))}
+              className="px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary">
+              <option value="user">普通用户</option>
+              <option value="moderator">版主</option>
+            </select>
+            <button onClick={handleCreate} disabled={creating || !newUser.username.trim() || !newUser.password}
+              className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-body hover:bg-primary-hover disabled:opacity-50">
+              {creating ? '创建中...' : '确认创建'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 批量操作栏 */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
+          <span className="text-sm font-body text-primary">已选 {selected.size} 个</span>
+          <button onClick={handleBatchBan} className="px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-body hover:bg-amber-600">
+            <Ban className="w-3 h-3 inline mr-1" />批量封禁
+          </button>
+          <button onClick={handleBatchDelete} className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-body hover:bg-red-600">
+            <Trash2 className="w-3 h-3 inline mr-1" />批量删除
+          </button>
+          <button onClick={() => setSelected(new Set())} className="text-xs text-campus-text-tertiary font-body hover:text-campus-text-secondary">取消选择</button>
+        </div>
+      )}
+
+      {/* 用户列表 */}
       <div className="space-y-2">
+        {users.length > 0 && (
+          <label className="card p-2 flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" checked={selected.size === users.length && users.length > 0} onChange={toggleSelectAll}
+              className="w-4 h-4 rounded border-border text-primary focus:ring-primary" />
+            <span className="text-xs text-campus-text-tertiary font-body">全选（共 {total} 个用户）</span>
+          </label>
+        )}
         {users.map(u => (
           <div key={u.id} className="card p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white font-bold">{u.display_name?.[0] || '?'}</div>
+              <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleSelect(u.id)}
+                className="w-4 h-4 rounded border-border text-primary focus:ring-primary" />
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white font-bold">
+                {u.display_name?.[0] || '?'}
+              </div>
               <div>
-                <p className="text-sm font-medium font-body">{u.display_name} <span className="text-xs text-campus-text-tertiary">@{u.username}</span></p>
+                <p className="text-sm font-medium font-body">
+                  {u.display_name} <span className="text-xs text-campus-text-tertiary">@{u.username}</span>
+                  {u.is_banned ? <span className="ml-2 px-1.5 py-0.5 rounded bg-red-50 text-red-500 text-xs">已封禁</span> : null}
+                </p>
                 <p className="text-xs text-campus-text-tertiary font-body">{u.email || '无邮箱'} · {u.post_count} 帖子 · {u.role}</p>
               </div>
             </div>

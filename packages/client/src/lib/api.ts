@@ -67,6 +67,12 @@ export const adminApi = {
   getUser: (id: number) => api.get<AdminUser>(`/admin/users/${id}`),
   banUser: (id: number) => api.put(`/admin/users/${id}/ban`),
   setRole: (id: number, role: string) => api.put(`/admin/users/${id}/role`, { role }),
+  createUser: (data: { username: string; password: string; display_name?: string; email?: string; role?: string }) =>
+    api.post<{ success: boolean; message: string }>('/admin/users', data),
+  batchDeleteUsers: (ids: number[]) =>
+    api.delete<{ success: boolean; message: string; skipped: number }>('/admin/users/batch', { data: { ids } }),
+  batchBanUsers: (ids: number[], ban: boolean) =>
+    api.put<{ success: boolean; message: string; skipped: number }>('/admin/users/batch/ban', { ids, ban }),
 };
 
 export const postsApi = {

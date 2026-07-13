@@ -1,4 +1,5 @@
 import { Plugin, PluginContext, DatabaseAdapter, uid as getUid } from '@campus-forum/core';
+import bcrypt from 'bcryptjs';
 
 interface AdminUser {
   id: number; username: string; display_name: string | null;
@@ -82,6 +83,52 @@ export const adminPlugin: Plugin = {
       if (!(await db.get('SELECT id FROM users WHERE id=?', id))) return rep.status(404).send({ error: '用户不存在' });
       await db.run('UPDATE users SET points=COALESCE(points,0)+?, updated_at=datetime(\'now\') WHERE id=?', points, id);
       return { success: true, message: `积分已调整 ${points > 0 ? '+' : ''}${points} 分`, reason };
+    });
+
+    // ─── 创建用户 ───
+    app.post('/api/admin/users', async (req, rep) => {
+      await guard(req, rep); if (rep.sent) return;
+      const { username, password, display_name, email, role } = req.body as {
+        username?: string; password?: string; display_name?: string; email?: string; role?: string;
+      };
+      if (!username?.trim() || !password) return rep.status(400).send({ error: '用户名和密码必填' });
+      if (username.length < 2 || username.length > 20) return rep.status(400).send({ error: '用户名长度 2-20' });
+      if (password.length < 6) return rep.status(400).send({ error: '密码至少 6 位' });
+      const exists = await db.get('SELECT id FROM users WHERE username=?', username.trim());
+      if (exists) return rep.status(409).send({ error: '用户名已存在' });
+      const hash = await bcrypt.hash(password, 10);
+      await db.run(
+        "INSERT INTO users (username, password_hash, display_name, email, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))",
+        username.trim(), hash, display_name?.trim() || username.trim(), email?.trim() || null, role || 'user'
+      );
+      return { success: true, message: '用户创建成功' };
+    });
+
+    // ─── 批量删除用户 ───
+    app.delete('/api/admin/users/batch', async (req, rep) => {
+      await guard(req, rep); if (rep.sent) return;
+      const { ids } = req.body as { ids?: number[] };
+      if (!ids?.length) return rep.status(400).send({ error: '请选择要删除的用户' });
+      const selfId = getUid(req);
+      const filtered = ids.filter(id => id !== selfId);
+      if (!filtered.length) return rep.status(400).send({ error: '不能删除自己' });
+      const placeholders = filtered.map(() => '?').join(',');
+      await db.run(`DELETE FROM users WHERE id IN (${placeholders})`, ...filtered);
+      return { success: true, message: `已删除 ${filtered.length} 个用户`, skipped: ids.length - filtered.length };
+    });
+
+    // ─── 批量封禁/解封用户 ───
+    app.put('/api/admin/users/batch/ban', async (req, rep) => {
+      await guard(req, rep); if (rep.sent) return;
+      const { ids, ban } = req.body as { ids?: number[]; ban?: boolean };
+      if (!ids?.length) return rep.status(400).send({ error: '请选择用户' });
+      const selfId = getUid(req);
+      const filtered = ids.filter(id => id !== selfId);
+      if (!filtered.length) return rep.status(400).send({ error: '不能操作自己' });
+      const newVal = ban ? 1 : 0;
+      const placeholders = filtered.map(() => '?').join(',');
+      await db.run(`UPDATE users SET is_banned=?, updated_at=datetime('now') WHERE id IN (${placeholders})`, newVal, ...filtered);
+      return { success: true, message: `已${ban ? '封禁' : '解封'} ${filtered.length} 个用户`, skipped: ids.length - filtered.length };
     });
 
     // ─── 数据统计看板 ───
