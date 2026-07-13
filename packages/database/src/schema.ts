@@ -13,6 +13,8 @@ export async function initializeSchema(db: DatabaseAdapter): Promise<void> {
       device_code TEXT UNIQUE,
       is_admin INTEGER DEFAULT 0,
       is_banned INTEGER DEFAULT 0,
+      banned_until TEXT,
+      ban_reason TEXT,
       role TEXT DEFAULT 'user',
       bio TEXT,
       last_active_at TEXT,
@@ -353,6 +355,8 @@ export async function migrateSchema(db: DatabaseAdapter): Promise<void> {
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )`],
+    ['add_ban_until_reason', `ALTER TABLE users ADD COLUMN banned_until TEXT`],
+    ['add_ban_reason', `ALTER TABLE users ADD COLUMN ban_reason TEXT`],
   ];
 
   for (const [name, sql] of migrations) {

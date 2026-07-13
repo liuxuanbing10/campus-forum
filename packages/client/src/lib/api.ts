@@ -65,14 +65,15 @@ export const adminApi = {
   getUsers: (page?: number, search?: string) =>
     api.get<{ users: AdminUser[]; page: number; limit: number; total: number }>('/admin/users', { params: { page, search } }),
   getUser: (id: number) => api.get<AdminUser>(`/admin/users/${id}`),
-  banUser: (id: number) => api.put(`/admin/users/${id}/ban`),
+  banUser: (id: number, opts?: { ban?: boolean; duration?: number; reason?: string }) =>
+    api.put(`/admin/users/${id}/ban`, opts || {}),
   setRole: (id: number, role: string) => api.put(`/admin/users/${id}/role`, { role }),
   createUser: (data: { username: string; password: string; display_name?: string; email?: string; role?: string }) =>
     api.post<{ success: boolean; message: string }>('/admin/users', data),
   batchDeleteUsers: (ids: number[]) =>
     api.delete<{ success: boolean; message: string; skipped: number }>('/admin/users/batch', { data: { ids } }),
-  batchBanUsers: (ids: number[], ban: boolean) =>
-    api.put<{ success: boolean; message: string; skipped: number }>('/admin/users/batch/ban', { ids, ban }),
+  batchBanUsers: (ids: number[], ban: boolean, opts?: { duration?: number; reason?: string }) =>
+    api.put<{ success: boolean; message: string; skipped: number }>('/admin/users/batch/ban', { ids, ban, ...opts }),
 };
 
 export const postsApi = {

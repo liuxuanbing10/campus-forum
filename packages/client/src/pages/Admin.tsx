@@ -245,6 +245,9 @@ function UsersTab() {
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', password: '', display_name: '', email: '', role: 'user' });
+  const [banModal, setBanModal] = useState<{ open: boolean; userIds: number[]; action: 'ban' | 'unban' }>({ open: false, userIds: [], action: 'ban' });
+  const [banDuration, setBanDuration] = useState(7);
+  const [banReason, setBanReason] = useState('');
 
   useEffect(() => { loadUsers(); }, [page, searchQuery]);
 
@@ -260,9 +263,29 @@ function UsersTab() {
     finally { setLoading(false); }
   };
 
-  const handleBan = async (id: number) => {
-    try { await adminApi.banUser(id); toastStore.success('操作成功'); loadUsers(); }
-    catch { toastStore.error('操作失败'); }
+  const handleBan = async (id: number, isBanned: boolean) => {
+    if (isBanned) {
+      try { await adminApi.banUser(id, { ban: false }); toastStore.success('已解封'); loadUsers(); }
+      catch { toastStore.error('操作失败'); }
+    } else {
+      setBanModal({ open: true, userIds: [id], action: 'ban' });
+    }
+  };
+
+  const confirmBan = async () => {
+    const { userIds, action } = banModal;
+    try {
+      if (action === 'ban') {
+        await adminApi.batchBanUsers(userIds, true, { duration: banDuration, reason: banReason || '违反社区规定' });
+        toastStore.success(`已封禁 ${userIds.length} 个用户`);
+      } else {
+        await adminApi.batchBanUsers(userIds, false);
+        toastStore.success(`已解封 ${userIds.length} 个用户`);
+      }
+      setBanModal({ open: false, userIds: [], action: 'ban' });
+      setBanReason(''); setBanDuration(7);
+      setSelected(new Set()); loadUsers();
+    } catch { toastStore.error('操作失败'); }
   };
 
   const handleRole = async (id: number, role: string) => {
@@ -283,12 +306,9 @@ function UsersTab() {
     else setSelected(new Set(users.map(u => u.id)));
   };
 
-  const handleBatchBan = async () => {
+  const handleBatchBan = () => {
     if (!selected.size) return;
-    try {
-      const res = await adminApi.batchBanUsers([...selected], true);
-      toastStore.success(res.data.message); setSelected(new Set()); loadUsers();
-    } catch { toastStore.error('批量封禁失败'); }
+    setBanModal({ open: true, userIds: [...selected], action: 'ban' });
   };
 
   const handleBatchDelete = async () => {
@@ -393,7 +413,7 @@ function UsersTab() {
               {u.role !== 'admin' && (
                 <button onClick={() => handleRole(u.id, u.role === 'admin' ? 'user' : 'admin')} className="p-2 hover:bg-surface-hover rounded-lg transition-colors" title="切换角色"><UserCog className="w-4 h-4" /></button>
               )}
-              <button onClick={() => handleBan(u.id)} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-destructive" title={u.is_banned ? '解封' : '封禁'}>
+              <button onClick={() => handleBan(u.id, !!u.is_banned)} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-destructive" title={u.is_banned ? '解封' : '封禁'}>
                 {u.is_banned ? <UserCheck className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
               </button>
             </div>
@@ -401,6 +421,36 @@ function UsersTab() {
         ))}
       </div>
       {hasMore && <button onClick={() => setPage(p => p + 1)} className="w-full py-3 text-sm text-primary hover:text-primary-hover font-body mt-4">加载更多</button>}
+
+      {/* 封禁弹窗 */}
+      {banModal.open && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setBanModal(p => ({ ...p, open: false }))}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-96 shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold font-display mb-4">封禁设置</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-body text-campus-text-secondary mb-1">封禁时长</label>
+              <div className="grid grid-cols-5 gap-1">
+                {[1, 3, 7, 14, 0].map(d => (
+                  <button key={d} onClick={() => setBanDuration(d)}
+                    className={`py-1.5 rounded-lg text-xs font-body transition-colors ${banDuration === d ? 'bg-primary text-white' : 'bg-surface-hover text-campus-text-secondary hover:bg-primary/10'}`}>
+                    {d === 0 ? '永久' : `${d}天`}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-body text-campus-text-secondary mb-1">封禁原因</label>
+              <textarea value={banReason} onChange={e => setBanReason(e.target.value)} rows={3}
+                placeholder="违反社区规定" className="w-full px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary resize-none" />
+            </div>
+            <p className="text-xs text-campus-text-tertiary mb-4">将封禁 {banModal.userIds.length} 个用户</p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setBanModal(p => ({ ...p, open: false }))} className="px-4 py-2 rounded-lg bg-surface-hover text-sm font-body">取消</button>
+              <button onClick={confirmBan} className="px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-body hover:bg-red-600">确认封禁</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

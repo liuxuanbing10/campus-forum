@@ -71,6 +71,8 @@ interface UserRow {
   avatar_url: string | null;
   role: string;
   is_banned: number;
+  banned_until: string | null;
+  ban_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -261,12 +263,21 @@ export const authPlugin: Plugin = {
       db.run("UPDATE users SET last_active_at = datetime('now') WHERE id = ?", userId);
 
       const user = await db.get<UserRow>(
-        'SELECT id, username, display_name, email, avatar_url, is_admin, role, is_banned, created_at FROM users WHERE id = ?',
+        'SELECT id, username, display_name, email, avatar_url, is_admin, role, is_banned, banned_until, ban_reason, created_at FROM users WHERE id = ?',
         userId
       );
 
       if (!user) {
         return reply.status(401).send({ error: '用户不存在' });
+      }
+
+      // 自动解封: 如果 banned_until 已过期，自动清除封禁
+      const isActuallyBanned = user.is_banned === 1 && (!user.banned_until || new Date(user.banned_until + 'Z') > new Date());
+      if (user.is_banned === 1 && user.banned_until && !isActuallyBanned) {
+        db.run("UPDATE users SET is_banned=0, banned_until=NULL, ban_reason=NULL WHERE id=?", userId);
+        user.is_banned = 0;
+        user.banned_until = null;
+        user.ban_reason = null;
       }
 
       return {
@@ -277,7 +288,9 @@ export const authPlugin: Plugin = {
         avatarUrl: user.avatar_url || null,
         isAdmin: user.is_admin === 1,
         role: user.role || 'user',
-        isBanned: user.is_banned === 1,
+        isBanned: isActuallyBanned,
+        bannedUntil: user.banned_until || null,
+        banReason: user.ban_reason || null,
         createdAt: user.created_at,
       };
     });
@@ -706,6 +719,54 @@ export const authPlugin: Plugin = {
       if (device.user_id !== userId) return rep.status(403).send({ error: '无权操作' });
       await db.run('DELETE FROM user_devices WHERE id = ?', id);
       return { success: true, message: '已退出该设备' };
+    });
+
+    // ========================================
+    // 放逐空间 (Ostracism)
+    // ========================================
+    app.get('/api/ostracism/info', async (req, rep) => {
+      const userId = uid(req) ?? (req as any).session?.userId;
+      if (!userId) return rep.status(401).send({ error: '请先登录' });
+      const user = await db.get<{ is_banned: number; banned_until: string | null; ban_reason: string | null; username: string; display_name: string }>(
+        'SELECT is_banned, banned_until, ban_reason, username, display_name FROM users WHERE id=?', userId
+      );
+      if (!user) return rep.status(404).send({ error: '用户不存在' });
+      const isBanned = user.is_banned === 1 && (!user.banned_until || new Date(user.banned_until + 'Z') > new Date());
+      if (!isBanned) return { banned: false, message: '你没有被放逐' };
+      return {
+        banned: true,
+        username: user.username,
+        displayName: user.display_name,
+        bannedUntil: user.banned_until || null,
+        banReason: user.ban_reason || '违反社区规定',
+        isPermanent: !user.banned_until,
+      };
+    });
+
+    // ========================================
+    // 封禁执行中间件 (banned users block writes)
+    // ========================================
+    app.addHook('preHandler', async (request, reply) => {
+      // 放行 GET/HEAD/OPTIONS（只读操作）
+      const method = request.method;
+      if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return;
+
+      const userId = uid(request) ?? (request as any).session?.userId;
+      if (!userId) return; // 未登录，由路由自行处理认证
+
+      const user = await db.get<{ is_banned: number; banned_until: string | null }>(
+        'SELECT is_banned, banned_until FROM users WHERE id=?', userId
+      );
+      if (!user || user.is_banned !== 1) return;
+
+      // 检查是否已过期
+      if (user.banned_until && new Date(user.banned_until + 'Z') <= new Date()) return;
+
+      return reply.status(403).send({
+        error: '你的账号已被放逐，无法执行此操作',
+        banned: true,
+        bannedUntil: user.banned_until || null,
+      });
     });
   },
 };

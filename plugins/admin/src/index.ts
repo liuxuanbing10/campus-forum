@@ -60,9 +60,26 @@ export const adminPlugin: Plugin = {
       if (id === getUid(req)) return rep.status(400).send({ error: '不能封禁自己' });
       const user = await db.get<{ id: number; is_banned: number }>('SELECT id,is_banned FROM users WHERE id=?', id);
       if (!user) return rep.status(404).send({ error: '用户不存在' });
-      const newVal = user.is_banned ? 0 : 1;
-      await db.run("UPDATE users SET is_banned=?, updated_at=datetime('now') WHERE id=?", newVal, id);
-      return { success: true, isBanned: newVal === 1, message: newVal ? '用户已被封禁' : '用户已解封' };
+      const { duration, reason, ban } = req.body as { duration?: number; reason?: string; ban?: boolean };
+      // 解封: ban=false 或当前已封禁且未传 duration
+      const isUnban = ban === false || (user.is_banned === 1 && duration === undefined);
+      if (isUnban) {
+        await db.run("UPDATE users SET is_banned=0, banned_until=NULL, ban_reason=NULL, updated_at=datetime('now') WHERE id=?", id);
+        return { success: true, isBanned: false, message: '用户已解封' };
+      }
+      // 封禁
+      let bannedUntil: string | null = null;
+      if (duration && duration > 0) {
+        // duration: 天数
+        bannedUntil = new Date(Date.now() + duration * 86400000).toISOString().slice(0, 19).replace('T', ' ');
+      }
+      // 永久封禁: duration=0 或 undefined, banned_until=NULL
+      await db.run(
+        "UPDATE users SET is_banned=1, banned_until=?, ban_reason=?, updated_at=datetime('now') WHERE id=?",
+        bannedUntil, reason?.trim() || null, id
+      );
+      const msg = bannedUntil ? `用户已被放逐 ${duration} 天` : '用户已被永久封禁';
+      return { success: true, isBanned: true, bannedUntil, message: msg };
     });
 
     app.put('/api/admin/users/:id/role', async (req, rep) => {
@@ -120,15 +137,26 @@ export const adminPlugin: Plugin = {
     // ─── 批量封禁/解封用户 ───
     app.put('/api/admin/users/batch/ban', async (req, rep) => {
       await guard(req, rep); if (rep.sent) return;
-      const { ids, ban } = req.body as { ids?: number[]; ban?: boolean };
+      const { ids, ban, duration, reason } = req.body as { ids?: number[]; ban?: boolean; duration?: number; reason?: string };
       if (!ids?.length) return rep.status(400).send({ error: '请选择用户' });
       const selfId = getUid(req);
       const filtered = ids.filter(id => id !== selfId);
       if (!filtered.length) return rep.status(400).send({ error: '不能操作自己' });
-      const newVal = ban ? 1 : 0;
       const placeholders = filtered.map(() => '?').join(',');
-      await db.run(`UPDATE users SET is_banned=?, updated_at=datetime('now') WHERE id IN (${placeholders})`, newVal, ...filtered);
-      return { success: true, message: `已${ban ? '封禁' : '解封'} ${filtered.length} 个用户`, skipped: ids.length - filtered.length };
+      if (!ban) {
+        await db.run(`UPDATE users SET is_banned=0, banned_until=NULL, ban_reason=NULL, updated_at=datetime('now') WHERE id IN (${placeholders})`, ...filtered);
+        return { success: true, message: `已解封 ${filtered.length} 个用户`, skipped: ids.length - filtered.length };
+      }
+      let bannedUntil: string | null = null;
+      if (duration && duration > 0) {
+        bannedUntil = new Date(Date.now() + duration * 86400000).toISOString().slice(0, 19).replace('T', ' ');
+      }
+      await db.run(
+        `UPDATE users SET is_banned=1, banned_until=?, ban_reason=?, updated_at=datetime('now') WHERE id IN (${placeholders})`,
+        bannedUntil, reason?.trim() || null, ...filtered
+      );
+      const msg = bannedUntil ? `已放逐 ${filtered.length} 个用户 ${duration} 天` : `已永久封禁 ${filtered.length} 个用户`;
+      return { success: true, message: msg, skipped: ids.length - filtered.length };
     });
 
     // ─── 数据统计看板 ───

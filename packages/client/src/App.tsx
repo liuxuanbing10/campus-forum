@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense, useState, useCallback } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuthStore } from './stores/auth';
 import { useThemeStore } from './stores/theme';
 import Layout from './components/Layout';
@@ -24,6 +24,7 @@ import Admin from './pages/Admin';
 import UserProfile from './pages/UserProfile';
 import Messages from './pages/Messages';
 import OAuthSetup from './pages/OAuthSetup';
+import Ostracism from './pages/Ostracism';
 import { ToastContainer, ToastProps } from './components/Toast';
 import { wsService } from './lib/websocket';
 
@@ -58,6 +59,7 @@ export default function App() {
   const fetchUser = useAuthStore(s => s.fetchUser);
   const initTheme = useThemeStore(s => s.initTheme);
   const user = useAuthStore(s => s.user);
+  const navigate = useNavigate();
   const [, setTick] = useState(0);
 
   const forceUpdate = useCallback(() => setTick(t => t + 1), []);
@@ -66,6 +68,13 @@ export default function App() {
     initTheme();
     fetchUser();
   }, [initTheme, fetchUser]);
+
+  // 封禁用户跳转到放逐空间
+  useEffect(() => {
+    if (user && user.isBanned && window.location.pathname !== '/ostracism') {
+      navigate('/ostracism', { replace: true });
+    }
+  }, [user, navigate]);
 
   useEffect(() => {
     if (user) {
@@ -109,6 +118,7 @@ export default function App() {
           <Route path={"/teams/:id/edit"} element={<EditTeam />} />
           <Route path={"*"} element={<Navigate to="/" />} />
         </Route>
+        <Route path="/ostracism" element={<Ostracism />} />
         <Route path={"/oauth/setup"} element={<OAuthSetup />} />
       </Routes>
       <ToastContainer toasts={toastList} onClose={toastStore.remove} />
