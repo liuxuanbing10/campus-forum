@@ -44,6 +44,9 @@ export async function buildApp(options?: { plugins?: any[] }) {
   // 支持多个前端来源：本地开发、Netlify 部署、GitHub Pages 部署
   const allowedOrigins = [
     'http://localhost:5173',
+    'http://47.121.137.231',
+    'https://47.121.137.231',
+    'https://campus-forum.duckdns.org',
     'https://liuxuanbing10.github.io',
   ];
   // 额外允许通过 CLIENT_URL 环境变量配置（.env 中设置）
