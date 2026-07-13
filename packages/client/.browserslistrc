@@ -1,0 +1,13 @@
+# 校园论坛浏览器兼容性目标
+# React 19 最低要求: Chrome 91+, Firefox 90+, Safari 15+
+# 覆盖微信/QQ/UC 内置浏览器 (Chromium 内核)、iOS Safari、桌面浏览器
+
+> 0.5%
+last 3 versions
+not dead
+Chrome >= 80
+Firefox >= 78
+Safari >= 13
+Edge >= 80
+iOS >= 13
+Android >= 5
