@@ -261,7 +261,7 @@ export const authPlugin: Plugin = {
       db.run("UPDATE users SET last_active_at = datetime('now') WHERE id = ?", userId);
 
       const user = await db.get<UserRow>(
-        'SELECT id, username, display_name, is_admin FROM users WHERE id = ?',
+        'SELECT id, username, display_name, email, avatar_url, is_admin, role, is_banned, created_at FROM users WHERE id = ?',
         userId
       );
 
