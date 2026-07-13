@@ -177,7 +177,7 @@ export const authPlugin: Plugin = {
 
       // 1. 查找用户
       const user = await db.get<UserRow>(
-        'SELECT id, username, password_hash, display_name FROM users WHERE username = ?',
+        'SELECT id, username, password_hash, display_name, is_banned, banned_until, ban_reason FROM users WHERE username = ?',
         username
       );
 
@@ -231,10 +231,21 @@ export const authPlugin: Plugin = {
 
       const token = signJwt({ userId: user.id, username: user.username });
 
+      // 检查封禁状态
+      const isActuallyBanned = user.is_banned === 1 && (!user.banned_until || new Date(user.banned_until + 'Z') > new Date());
+
       return {
         success: true,
-        message: '登录成功',
-        user: { id: user.id, username: user.username, displayName: user.display_name, isAdmin: user.is_admin },
+        message: isActuallyBanned ? '账号已被放逐' : '登录成功',
+        user: {
+          id: user.id,
+          username: user.username,
+          displayName: user.display_name,
+          isAdmin: user.is_admin,
+          isBanned: isActuallyBanned,
+          bannedUntil: user.banned_until || null,
+          banReason: user.ban_reason || null,
+        },
         token,
       };
     });
@@ -750,6 +761,10 @@ export const authPlugin: Plugin = {
       // 放行 GET/HEAD/OPTIONS（只读操作）
       const method = request.method;
       if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return;
+
+      // 放行认证端点（登录/注册/登出/获取当前用户），避免残留 session 阻塞其他用户
+      const url = request.url.split('?')[0];
+      if (url === '/api/auth/login' || url === '/api/auth/register' || url === '/api/auth/logout' || url === '/api/auth/me') return;
 
       const userId = uid(request) ?? (request as any).session?.userId;
       if (!userId) return; // 未登录，由路由自行处理认证
