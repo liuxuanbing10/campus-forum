@@ -9,7 +9,7 @@ import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import { PluginManager, SimpleEventBus, PluginContext, Logger } from '@campus-forum/core';
 import 'dotenv/config';
-import { createDatabase, initializeSchema, seedData } from '@campus-forum/database';
+import { createDatabase, initializeSchema, migrateSchema, seedData } from '@campus-forum/database';
 import { TursoSessionStore } from './session-store.js';
 
 let __dirname: string;
@@ -113,6 +113,7 @@ export async function buildApp(options?: { plugins?: any[] }) {
   // 数据库（支持 DB_PATH 环境变量或 Turso 远程数据库）
   const db = await createDatabase();
   await initializeSchema(db);
+  await migrateSchema(db);
   await seedData(db);
 
   // ── Session with Turso-backed store ─────────────
