@@ -5,7 +5,6 @@ import { useThemeStore } from './stores/theme';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Login from './pages/Login';
-import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import MyPosts from './pages/MyPosts';
 import Board from './pages/Board';
@@ -96,7 +95,6 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/settings" element={<Suspense fallback={<div>加载中...</div>}><Settings /></Suspense>} />
           <Route path="/my-posts" element={<MyPosts />} />

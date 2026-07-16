@@ -138,9 +138,6 @@ export default function Layout() {
                 <Link to="/login" className="text-sm text-campus-text-secondary hover:text-primary transition-colors font-body">
                   登录
                 </Link>
-                <Link to="/register" className="btn-primary btn-sm btn-inline font-body">
-                  注册
-                </Link>
               </>
             )}
             </div>
@@ -187,9 +184,6 @@ export default function Layout() {
               <>
                 <Link to="/login" className="block px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
                   登录
-                </Link>
-                <Link to="/register" className="block px-3 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium text-center font-body">
-                  注册
                 </Link>
               </>
             )}

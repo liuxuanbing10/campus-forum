@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 import api from '../lib/api';
-import { Pin, MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Heart, Star, ChevronLeft, ChevronRight, Palette } from 'lucide-react';
+import { Pin, MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Heart, Star, ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
 import { THEMES, useThemeStore } from '../stores/theme';
 import MetaManager from '../components/MetaManager';
 
@@ -151,12 +151,12 @@ export default function HomePage() {
         {/* 标语：手写动画 */}
         <h1 className="relative z-10 font-slogan text-4xl sm:text-5xl md:text-6xl text-campus-text-primary leading-tight">
           <span className={`slogan-write ${sloganDone ? 'slogan-write-done' : ''}`}>
-            独行快，众行远
+            代码改变世界
           </span>
         </h1>
         {/* 副标语：手写字体 + 延迟渐入 */}
         <p className="relative z-10 text-xl text-campus-text-secondary font-handwrite max-w-2xl mx-auto mt-6 text-fade-in text-fade-in-delay-1">
-          一个人的疑惑，一群人的答案
+          从此刻起，与优秀的你同行
         </p>
       </div>
 
@@ -308,25 +308,19 @@ export default function HomePage() {
               </div>
             </Link>
 
-            {/* 切换主题 */}
-            <div className="group relative rounded-2xl overflow-hidden glass-card p-6 transition-all">
+            {/* 加入团队 */}
+            <Link to="/teams" className="group relative rounded-2xl overflow-hidden glass-card p-6 transition-all block">
               <div className="relative z-10 flex items-start gap-4">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                  <Palette className="w-6 h-6" />
+                  <UserPlus className="w-6 h-6" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-semibold font-display text-campus-text-primary mb-1">切换主题</h3>
-                  <p className="text-sm text-campus-text-tertiary font-body leading-relaxed">换个心情，选择你喜欢的论坛视觉风格</p>
-                  <div className="flex items-center gap-2 mt-3">
-                    <ThemePreview />
-                    <button
-                      onClick={(e) => { e.preventDefault(); window.location.href = '/settings?tab=appearance'; }}
-                      className="text-xs font-medium text-primary font-body hover:underline"
-                    >去设置 →</button>
-                  </div>
+                  <h3 className="text-base font-semibold font-display text-campus-text-primary mb-1">加入团队</h3>
+                  <p className="text-sm text-campus-text-tertiary font-body leading-relaxed">找到志同道合的小伙伴，一起交流成长</p>
+                  <span className="inline-block mt-3 text-xs font-medium text-primary font-body group-hover:underline">浏览团队 →</span>
                 </div>
               </div>
-            </div>
+            </Link>
           </div>
         </div>
       ) : (
