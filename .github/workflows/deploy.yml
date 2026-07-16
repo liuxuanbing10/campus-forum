@@ -38,5 +38,7 @@ jobs:
           script: |
             cd /opt/campus-forum
             git pull origin main
-            npm install --omit=dev
-            pm2 restart campus-forum
+            npm install
+            npm run build:server
+            npm run build:client
+            npx pm2 restart campus-forum || npx pm2 start packages/server/dist/index.js --name campus-forum
