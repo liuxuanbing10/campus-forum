@@ -13,6 +13,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - run: npm install
       - run: npm run build
@@ -23,9 +24,9 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "packages/client/dist/*,packages/server/dist/*,packages/core/dist/*,packages/database/dist/*,plugins/*/dist/*"
-          target: /opt/campus-forum
-          strip_components: 0
+          source: "packages/client/dist/*"
+          target: /opt/campus-forum/packages/client/
+          strip_components: 2
 
       - name: Restart service
         uses: appleboy/ssh-action@v1.0.3
@@ -35,6 +36,5 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /opt/campus-forum
-            git pull origin main
-            npm install --omit=dev
-            pm2 restart campus-forum || pm2 start npm --name campus-forum -- start
+            npm run build:server
+            pm2 restart campus-forum
