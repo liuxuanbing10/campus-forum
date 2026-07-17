@@ -23,13 +23,11 @@ jobs:
         run: |
           npx cap add ios || true
           npx cap sync ios
-          cd ios/App
-          pod install || true
 
       - name: Build iOS (unsigned)
         working-directory: packages/client/ios/App
         run: |
-          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -derivedDataPath build -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release -derivedDataPath build -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO
 
       - uses: actions/upload-artifact@v4
         with:
