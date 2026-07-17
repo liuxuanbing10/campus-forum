@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { User, UpdateProfileData, ChangePasswordData, Post, SearchResult, Notification, AdminUser, ShareInfo, PostStats, TeamCategory, Team, TeamMember, TeamAnnouncement, TeamPost, MyTeamsResponse, CreateTeamData, UpdateTeamData, UserProfile, UserPost, UserComment, FollowStatus, Conversation, Message, ReportData, OAuthAccount, PendingPost, SensitiveWord, AdminReport, AuditLog, PostVersion, CaptchaData, AdminStats, DeviceBlacklistEntry, UserDevice } from '@campus-forum/core';
+import { getDeviceCode } from './device';
 
 const baseURL = import.meta.env.VITE_API_URL || '/api';
 
@@ -27,6 +28,7 @@ api.interceptors.request.use(config => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  config.headers['x-device-id'] = getDeviceCode();
   return config;
 });
 

@@ -2,7 +2,8 @@ import { Outlet, Link, useNavigate, useLocation, useSearchParams } from 'react-r
 import { useAuthStore } from '../stores/auth';
 import NotificationBell from './NotificationBell';
 import ThemeSwitcher from './ThemeSwitcher';
-import { Home, Users, Heart, Search, Shield, MessageCircle, Bell, X, Menu, Download } from 'lucide-react';
+import BottomNav from './BottomNav';
+import { Home, Users, Heart, Search, Shield, MessageCircle, Bell, X, Menu, Download, Plus, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 // ponytail: inline PWA install — no separate hook/component for one event listener + one button
@@ -50,6 +51,12 @@ export default function Layout() {
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') setCanInstall(false);
     setDeferredPrompt(null);
+  };
+
+  // Bottom tab bar active detection
+  const isActive = (path: string) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(path);
   };
 
   return (
@@ -191,9 +198,90 @@ export default function Layout() {
         )}
       </header>
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-6 pt-20">
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-6 md:pt-6 pt-4 pb-24 md:pb-6">
         <Outlet />
       </main>
+
+      {/* ═══════════════════════════════════════════
+          移动端底部 Tab Bar（桌面端隐藏）
+          ═══════════════════════════════════════════ */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-lg border-t border-border safe-area-bottom">
+        <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
+          {/* 首页 */}
+          <Link
+            to="/"
+            className={`flex flex-col items-center justify-center gap-0.5 w-16 py-1 transition-colors ${
+              isActive('/') && !isActive('/board')
+                ? 'text-primary'
+                : 'text-campus-text-tertiary hover:text-campus-text-secondary'
+            }`}
+          >
+            <Home className="w-5 h-5" strokeWidth={isActive('/') && !isActive('/board') ? 2.5 : 2} />
+            <span className="text-[10px] font-body leading-none">首页</span>
+          </Link>
+
+          {/* 搜索 */}
+          <Link
+            to="/search"
+            className={`flex flex-col items-center justify-center gap-0.5 w-16 py-1 transition-colors ${
+              isActive('/search')
+                ? 'text-primary'
+                : 'text-campus-text-tertiary hover:text-campus-text-secondary'
+            }`}
+          >
+            <Search className="w-5 h-5" strokeWidth={isActive('/search') ? 2.5 : 2} />
+            <span className="text-[10px] font-body leading-none">搜索</span>
+          </Link>
+
+          {/* 发帖 - 居中突出按钮 */}
+          <Link
+            to="/new"
+            className="flex items-center justify-center -mt-5 w-14 h-14 rounded-full bg-primary text-white shadow-lg shadow-primary/30 hover:bg-primary-hover active:scale-95 transition-all"
+          >
+            <Plus className="w-7 h-7" strokeWidth={2.5} />
+          </Link>
+
+          {/* 消息 */}
+          <Link
+            to="/messages"
+            className={`flex flex-col items-center justify-center gap-0.5 w-16 py-1 transition-colors ${
+              isActive('/messages')
+                ? 'text-primary'
+                : 'text-campus-text-tertiary hover:text-campus-text-secondary'
+            }`}
+          >
+            <MessageCircle className="w-5 h-5" strokeWidth={isActive('/messages') ? 2.5 : 2} />
+            <span className="text-[10px] font-body leading-none">消息</span>
+          </Link>
+
+          {/* 我的 */}
+          <Link
+            to={user ? `/user/${user.id}` : '/login'}
+            className={`flex flex-col items-center justify-center gap-0.5 w-16 py-1 transition-colors ${
+              isActive('/user') || isActive('/my-posts') || isActive('/favorites')
+                ? 'text-primary'
+                : 'text-campus-text-tertiary hover:text-campus-text-secondary'
+            }`}
+          >
+            <User className="w-5 h-5" strokeWidth={(isActive('/user') || isActive('/my-posts') || isActive('/favorites')) ? 2.5 : 2} />
+            <span className="text-[10px] font-body leading-none">我的</span>
+          </Link>
+        </div>
+      </nav>
+
+      {/* ═══════════════════════════════════════════
+          CSS for safe-area-bottom & bottom bar styles
+          ═══════════════════════════════════════════ */}
+      <style>{`
+        .safe-area-bottom {
+          padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+          .safe-area-bottom {
+            padding-bottom: env(safe-area-inset-bottom);
+          }
+        }
+      `}</style>
     </div>
   );
 }

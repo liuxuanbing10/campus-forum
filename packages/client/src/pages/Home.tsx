@@ -2,9 +2,10 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 import api from '../lib/api';
-import { Pin, MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Heart, Star, ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
+import { Pin, MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Heart, Star, ChevronLeft, ChevronRight, UserPlus, Eye, ThumbsUp, RefreshCw, Loader2 } from 'lucide-react';
 import { THEMES, useThemeStore } from '../stores/theme';
 import MetaManager from '../components/MetaManager';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 interface Board {
   id: number;
@@ -12,6 +13,19 @@ interface Board {
   description: string;
   icon: string;
   post_count: number;
+}
+
+interface Post {
+  id: number;
+  title: string;
+  author_name: string;
+  created_at: string;
+  view_count: number;
+  like_count: number;
+  comment_count: number;
+  board_name: string;
+  is_pinned: number;
+  is_favorited: number;
 }
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -27,6 +41,8 @@ const iconMap: Record<string, React.ReactNode> = {
 
 const defaultIcon = <MessageCircle className="w-10 h-10" />;
 
+const POST_LIMIT = 10;
+
 export default function HomePage() {
   const { user, loading } = useAuthStore();
   const [boards, setBoards] = useState<Board[]>([]);
@@ -35,6 +51,14 @@ export default function HomePage() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [canScroll, setCanScroll] = useState(false);
   const [sloganDone, setSloganDone] = useState(false);
+
+  // ── 最新帖子无限滚动状态 ──
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [postsPage, setPostsPage] = useState(1);
+  const [postsLoading, setPostsLoading] = useState(false);
+  const [postsLoadingMore, setPostsLoadingMore] = useState(false);
+  const [postsHasMore, setPostsHasMore] = useState(true);
+  const postsSentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     api.get('/boards')
@@ -128,6 +152,66 @@ export default function HomePage() {
     };
   }, [activeIndex]);
 
+  // ── 最新帖子：加载函数 ──
+  const fetchPosts = useCallback(async (pageNum: number, append = false) => {
+    if (pageNum === 1) setPostsLoading(true);
+    else setPostsLoadingMore(true);
+    try {
+      const res = await api.get('/posts', { params: { page: pageNum, sort: 'latest' } });
+      const newPosts: Post[] = res.data.posts || [];
+      if (append) {
+        setPosts(prev => [...prev, ...newPosts]);
+      } else {
+        setPosts(newPosts);
+      }
+      if (newPosts.length < POST_LIMIT) {
+        setPostsHasMore(false);
+      }
+      setPostsPage(pageNum + 1);
+    } finally {
+      setPostsLoading(false);
+      setPostsLoadingMore(false);
+    }
+  }, []);
+
+  // 初始加载帖子
+  useEffect(() => {
+    if (user) {
+      fetchPosts(1, false);
+    }
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // IntersectionObserver 无限滚动
+  useEffect(() => {
+    if (!postsSentinelRef.current || !postsHasMore || postsLoadingMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && postsHasMore && !postsLoadingMore) {
+          fetchPosts(postsPage, true);
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(postsSentinelRef.current);
+    return () => observer.disconnect();
+  }, [postsSentinelRef.current, postsHasMore, postsLoadingMore, postsPage, fetchPosts]);
+
+  // ── 下拉刷新 ──
+  const { pullDistance, pulling, refreshing, pullProps, containerRef } = usePullToRefresh({
+    threshold: 80,
+    resistance: 0.5,
+    onRefresh: async () => {
+      setPostsPage(1);
+      setPostsHasMore(true);
+      await fetchPosts(1, false);
+      // 同时刷新板块数据
+      try {
+        const res = await api.get('/boards');
+        setBoards(res.data);
+      } catch {}
+    },
+  });
+
   if (loading) {
     return <div className="text-center py-12 text-campus-text-tertiary font-handwrite text-lg">加载中...</div>;
   }
@@ -140,8 +224,21 @@ export default function HomePage() {
         keywords="校园论坛,社区,交流,校园生活,学习,讨论"
         ogType="website"
       />
-    <div className="page-enter">
-      <div className="relative py-16 sm:py-20 px-4 bg-gradient-to-b from-primary-light/50 to-surface text-center overflow-hidden">
+    <div
+      ref={containerRef}
+      className="page-enter"
+      style={{ transform: pullDistance > 0 ? `translateY(${pullDistance}px)` : undefined, transition: pulling ? 'none' : 'transform 0.3s ease' }}
+      {...pullProps}
+    >
+      {/* Pull-to-refresh indicator */}
+      {(pulling || refreshing) && (
+        <div className="flex items-center justify-center py-2 text-sm text-campus-text-tertiary font-body" style={{ opacity: Math.min(1, pullDistance / 60) }}>
+          <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} style={{ transform: refreshing ? undefined : `rotate(${pullDistance * 3}deg)` }} />
+          {refreshing ? '刷新中...' : pullDistance >= 80 ? '释放刷新' : '下拉刷新'}
+        </div>
+      )}
+
+      <div className="relative py-12 sm:py-16 md:py-20 px-4 bg-gradient-to-b from-primary-light/50 to-surface text-center overflow-hidden">
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className="ink-blob ink-blob-1" />
           <div className="ink-blob ink-blob-2" />
@@ -149,44 +246,44 @@ export default function HomePage() {
           <div className="ink-blob ink-blob-4" />
         </div>
         {/* 标语：手写动画 */}
-        <h1 className="relative z-10 font-slogan text-4xl sm:text-5xl md:text-6xl text-campus-text-primary leading-tight">
+        <h1 className="relative z-10 font-slogan text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-campus-text-primary leading-tight">
           <span className={`slogan-write ${sloganDone ? 'slogan-write-done' : ''}`}>
             代码改变世界
           </span>
         </h1>
         {/* 副标语：手写字体 + 延迟渐入 */}
-        <p className="relative z-10 text-xl text-campus-text-secondary font-handwrite max-w-2xl mx-auto mt-6 text-fade-in text-fade-in-delay-1">
+        <p className="relative z-10 text-lg sm:text-xl text-campus-text-secondary font-handwrite max-w-2xl mx-auto mt-4 sm:mt-6 text-fade-in text-fade-in-delay-1">
           从此刻起，与优秀的你同行
         </p>
       </div>
 
       {user ? (
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 overflow-hidden">
+        <div className="relative max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12 overflow-hidden">
           <div className="absolute inset-0 pointer-events-none -z-10">
             <div className="absolute w-96 h-96 -top-10 -left-20 rounded-full bg-gradient-to-br from-pink-300 via-purple-300 to-blue-300 blur-3xl opacity-30" />
             <div className="absolute w-80 h-80 top-20 -right-10 rounded-full bg-gradient-to-br from-yellow-200 via-orange-300 to-pink-300 blur-3xl opacity-30" />
             <div className="absolute w-72 h-72 bottom-0 left-1/3 rounded-full bg-gradient-to-br from-green-200 via-teal-300 to-cyan-300 blur-3xl opacity-30" />
           </div>
           {boardsLoading ? (
-            <div className="flex gap-5 overflow-x-auto pb-4">
+            <div className="flex gap-4 sm:gap-5 overflow-x-auto pb-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="flex-shrink-0 w-72 bg-surface border border-border rounded-xl p-8 animate-pulse">
-                  <div className="w-12 h-12 bg-primary-light rounded-xl mb-4" />
-                  <div className="h-6 w-24 bg-primary-light rounded mb-3" />
+                <div key={i} className="flex-shrink-0 w-60 sm:w-72 bg-surface border border-border rounded-xl p-6 sm:p-8 animate-pulse">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary-light rounded-xl mb-4" />
+                  <div className="h-5 w-24 bg-primary-light rounded mb-3" />
                   <div className="h-4 w-full bg-primary-light rounded" />
                 </div>
               ))}
             </div>
           ) : boards.length > 0 ? (
-            <div className="relative rounded-3xl overflow-hidden glass-liquid p-6 sm:p-8">
+            <div className="relative rounded-3xl overflow-hidden glass-liquid p-4 sm:p-6 md:p-8">
               <div className="glass-highlight" />
               <div className="glass-inner-shadow" />
               <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl opacity-60">
                 <div className="ink-blob ink-blob-section-1" />
                 <div className="ink-blob ink-blob-section-2" />
               </div>
-              <div className="relative z-10 flex items-center justify-between mb-6">
-                <h2 className="font-handwrite text-2xl sm:text-3xl text-campus-text-primary text-fade-in">
+              <div className="relative z-10 flex items-center justify-between mb-4 sm:mb-6">
+                <h2 className="font-handwrite text-xl sm:text-2xl md:text-3xl text-campus-text-primary text-fade-in">
                   探索板块
                 </h2>
                 {canScroll && (
@@ -197,8 +294,8 @@ export default function HomePage() {
               </div>
 
               <div className="relative z-10">
-                <div className="absolute left-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-r from-surface via-surface/80 to-transparent pointer-events-none z-20" />
-                <div className="absolute right-0 top-0 bottom-0 w-24 sm:w-32 bg-gradient-to-l from-surface via-surface/80 to-transparent pointer-events-none z-20" />
+                <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-24 md:w-32 bg-gradient-to-r from-surface via-surface/80 to-transparent pointer-events-none z-20" />
+                <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-24 md:w-32 bg-gradient-to-l from-surface via-surface/80 to-transparent pointer-events-none z-20" />
 
                 {boards.length > 1 && canScroll && (
                   <>
@@ -223,7 +320,7 @@ export default function HomePage() {
                   ref={scrollRef}
                   onScroll={handleScroll}
                   tabIndex={0}
-                  className="flex items-center overflow-x-auto scroll-smooth py-8 px-8 sm:px-16 scrollbar-hide snap-x snap-mandatory focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl"
+                  className="flex items-center overflow-x-auto scroll-smooth py-6 sm:py-8 px-4 sm:px-8 md:px-16 scrollbar-hide snap-x snap-mandatory focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl"
                   aria-label="板块轮播，使用左右方向键导航"
                 >
                   <div className="flex-shrink-0 w-[calc(50%-7rem)] sm:w-[calc(50%-8rem)]" />
@@ -232,19 +329,19 @@ export default function HomePage() {
                     <Link
                       key={board.id}
                       to={`/board/${board.id}`}
-                      className="carousel-card card-enter relative w-64 sm:w-72 flex flex-col items-start p-6 sm:p-7 rounded-2xl transition-all duration-500 ease-out snap-center -mx-4 sm:-mx-6 overflow-hidden glass-card cursor-pointer"
+                      className="carousel-card card-enter relative w-56 sm:w-64 md:w-72 flex flex-col items-start p-5 sm:p-6 md:p-7 rounded-2xl transition-all duration-500 ease-out snap-center -mx-3 sm:-mx-4 md:-mx-6 overflow-hidden glass-card cursor-pointer"
                       style={{
                         ...getCardStyle(index),
                         animationDelay: `${index * 0.08}s`,
                       }}
                     >
-                      <div className="relative z-10 text-primary mb-4">
+                      <div className="relative z-10 text-primary mb-3 sm:mb-4">
                         {iconMap[board.icon] || defaultIcon}
                       </div>
-                      <h3 className="relative z-10 font-handwrite text-xl font-semibold text-campus-text-primary mb-2">
+                      <h3 className="relative z-10 font-handwrite text-lg sm:text-xl font-semibold text-campus-text-primary mb-1.5 sm:mb-2">
                         {board.name}
                       </h3>
-                      <p className="relative z-10 text-sm text-campus-text-secondary font-handwrite mb-5 flex-1 leading-relaxed">
+                      <p className="relative z-10 text-xs sm:text-sm text-campus-text-secondary font-handwrite mb-4 sm:mb-5 flex-1 leading-relaxed line-clamp-2">
                         {board.description}
                       </p>
                       <span className="relative z-10 text-xs font-medium text-campus-text-tertiary font-body">
@@ -257,7 +354,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div className="relative z-10 flex justify-center gap-2 mt-4">
+              <div className="relative z-10 flex justify-center gap-2 mt-3 sm:mt-4">
                 {boards.map((_, index) => (
                   <button
                     key={index}
@@ -289,35 +386,117 @@ export default function HomePage() {
             </div>
           )}
 
+          {/* ═══════════════════════════════════════════
+              最新帖子 - 无限滚动信息流
+              ═══════════════════════════════════════════ */}
+          <div className="mt-8 sm:mt-10">
+            <h2 className="font-handwrite text-xl sm:text-2xl text-campus-text-primary mb-4 sm:mb-6">
+              最新动态
+            </h2>
+
+            {postsLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="card p-4 sm:p-5 animate-pulse">
+                    <div className="h-5 w-3/4 bg-primary-light rounded mb-3" />
+                    <div className="h-4 w-1/2 bg-primary-light rounded mb-2" />
+                    <div className="h-3 w-1/3 bg-primary-light rounded" />
+                  </div>
+                ))}
+              </div>
+            ) : posts.length === 0 ? (
+              <div className="card text-center py-8">
+                <p className="text-campus-text-secondary font-body">暂无帖子</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {posts.map((post) => (
+                  <Link
+                    key={post.id}
+                    to={`/post/${post.id}`}
+                    className="card block p-4 sm:p-5 border-l-[3px] border-l-primary hover:-translate-y-0.5 transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-base sm:text-lg font-semibold font-body text-campus-text-primary truncate flex-1 min-w-0">
+                        {post.is_pinned ? (
+                          <span className="inline-flex items-center gap-1 text-primary mr-1">
+                            <Pin className="w-3.5 h-3.5" />
+                          </span>
+                        ) : null}
+                        {post.title}
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-2 sm:gap-3 mt-2 text-xs sm:text-sm text-campus-text-tertiary font-body flex-wrap">
+                      <span className="whitespace-nowrap">{post.author_name}</span>
+                      <span className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded-full whitespace-nowrap">{post.board_name}</span>
+                      <span className="whitespace-nowrap flex items-center gap-1">
+                        <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        {post.view_count}
+                      </span>
+                      <span className="whitespace-nowrap flex items-center gap-1">
+                        <ThumbsUp className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        {post.like_count}
+                      </span>
+                      <span className="whitespace-nowrap flex items-center gap-1">
+                        <MessageCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        {post.comment_count}
+                      </span>
+                      <span className="whitespace-nowrap ml-auto text-xs">
+                        {new Date(post.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+
+                {/* 无限滚动哨兵 */}
+                {postsHasMore && (
+                  <div ref={postsSentinelRef} className="flex items-center justify-center py-4">
+                    {postsLoadingMore ? (
+                      <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                    ) : (
+                      <span className="text-sm text-campus-text-tertiary font-body">加载更多...</span>
+                    )}
+                  </div>
+                )}
+
+                {!postsHasMore && posts.length > 0 && (
+                  <div className="text-center py-4 text-sm text-campus-text-tertiary font-body">
+                    — 已经到底了 —
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* 底部快捷操作 */}
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* 创建团队 */}
             <Link
               to="/teams/new"
-              className="group relative rounded-2xl overflow-hidden glass-card p-6 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="group relative rounded-2xl overflow-hidden glass-card p-5 sm:p-6 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
-              <div className="relative z-10 flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                  <Users className="w-6 h-6" />
+              <div className="relative z-10 flex items-start gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-semibold font-display text-campus-text-primary mb-1">创建团队</h3>
-                  <p className="text-sm text-campus-text-tertiary font-body leading-relaxed">邀请同学一起学习、组队参赛，打造你的校园团队</p>
-                  <span className="inline-block mt-3 text-xs font-medium text-primary font-body group-hover:underline">立即创建 →</span>
+                  <h3 className="text-sm sm:text-base font-semibold font-display text-campus-text-primary mb-1">创建团队</h3>
+                  <p className="text-xs sm:text-sm text-campus-text-tertiary font-body leading-relaxed">邀请同学一起学习、组队参赛，打造你的校园团队</p>
+                  <span className="inline-block mt-2 sm:mt-3 text-xs font-medium text-primary font-body group-hover:underline">立即创建 →</span>
                 </div>
               </div>
             </Link>
 
             {/* 加入团队 */}
-            <Link to="/teams" className="group relative rounded-2xl overflow-hidden glass-card p-6 transition-all block">
-              <div className="relative z-10 flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                  <UserPlus className="w-6 h-6" />
+            <Link to="/teams" className="group relative rounded-2xl overflow-hidden glass-card p-5 sm:p-6 transition-all block">
+              <div className="relative z-10 flex items-start gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                  <UserPlus className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-semibold font-display text-campus-text-primary mb-1">加入团队</h3>
-                  <p className="text-sm text-campus-text-tertiary font-body leading-relaxed">找到志同道合的小伙伴，一起交流成长</p>
-                  <span className="inline-block mt-3 text-xs font-medium text-primary font-body group-hover:underline">浏览团队 →</span>
+                  <h3 className="text-sm sm:text-base font-semibold font-display text-campus-text-primary mb-1">加入团队</h3>
+                  <p className="text-xs sm:text-sm text-campus-text-tertiary font-body leading-relaxed">找到志同道合的小伙伴，一起交流成长</p>
+                  <span className="inline-block mt-2 sm:mt-3 text-xs font-medium text-primary font-body group-hover:underline">浏览团队 →</span>
                 </div>
               </div>
             </Link>
@@ -485,6 +664,12 @@ export default function HomePage() {
         }
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
+        }
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
       `}</style>
     </div>
