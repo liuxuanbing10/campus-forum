@@ -1,0 +1,12 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "校园论坛鸿蒙客户端"
+    },
+    {
+      "name": "app_name",
+      "value": "校园论坛"
+    }
+  ]
+}
