@@ -177,7 +177,7 @@ export const authPlugin: Plugin = {
 
       // 1. 查找用户
       const user = await db.get<UserRow>(
-        'SELECT id, username, password_hash, display_name, is_banned, banned_until, ban_reason FROM users WHERE username = ?',
+        'SELECT id, username, password_hash, display_name, role, is_admin, is_banned, banned_until, ban_reason FROM users WHERE username = ?',
         username
       );
 
@@ -241,6 +241,7 @@ export const authPlugin: Plugin = {
           id: user.id,
           username: user.username,
           displayName: user.display_name,
+          role: user.is_admin ? 'admin' : (user.role || 'user'),
           isAdmin: user.is_admin,
           isBanned: isActuallyBanned,
           bannedUntil: user.banned_until || null,
@@ -298,7 +299,7 @@ export const authPlugin: Plugin = {
         email: user.email || null,
         avatarUrl: user.avatar_url || null,
         isAdmin: user.is_admin === 1,
-        role: user.role || 'user',
+        role: user.is_admin ? 'admin' : (user.role || 'user'),
         isBanned: isActuallyBanned,
         bannedUntil: user.banned_until || null,
         banReason: user.ban_reason || null,
@@ -364,7 +365,7 @@ export const authPlugin: Plugin = {
           email: updatedUser.email || null,
           avatarUrl: updatedUser.avatar_url || null,
           isAdmin: updatedUser.is_admin === 1,
-          role: updatedUser.role || 'user',
+          role: updatedUser.is_admin ? 'admin' : (updatedUser.role || 'user'),
           isBanned: updatedUser.is_banned === 1,
           createdAt: updatedUser.created_at,
         },
