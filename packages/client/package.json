@@ -26,13 +26,18 @@
     "@tiptap/pm": "^3.27.3",
     "@tiptap/react": "^3.27.3",
     "@tiptap/starter-kit": "^3.27.3",
+    "@tsparticles/react": "^4.3.2",
+    "@tsparticles/slim": "^4.3.2",
     "axios": "^1.7.0",
+    "gsap": "^3.15.0",
     "lowlight": "^3.3.0",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-helmet-async": "^3.0.0",
     "react-router-dom": "^7.0.0",
+    "roughjs": "^4.6.6",
+    "tsparticles-slim": "^2.12.0",
     "zustand": "^5.0.0"
   },
   "devDependencies": {

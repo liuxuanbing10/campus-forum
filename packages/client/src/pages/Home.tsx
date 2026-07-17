@@ -6,6 +6,9 @@ import { Pin, MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Hear
 import { THEMES, useThemeStore } from '../stores/theme';
 import MetaManager from '../components/MetaManager';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import Particles, { ParticlesProvider } from '@tsparticles/react';
+import { loadSlim } from '@tsparticles/slim';
+import { gsap } from 'gsap';
 
 interface Board {
   id: number;
@@ -51,6 +54,10 @@ export default function HomePage() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [canScroll, setCanScroll] = useState(false);
   const [sloganDone, setSloganDone] = useState(false);
+  const heroCanvasRef = useRef<HTMLCanvasElement>(null);
+  const particlesInit = useCallback(async (engine: any) => {
+    await loadSlim(engine);
+  }, []);
 
   // ── 最新帖子无限滚动状态 ──
   const [posts, setPosts] = useState<Post[]>([]);
@@ -71,6 +78,151 @@ export default function HomePage() {
   useEffect(() => {
     const timer = setTimeout(() => setSloganDone(true), 2800);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Hero 区域 Canvas 动画：流星 + 漂浮金粒子
+  useEffect(() => {
+    const canvas = heroCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const ctx2d = ctx!;
+    const dpr = window.devicePixelRatio || 1;
+    const heroEl = canvas.parentElement;
+    if (!heroEl) return;
+    let animId: number;
+    let inited = false;
+    const resize = () => {
+      const w = heroEl.clientWidth;
+      const h = heroEl.clientHeight;
+      if (w === 0 || h === 0) return false;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return true;
+    };
+    window.addEventListener('resize', resize);
+    type FloatingParticle = { x: number; y: number; vx: number; vy: number; size: number; alpha: number; hue: number; phase: number };
+    type Meteor = { x: number; y: number; vx: number; vy: number; length: number; alpha: number; life: number };
+    const floaters: FloatingParticle[] = [];
+    const meteors: Meteor[] = [];
+    const W = () => canvas.width / dpr;
+    const H = () => canvas.height / dpr;
+    function initParticles() {
+      if (W() === 0 || H() === 0) return;
+      floaters.length = 0;
+      for (let i = 0; i < 40; i++) {
+        floaters.push({
+          x: Math.random() * W(),
+          y: Math.random() * H(),
+          vx: (Math.random() - 0.5) * 0.3,
+          vy: -0.2 - Math.random() * 0.4,
+          size: 1 + Math.random() * 2.5,
+          alpha: 0.3 + Math.random() * 0.5,
+          hue: 35 + Math.random() * 25,
+          phase: Math.random() * Math.PI * 2,
+        });
+      }
+    }
+    let meteorTimer = 0;
+    function spawnMeteor() {
+      const startX = Math.random() * W() * 1.2 - W() * 0.1;
+      const startY = -20;
+      const angle = Math.PI / 4 + (Math.random() - 0.5) * 0.3;
+      const speed = 8 + Math.random() * 6;
+      meteors.push({
+        x: startX,
+        y: startY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        length: 80 + Math.random() * 120,
+        alpha: 0.6 + Math.random() * 0.4,
+        life: 1,
+      });
+    }
+    function drawFloater(p: FloatingParticle, time: number) {
+      const twinkle = 0.6 + 0.4 * Math.sin(time * 0.002 + p.phase);
+      const a = p.alpha * twinkle;
+      const grad = ctx2d.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
+      grad.addColorStop(0, `hsla(${p.hue}, 100%, 80%, ${a})`);
+      grad.addColorStop(0.4, `hsla(${p.hue - 10}, 100%, 65%, ${a * 0.5})`);
+      grad.addColorStop(1, `hsla(${p.hue - 20}, 100%, 50%, 0)`);
+      ctx2d.beginPath();
+      ctx2d.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
+      ctx2d.fillStyle = grad;
+      ctx2d.fill();
+    }
+    function drawMeteor(m: Meteor) {
+      const tailX = m.x - m.vx * (m.length / Math.hypot(m.vx, m.vy));
+      const tailY = m.y - m.vy * (m.length / Math.hypot(m.vx, m.vy));
+      const grad = ctx2d.createLinearGradient(tailX, tailY, m.x, m.y);
+      grad.addColorStop(0, 'rgba(255, 220, 150, 0)');
+      grad.addColorStop(0.6, `rgba(255, 200, 100, ${m.alpha * 0.5})`);
+      grad.addColorStop(1, `rgba(255, 255, 220, ${m.alpha})`);
+      ctx2d.beginPath();
+      ctx2d.moveTo(tailX, tailY);
+      ctx2d.lineTo(m.x, m.y);
+      ctx2d.strokeStyle = grad;
+      ctx2d.lineWidth = 2.5;
+      ctx2d.lineCap = 'round';
+      ctx2d.stroke();
+      // 流星头
+      const headGrad = ctx2d.createRadialGradient(m.x, m.y, 0, m.x, m.y, 8);
+      headGrad.addColorStop(0, `rgba(255, 255, 255, ${m.alpha})`);
+      headGrad.addColorStop(0.5, `rgba(255, 230, 150, ${m.alpha * 0.7})`);
+      headGrad.addColorStop(1, 'rgba(255, 200, 100, 0)');
+      ctx2d.beginPath();
+      ctx2d.arc(m.x, m.y, 8, 0, Math.PI * 2);
+      ctx2d.fillStyle = headGrad;
+      ctx2d.fill();
+    }
+    function animate(time: number) {
+      // 尝试初始化尺寸
+      if (!inited) {
+        if (resize()) {
+          inited = true;
+          initParticles();
+        }
+      }
+      ctx2d.clearRect(0, 0, W(), H());
+      // 更新并绘制漂浮粒子
+      floaters.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.y < -10) {
+          p.y = H() + 10;
+          p.x = Math.random() * W();
+        }
+        if (p.x < -10) p.x = W() + 10;
+        if (p.x > W() + 10) p.x = -10;
+        drawFloater(p, time);
+      });
+      // 生成流星
+      meteorTimer++;
+      if (meteorTimer > 120 + Math.random() * 180) {
+        spawnMeteor();
+        meteorTimer = 0;
+      }
+      // 更新并绘制流星
+      for (let i = meteors.length - 1; i >= 0; i--) {
+        const m = meteors[i];
+        m.x += m.vx;
+        m.y += m.vy;
+        if (m.y > H() + 50 || m.x > W() + 50 || m.x < -50) {
+          meteors.splice(i, 1);
+        } else {
+          drawMeteor(m);
+        }
+      }
+      animId = requestAnimationFrame(animate);
+    }
+    animId = requestAnimationFrame(animate);
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', resize);
+    };
   }, []);
 
   useEffect(() => {
@@ -238,40 +390,81 @@ export default function HomePage() {
         </div>
       )}
 
-      <div className="relative py-12 sm:py-16 md:py-20 px-4 bg-gradient-to-b from-primary-light/50 to-surface text-center overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="ink-blob ink-blob-1" />
-          <div className="ink-blob ink-blob-2" />
-          <div className="ink-blob ink-blob-3" />
-          <div className="ink-blob ink-blob-4" />
+      <div className="relative py-14 sm:py-20 md:py-28 px-4 text-center overflow-hidden bg-gradient-to-b from-slate-950 via-indigo-950 to-slate-900">
+        {/* tsParticles 星空背景 */}
+        <div className="absolute inset-0 pointer-events-none w-full h-full">
+          <ParticlesProvider init={particlesInit}>
+            <Particles
+              id="tsparticles-hero"
+              style={{ width: '100%', height: '100%' }}
+              options={{
+                fullScreen: { enable: false },
+                background: { color: { value: 'transparent' } },
+                fpsLimit: 60,
+                particles: {
+                  number: { value: 80, density: { enable: true } },
+                  color: { value: ['#ffffff', '#ffd700', '#87ceeb', '#ffb6c1'] },
+                  shape: { type: 'circle' },
+                  opacity: {
+                    value: { min: 0.1, max: 0.9 },
+                    animation: { enable: true, speed: 1.2, minimumValue: 0.1, sync: false }
+                  },
+                  size: {
+                    value: { min: 0.5, max: 3 },
+                    animation: { enable: true, speed: 2, minimumValue: 0.3, sync: false }
+                  },
+                  move: {
+                    enable: true,
+                    speed: 0.4,
+                    direction: 'none',
+                    random: true,
+                    straight: false,
+                    outModes: { default: 'out' },
+                  },
+                  twinkle: {
+                    particles: { enable: true, frequency: 0.05, opacity: 1 },
+                  },
+                },
+                detectRetina: true,
+              }}
+            />
+          </ParticlesProvider>
         </div>
-        {/* 标语：对联式手写动画 */}
-        <h1 className="relative z-10 font-slogan text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-campus-text-primary leading-tight">
-          <span className={`block slogan-write ${sloganDone ? 'slogan-write-done' : ''}`}>
+        {/* Canvas 流星 + 漂浮金粒子 */}
+        <canvas ref={heroCanvasRef} className="absolute inset-0 pointer-events-none z-10" />
+        {/* 星云光晕装饰 */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute w-96 h-96 -top-20 -left-20 rounded-full bg-gradient-to-br from-amber-500/20 via-orange-500/10 to-transparent blur-3xl" />
+          <div className="absolute w-80 h-80 top-10 -right-10 rounded-full bg-gradient-to-br from-purple-500/20 via-pink-500/10 to-transparent blur-3xl" />
+          <div className="absolute w-64 h-64 bottom-0 left-1/3 rounded-full bg-gradient-to-br from-blue-500/15 via-cyan-500/10 to-transparent blur-3xl" />
+        </div>
+        {/* 标语：对联式金色发光文字 */}
+        <h1 className="relative z-20 font-slogan text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-tight">
+          <span className="block hero-title-text hero-title-text-1">
             指尖流淌星辰海
           </span>
-          <span className={`block slogan-write slogan-write-delay ${sloganDone ? 'slogan-write-done' : ''} mt-1`}>
+          <span className="block hero-title-text hero-title-text-2 mt-2 sm:mt-3">
             笔端绽放百花开
           </span>
         </h1>
-        {/* 横批：手写字体 + 延迟渐入 */}
-        <p className="relative z-10 text-lg sm:text-xl text-campus-text-secondary font-handwrite max-w-2xl mx-auto mt-4 sm:mt-6 text-fade-in text-fade-in-delay-1">
+        {/* 横批：金色印章风格 */}
+        <p className="relative z-20 text-lg sm:text-xl font-handwrite max-w-2xl mx-auto mt-5 sm:mt-8 text-amber-200/80 hero-subtitle">
           —— 文采飞扬 ——
         </p>
-        {/* APP 下载入口 */}
-        <Link to="/download" className="relative z-10 inline-flex items-center gap-2 mt-6 px-6 py-3 bg-gradient-to-r from-primary to-primary-hover text-white rounded-xl font-medium hover:opacity-90 transition-opacity shadow-lg">
-          <Download className="w-5 h-5" />
+        {/* APP 下载入口：金色发光按钮 */}
+        <Link to="/download" className="relative z-20 inline-flex items-center gap-2 mt-8 px-8 py-4 hero-download-btn text-slate-900 rounded-2xl font-bold text-lg hover:scale-105 transition-all duration-300">
+          <Download className="w-6 h-6" />
           下载 APP
         </Link>
       </div>
 
       {/* 第二副对联：知识分享理念 */}
       <div className="max-w-2xl mx-auto px-4 py-8 sm:py-10 text-center">
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-campus-text-secondary">
-          <span className="font-slogan text-2xl sm:text-3xl text-campus-text-primary text-fade-in tracking-wider">分享让知识增值</span>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6">
+          <span className="font-slogan text-2xl sm:text-3xl text-fade-in tracking-wider second-couplet-text">分享让知识增值</span>
           <span className="hidden sm:inline text-campus-text-tertiary text-2xl font-light">·</span>
           <span className="sm:hidden text-campus-text-tertiary text-lg font-light">·</span>
-          <span className="font-slogan text-2xl sm:text-3xl text-campus-text-primary text-fade-in text-fade-in-delay-1 tracking-wider">讨论让思维升级</span>
+          <span className="font-slogan text-2xl sm:text-3xl text-fade-in text-fade-in-delay-1 tracking-wider second-couplet-text">讨论让思维升级</span>
         </div>
         <p className="mt-4 text-base sm:text-lg text-campus-text-tertiary font-handwrite text-fade-in text-fade-in-delay-2">
           —— 共同成长 ——
@@ -304,7 +497,7 @@ export default function HomePage() {
                 <div className="ink-blob ink-blob-section-2" />
               </div>
               <div className="relative z-10 flex items-center justify-between mb-4 sm:mb-6">
-                <h2 className="font-handwrite text-xl sm:text-2xl md:text-3xl text-campus-text-primary text-fade-in">
+                <h2 className="font-handwrite text-xl sm:text-2xl md:text-3xl text-fade-in gradient-title">
                   探索板块
                 </h2>
                 {canScroll && (
@@ -350,7 +543,7 @@ export default function HomePage() {
                     <Link
                       key={board.id}
                       to={`/board/${board.id}`}
-                      className="carousel-card card-enter relative w-56 sm:w-64 md:w-72 flex flex-col items-start p-5 sm:p-6 md:p-7 rounded-2xl transition-all duration-500 ease-out snap-center -mx-3 sm:-mx-4 md:-mx-6 overflow-hidden glass-card cursor-pointer"
+                      className="carousel-card card-enter relative w-56 sm:w-64 md:w-72 flex flex-col items-start p-5 sm:p-6 md:p-7 rounded-2xl transition-all duration-500 ease-out snap-center -mx-3 sm:-mx-4 md:-mx-6 overflow-hidden glass-card cursor-pointer board-card-glow"
                       style={{
                         ...getCardStyle(index),
                         animationDelay: `${index * 0.08}s`,
@@ -411,7 +604,7 @@ export default function HomePage() {
               最新帖子 - 无限滚动信息流
               ═══════════════════════════════════════════ */}
           <div className="mt-8 sm:mt-10">
-            <h2 className="font-handwrite text-xl sm:text-2xl text-campus-text-primary mb-4 sm:mb-6">
+            <h2 className="font-handwrite text-xl sm:text-2xl mb-4 sm:mb-6 gradient-title">
               最新动态
             </h2>
 
@@ -435,7 +628,7 @@ export default function HomePage() {
                   <Link
                     key={post.id}
                     to={`/post/${post.id}`}
-                    className="card block p-4 sm:p-5 border-l-[3px] border-l-primary hover:-translate-y-0.5 transition-all"
+                    className="card block p-4 sm:p-5 border-l-[3px] border-l-primary hover:-translate-y-0.5 transition-all post-card-glow"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="text-base sm:text-lg font-semibold font-body text-campus-text-primary truncate flex-1 min-w-0">
@@ -530,6 +723,194 @@ export default function HomePage() {
       )}
 
       <style>{`
+        .hero-title-text {
+          background: linear-gradient(
+            135deg,
+            #fff7ed 0%,
+            #fef08a 15%,
+            #fbbf24 30%,
+            #f59e0b 45%,
+            #fbbf24 60%,
+            #fef08a 75%,
+            #fff7ed 100%
+          );
+          background-size: 200% 200%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.5))
+                  drop-shadow(0 0 40px rgba(245, 158, 11, 0.3));
+          animation: hero-shimmer 4s ease-in-out infinite, hero-text-in 1.2s ease-out forwards;
+          opacity: 0;
+        }
+        .hero-title-text-1 {
+          animation-delay: 0.3s;
+        }
+        .hero-title-text-2 {
+          animation-delay: 0.8s;
+        }
+        @keyframes hero-shimmer {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        @keyframes hero-text-in {
+          0% {
+            opacity: 0;
+            transform: translateY(30px) scale(0.9);
+            filter: drop-shadow(0 0 0px rgba(251, 191, 36, 0))
+                    blur(10px);
+          }
+          60% {
+            opacity: 1;
+            transform: translateY(0) scale(1.02);
+            filter: drop-shadow(0 0 30px rgba(251, 191, 36, 0.6))
+                    blur(0);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.5))
+                    drop-shadow(0 0 40px rgba(245, 158, 11, 0.3))
+                    blur(0);
+          }
+        }
+        .hero-subtitle {
+          animation: hero-subtitle-in 1s ease-out 1.5s forwards;
+          opacity: 0;
+        }
+        @keyframes hero-subtitle-in {
+          0% {
+            opacity: 0;
+            transform: translateY(15px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .hero-download-btn {
+          background: linear-gradient(135deg, #fef08a 0%, #fbbf24 50%, #f59e0b 100%);
+          box-shadow:
+            0 0 20px rgba(251, 191, 36, 0.4),
+            0 0 40px rgba(245, 158, 11, 0.2),
+            0 8px 25px rgba(0, 0, 0, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.6);
+          animation: hero-btn-pulse 2.5s ease-in-out infinite, hero-btn-in 0.8s ease-out 2s forwards;
+          opacity: 0;
+          position: relative;
+          overflow: hidden;
+        }
+        .hero-download-btn::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.5) 50%,
+            transparent 100%
+          );
+          animation: hero-btn-shine 3s ease-in-out infinite;
+        }
+        @keyframes hero-btn-shine {
+          0% { left: -100%; }
+          50%, 100% { left: 100%; }
+        }
+        @keyframes hero-btn-pulse {
+          0%, 100% {
+            box-shadow:
+              0 0 20px rgba(251, 191, 36, 0.4),
+              0 0 40px rgba(245, 158, 11, 0.2),
+              0 8px 25px rgba(0, 0, 0, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.6);
+          }
+          50% {
+            box-shadow:
+              0 0 30px rgba(251, 191, 36, 0.6),
+              0 0 60px rgba(245, 158, 11, 0.3),
+              0 8px 30px rgba(0, 0, 0, 0.35),
+              inset 0 1px 0 rgba(255, 255, 255, 0.7);
+          }
+        }
+        @keyframes hero-btn-in {
+          0% {
+            opacity: 0;
+            transform: translateY(20px) scale(0.9);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        .second-couplet-text {
+          background: linear-gradient(
+            135deg,
+            #6366f1 0%,
+            #8b5cf6 25%,
+            #ec4899 50%,
+            #f59e0b 75%,
+            #6366f1 100%
+          );
+          background-size: 200% 200%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          animation: second-couplet-shimmer 6s ease-in-out infinite;
+        }
+        @keyframes second-couplet-shimmer {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        .gradient-title {
+          background: linear-gradient(
+            135deg,
+            #6366f1 0%,
+            #8b5cf6 30%,
+            #ec4899 60%,
+            #f59e0b 100%
+          );
+          background-size: 200% 200%;
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          animation: gradient-title-shimmer 8s ease-in-out infinite;
+        }
+        @keyframes gradient-title-shimmer {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        .board-card-glow {
+          position: relative;
+        }
+        .board-card-glow::before {
+          content: '';
+          position: absolute;
+          inset: -1px;
+          border-radius: 1rem;
+          background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899, #f59e0b);
+          opacity: 0;
+          transition: opacity 0.3s ease;
+          z-index: -1;
+          filter: blur(8px);
+        }
+        .board-card-glow:hover::before {
+          opacity: 0.6;
+        }
+        .board-card-glow:hover {
+          transform: translateY(-4px) scale(1.02);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        .post-card-glow {
+          position: relative;
+          transition: all 0.3s ease;
+        }
+        .post-card-glow:hover {
+          box-shadow: 0 8px 25px rgba(99, 102, 241, 0.15), 0 4px 10px rgba(0, 0, 0, 0.08);
+          border-color: rgba(139, 92, 246, 0.3);
+        }
         .ink-blob {
           position: absolute;
           border-radius: 50%;
