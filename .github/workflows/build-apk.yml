@@ -31,6 +31,13 @@ jobs:
           sed -i 's|distributionUrl=file.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.14.3-all.zip|' gradle/wrapper/gradle-wrapper.properties
           chmod +x gradlew
 
+      - name: Create missing files
+        working-directory: packages/client/android
+        run: |
+          mkdir -p capacitor-cordova-android-plugins
+          touch capacitor-cordova-android-plugins/cordova.variables.gradle
+          echo "" > capacitor-cordova-android-plugins/cordova.variables.gradle
+
       - name: Build APK
         working-directory: packages/client/android
         run: ./gradlew assembleDebug
