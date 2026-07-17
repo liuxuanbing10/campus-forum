@@ -24,6 +24,7 @@ import UserProfile from './pages/UserProfile';
 import Messages from './pages/Messages';
 import OAuthSetup from './pages/OAuthSetup';
 import Ostracism from './pages/Ostracism';
+import Download from './pages/Download';
 import { ToastContainer, ToastProps } from './components/Toast';
 import { wsService } from './lib/websocket';
 
@@ -114,6 +115,7 @@ export default function App() {
           <Route path="/teams/new" element={<CreateTeam />} />
           <Route path="/teams/:id" element={<TeamDetail />} />
           <Route path={"/teams/:id/edit"} element={<EditTeam />} />
+          <Route path="/download" element={<Download />} />
           <Route path={"*"} element={<Navigate to="/" />} />
         </Route>
         <Route path="/ostracism" element={<Ostracism />} />

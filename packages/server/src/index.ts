@@ -202,6 +202,28 @@ export async function buildApp(options?: { plugins?: any[] }) {
     return { status: 'ok', plugins: pluginManager.listPlugins() };
   });
 
+  // Download APK
+  app.get('/api/download/apk', async (request, reply) => {
+    const apkPath = path.join(__dirname, '../../data/campus-forum-debug.apk');
+    if (!fs.existsSync(apkPath)) {
+      return reply.status(404).send({ error: 'APK file not found' });
+    }
+    return reply
+      .header('Content-Type', 'application/vnd.android.package-archive')
+      .header('Content-Disposition', 'attachment; filename="campus-forum.apk"')
+      .send(fs.createReadStream(apkPath));
+  });
+
+  // Download info
+  app.get('/api/download/info', async () => {
+    return {
+      android: { downloadUrl: '/api/download/apk', version: '1.0.0', size: '4MB' },
+      ios: { status: '需要 Mac + Xcode 构建', note: 'iOS 版本需要 Apple 开发者账号' },
+      harmony: { status: '需要 DevEco Studio 构建', note: '鸿蒙版本需要华为开发者账号' },
+      web: { url: '/', note: '网页版直接访问' },
+    };
+  });
+
   // robots.txt — 禁止爬虫爬 API
   app.get('/robots.txt', async (_req, reply) => {
     reply.header('Content-Type', 'text/plain');

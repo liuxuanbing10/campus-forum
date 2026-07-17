@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 import api from '../lib/api';
-import { Pin, MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Heart, Star, ChevronLeft, ChevronRight, UserPlus, Eye, ThumbsUp, RefreshCw, Loader2 } from 'lucide-react';
+import { Pin, MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Heart, Star, ChevronLeft, ChevronRight, UserPlus, Eye, ThumbsUp, RefreshCw, Loader2, Download } from 'lucide-react';
 import { THEMES, useThemeStore } from '../stores/theme';
 import MetaManager from '../components/MetaManager';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -255,6 +255,11 @@ export default function HomePage() {
         <p className="relative z-10 text-lg sm:text-xl text-campus-text-secondary font-handwrite max-w-2xl mx-auto mt-4 sm:mt-6 text-fade-in text-fade-in-delay-1">
           从此刻起，与优秀的你同行
         </p>
+        {/* APP 下载入口 */}
+        <Link to="/download" className="relative z-10 inline-flex items-center gap-2 mt-6 px-6 py-3 bg-gradient-to-r from-primary to-primary-hover text-white rounded-xl font-medium hover:opacity-90 transition-opacity shadow-lg">
+          <Download className="w-5 h-5" />
+          下载 APP
+        </Link>
       </div>
 
       {user ? (
