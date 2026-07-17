@@ -7,6 +7,7 @@ interface PullToRefreshOptions {
 }
 
 interface PullToRefreshResult {
+  pulling: boolean;
   pullDistance: number;
   refreshing: boolean;
   pullProps: {
@@ -21,6 +22,7 @@ export function usePullToRefresh(options: PullToRefreshOptions): PullToRefreshRe
   const { threshold = 80, resistance = 0.5, onRefresh } = options;
   const [pullDistance, setPullDistance] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [pulling, setPulling] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const pullingRef = useRef(false);
@@ -29,6 +31,7 @@ export function usePullToRefresh(options: PullToRefreshOptions): PullToRefreshRe
     if (window.scrollY === 0) {
       startY.current = e.touches[0].clientY;
       pullingRef.current = true;
+      setPulling(true);
     }
   }, []);
 
@@ -36,6 +39,7 @@ export function usePullToRefresh(options: PullToRefreshOptions): PullToRefreshRe
     if (!pullingRef.current || refreshing) return;
     const delta = (e.touches[0].clientY - startY.current) * resistance;
     if (delta > 0) {
+      e.preventDefault();
       setPullDistance(Math.min(delta, threshold * 1.5));
     }
   }, [refreshing, resistance, threshold]);
@@ -44,13 +48,15 @@ export function usePullToRefresh(options: PullToRefreshOptions): PullToRefreshRe
     pullingRef.current = false;
     if (pullDistance >= threshold && !refreshing) {
       setRefreshing(true);
-      await onRefresh();
+      try { await onRefresh(); } catch { /* silent */ }
       setRefreshing(false);
     }
     setPullDistance(0);
+    setPulling(false);
   }, [pullDistance, threshold, refreshing, onRefresh]);
 
   return {
+    pulling,
     pullDistance,
     refreshing,
     pullProps: { onTouchStart: handleTouchStart, onTouchMove: handleTouchMove, onTouchEnd: handleTouchEnd },
