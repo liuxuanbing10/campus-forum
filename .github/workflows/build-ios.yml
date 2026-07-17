@@ -18,9 +18,11 @@ jobs:
       - run: npm run build:server
       - run: npm run build:client
 
-      - name: Setup Capacitor
+      - name: Setup Capacitor iOS
         working-directory: packages/client
-        run: npx cap sync ios
+        run: |
+          npx cap add ios || true
+          npx cap sync ios
 
       - name: Build iOS (unsigned)
         working-directory: packages/client/ios
@@ -29,5 +31,5 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: campus-forum-ios.zip
+          name: campus-forum-ios
           path: packages/client/ios/build/Build/Products/Release-iphoneos/
