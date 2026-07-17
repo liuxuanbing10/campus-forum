@@ -241,6 +241,13 @@ function UsersTab() {
   const [total, setTotal] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [hasMore, setHasMore] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newUser, setNewUser] = useState({ username: '', password: '', display_name: '', email: '', role: 'user' });
+  const [banModal, setBanModal] = useState<{ open: boolean; userIds: number[]; action: 'ban' | 'unban' }>({ open: false, userIds: [], action: 'ban' });
+  const [banDuration, setBanDuration] = useState(7);
+  const [banReason, setBanReason] = useState('');
 
   useEffect(() => { loadUsers(); }, [page, searchQuery]);
 
@@ -256,9 +263,29 @@ function UsersTab() {
     finally { setLoading(false); }
   };
 
-  const handleBan = async (id: number) => {
-    try { await adminApi.banUser(id); toastStore.success('操作成功'); loadUsers(); }
-    catch { toastStore.error('操作失败'); }
+  const handleBan = async (id: number, isBanned: boolean) => {
+    if (isBanned) {
+      try { await adminApi.banUser(id, { ban: false }); toastStore.success('已解封'); loadUsers(); }
+      catch { toastStore.error('操作失败'); }
+    } else {
+      setBanModal({ open: true, userIds: [id], action: 'ban' });
+    }
+  };
+
+  const confirmBan = async () => {
+    const { userIds, action } = banModal;
+    try {
+      if (action === 'ban') {
+        await adminApi.batchBanUsers(userIds, true, { duration: banDuration, reason: banReason || '违反社区规定' });
+        toastStore.success(`已封禁 ${userIds.length} 个用户`);
+      } else {
+        await adminApi.batchBanUsers(userIds, false);
+        toastStore.success(`已解封 ${userIds.length} 个用户`);
+      }
+      setBanModal({ open: false, userIds: [], action: 'ban' });
+      setBanReason(''); setBanDuration(7);
+      setSelected(new Set()); loadUsers();
+    } catch { toastStore.error('操作失败'); }
   };
 
   const handleRole = async (id: number, role: string) => {
@@ -266,20 +293,119 @@ function UsersTab() {
     catch { toastStore.error('操作失败'); }
   };
 
+  const toggleSelect = (id: number) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.size === users.length) setSelected(new Set());
+    else setSelected(new Set(users.map(u => u.id)));
+  };
+
+  const handleBatchBan = () => {
+    if (!selected.size) return;
+    setBanModal({ open: true, userIds: [...selected], action: 'ban' });
+  };
+
+  const handleBatchDelete = async () => {
+    if (!selected.size || !confirm(`确定删除 ${selected.size} 个用户？此操作不可撤销。`)) return;
+    try {
+      const res = await adminApi.batchDeleteUsers([...selected]);
+      toastStore.success(res.data.message); setSelected(new Set()); loadUsers();
+    } catch { toastStore.error('批量删除失败'); }
+  };
+
+  const handleCreate = async () => {
+    if (!newUser.username.trim() || !newUser.password) { toastStore.error('用户名和密码必填'); return; }
+    setCreating(true);
+    try {
+      await adminApi.createUser(newUser);
+      toastStore.success('用户创建成功');
+      setShowCreate(false); setNewUser({ username: '', password: '', display_name: '', email: '', role: 'user' });
+      setPage(1); loadUsers();
+    } catch (e: any) { toastStore.error(e.response?.data?.error || '创建失败'); }
+    finally { setCreating(false); }
+  };
+
   return (
     <div>
+      {/* 搜索栏 + 创建按钮 */}
       <div className="flex gap-2 mb-4">
         <input value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
           placeholder="搜索用户..." className="flex-1 px-4 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
         <Search className="w-5 h-5 text-campus-text-tertiary -ml-8 self-center" />
+        <button onClick={() => setShowCreate(!showCreate)}
+          className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-body hover:bg-primary-hover whitespace-nowrap">
+          {showCreate ? '取消' : '+ 创建用户'}
+        </button>
       </div>
+
+      {/* 创建用户表单 */}
+      {showCreate && (
+        <div className="card p-4 mb-4">
+          <h3 className="text-sm font-semibold font-display mb-3">创建新用户</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <input value={newUser.username} onChange={e => setNewUser(p => ({ ...p, username: e.target.value }))}
+              placeholder="用户名 *" className="px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
+            <input type="password" value={newUser.password} onChange={e => setNewUser(p => ({ ...p, password: e.target.value }))}
+              placeholder="密码 *（至少6位）" className="px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
+            <input value={newUser.display_name} onChange={e => setNewUser(p => ({ ...p, display_name: e.target.value }))}
+              placeholder="显示名称" className="px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
+            <input type="email" value={newUser.email} onChange={e => setNewUser(p => ({ ...p, email: e.target.value }))}
+              placeholder="邮箱" className="px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
+            <select value={newUser.role} onChange={e => setNewUser(p => ({ ...p, role: e.target.value }))}
+              className="px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary">
+              <option value="user">普通用户</option>
+              <option value="moderator">版主</option>
+            </select>
+            <button onClick={handleCreate} disabled={creating || !newUser.username.trim() || !newUser.password}
+              className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-body hover:bg-primary-hover disabled:opacity-50">
+              {creating ? '创建中...' : '确认创建'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 批量操作栏 */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
+          <span className="text-sm font-body text-primary">已选 {selected.size} 个</span>
+          <button onClick={handleBatchBan} className="px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-body hover:bg-amber-600">
+            <Ban className="w-3 h-3 inline mr-1" />批量封禁
+          </button>
+          <button onClick={handleBatchDelete} className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-body hover:bg-red-600">
+            <Trash2 className="w-3 h-3 inline mr-1" />批量删除
+          </button>
+          <button onClick={() => setSelected(new Set())} className="text-xs text-campus-text-tertiary font-body hover:text-campus-text-secondary">取消选择</button>
+        </div>
+      )}
+
+      {/* 用户列表 */}
       <div className="space-y-2">
+        {users.length > 0 && (
+          <label className="card p-2 flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" checked={selected.size === users.length && users.length > 0} onChange={toggleSelectAll}
+              className="w-4 h-4 rounded border-border text-primary focus:ring-primary" />
+            <span className="text-xs text-campus-text-tertiary font-body">全选（共 {total} 个用户）</span>
+          </label>
+        )}
         {users.map(u => (
           <div key={u.id} className="card p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white font-bold">{u.display_name?.[0] || '?'}</div>
+              <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleSelect(u.id)}
+                className="w-4 h-4 rounded border-border text-primary focus:ring-primary" />
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white font-bold">
+                {u.display_name?.[0] || '?'}
+              </div>
               <div>
-                <p className="text-sm font-medium font-body">{u.display_name} <span className="text-xs text-campus-text-tertiary">@{u.username}</span></p>
+                <p className="text-sm font-medium font-body">
+                  {u.display_name} <span className="text-xs text-campus-text-tertiary">@{u.username}</span>
+                  {u.is_banned ? <span className="ml-2 px-1.5 py-0.5 rounded bg-red-50 text-red-500 text-xs">已封禁</span> : null}
+                </p>
                 <p className="text-xs text-campus-text-tertiary font-body">{u.email || '无邮箱'} · {u.post_count} 帖子 · {u.role}</p>
               </div>
             </div>
@@ -287,7 +413,7 @@ function UsersTab() {
               {u.role !== 'admin' && (
                 <button onClick={() => handleRole(u.id, u.role === 'admin' ? 'user' : 'admin')} className="p-2 hover:bg-surface-hover rounded-lg transition-colors" title="切换角色"><UserCog className="w-4 h-4" /></button>
               )}
-              <button onClick={() => handleBan(u.id)} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-destructive" title={u.is_banned ? '解封' : '封禁'}>
+              <button onClick={() => handleBan(u.id, !!u.is_banned)} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-destructive" title={u.is_banned ? '解封' : '封禁'}>
                 {u.is_banned ? <UserCheck className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
               </button>
             </div>
@@ -295,6 +421,36 @@ function UsersTab() {
         ))}
       </div>
       {hasMore && <button onClick={() => setPage(p => p + 1)} className="w-full py-3 text-sm text-primary hover:text-primary-hover font-body mt-4">加载更多</button>}
+
+      {/* 封禁弹窗 */}
+      {banModal.open && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setBanModal(p => ({ ...p, open: false }))}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-96 shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold font-display mb-4">封禁设置</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-body text-campus-text-secondary mb-1">封禁时长</label>
+              <div className="grid grid-cols-5 gap-1">
+                {[1, 3, 7, 14, 0].map(d => (
+                  <button key={d} onClick={() => setBanDuration(d)}
+                    className={`py-1.5 rounded-lg text-xs font-body transition-colors ${banDuration === d ? 'bg-primary text-white' : 'bg-surface-hover text-campus-text-secondary hover:bg-primary/10'}`}>
+                    {d === 0 ? '永久' : `${d}天`}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-body text-campus-text-secondary mb-1">封禁原因</label>
+              <textarea value={banReason} onChange={e => setBanReason(e.target.value)} rows={3}
+                placeholder="违反社区规定" className="w-full px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary resize-none" />
+            </div>
+            <p className="text-xs text-campus-text-tertiary mb-4">将封禁 {banModal.userIds.length} 个用户</p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setBanModal(p => ({ ...p, open: false }))} className="px-4 py-2 rounded-lg bg-surface-hover text-sm font-body">取消</button>
+              <button onClick={confirmBan} className="px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-body hover:bg-red-600">确认封禁</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -439,6 +595,36 @@ function ReportsTab() {
   );
 }
 
+function parseBrowser(ua?: string | null): string {
+  if (!ua) return '未知浏览器';
+  const patterns: [RegExp, string][] = [
+    [/Edg(?:e|A|iOS)?\/(\d+)/, 'Edge $1'],
+    [/OPR\/(\d+)/, 'Opera $1'],
+    [/Chrome\/(\d+)/, 'Chrome $1'],
+    [/Firefox\/(\d+)/, 'Firefox $1'],
+    [/Version\/(\d+).*Safari/, 'Safari $1'],
+    [/Safari\/(\d+)/, 'Safari $1'],
+  ];
+  for (const [re, name] of patterns) { const m = ua.match(re); if (m) return name.replace('$1', m[1]); }
+  return '未知浏览器';
+}
+
+function parseDevice(ua?: string | null): string {
+  if (!ua) return '未知设备';
+  if (/iPhone|iPad/.test(ua)) return 'iPhone';
+  if (/Android/.test(ua)) {
+    const m = ua.match(/;\s*([^;)]+)\s*Build/);
+    return m ? m[1].trim() : 'Android';
+  }
+  if (/Macintosh/.test(ua)) return 'Mac';
+  if (/Windows NT 10/.test(ua)) return 'Windows 10';
+  if (/Windows NT 6\.3/.test(ua)) return 'Windows 8.1';
+  if (/Windows NT 6\.1/.test(ua)) return 'Windows 7';
+  if (/Windows/.test(ua)) return 'Windows';
+  if (/Linux/.test(ua)) return 'Linux';
+  return '未知设备';
+}
+
 function DevicesTab() {
   const [blacklist, setBlacklist] = useState<DeviceBlacklistEntry[]>([]);
   const [devices, setDevices] = useState<(UserDevice & { username?: string })[]>([]);
@@ -483,7 +669,13 @@ function DevicesTab() {
   };
 
   const filteredDevices = deviceFilter
-    ? devices.filter(d => d.user_id === Number(deviceFilter) || d.username?.includes(deviceFilter))
+    ? devices.filter(d => {
+        const f = deviceFilter.toLowerCase();
+        const ua = d.device_name || d.device_info || '';
+        const browser = parseBrowser(ua).toLowerCase();
+        const device = parseDevice(ua).toLowerCase();
+        return d.username?.toLowerCase().includes(f) || browser.includes(f) || device.includes(f);
+      })
     : devices;
 
   if (loading) return <div className="text-center py-8 text-campus-text-tertiary font-body">加载中...</div>;
@@ -529,7 +721,7 @@ function DevicesTab() {
       <div className="card p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold font-display">用户设备列表</h3>
-          <input value={deviceFilter} onChange={e => setDeviceFilter(e.target.value)} placeholder="按用户ID/名称筛选"
+          <input value={deviceFilter} onChange={e => setDeviceFilter(e.target.value)} placeholder="搜索用户名/浏览器"
             className="w-48 px-3 py-1.5 rounded-lg bg-surface-hover border border-border text-xs font-body focus:outline-none focus:border-primary" />
         </div>
         {filteredDevices.length === 0 ? (
@@ -537,14 +729,9 @@ function DevicesTab() {
         ) : (
           <div className="space-y-2">
             {filteredDevices.map(d => (
-              <div key={d.id} className="flex items-center justify-between p-2 rounded-lg bg-surface-hover">
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium font-body">{d.username || `用户#${d.user_id}`}</span>
-                  <span className="text-xs text-campus-text-tertiary ml-2 font-mono">{d.device_id.slice(0, 16)}...</span>
-                  {d.device_name && <span className="text-xs text-campus-text-secondary ml-2 font-body">{d.device_name}</span>}
-                  {d.is_active === 0 && <span className="text-xs text-destructive ml-2 font-body">已禁用</span>}
-                </div>
-                <span className="text-xs text-campus-text-tertiary font-body shrink-0">
+              <div key={d.id} className="flex items-center justify-between p-2 rounded-lg bg-surface-hover text-sm font-body">
+                <span className="text-campus-text-primary">{d.username || '未知用户'} · {parseDevice(d.device_name || d.device_info)} · {parseBrowser(d.device_name || d.device_info)}</span>
+                <span className="text-campus-text-tertiary shrink-0 text-xs">
                   {d.last_login_at ? new Date(d.last_login_at).toLocaleString() : '-'}
                 </span>
               </div>

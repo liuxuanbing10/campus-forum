@@ -26,7 +26,7 @@ export default function SearchPage() {
 
   useEffect(() => {
     if (!q) return;
-    const controller = new AbortController();
+    // ponytail: AbortController was dead code — signal never connected to fetch
     const doSearch = async () => {
       setLoading(true);
       try {
@@ -45,7 +45,6 @@ export default function SearchPage() {
       }
     };
     doSearch();
-    return () => controller.abort();
   }, [q, page]);
 
   const loadMore = () => setPage(p => p + 1);

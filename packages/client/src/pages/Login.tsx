@@ -139,13 +139,7 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <div className="flex items-center justify-between text-sm font-body">
-            <span className="text-campus-text-secondary">
-              没有账号？{' '}
-              <Link to="/register" className="font-medium text-primary hover:text-primary-hover transition-colors">
-                注册
-              </Link>
-            </span>
+          <div className="text-center text-sm font-body">
             <Link to="/forgot-password" className="text-campus-text-tertiary hover:text-primary transition-colors">
               忘记密码？
             </Link>

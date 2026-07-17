@@ -8,6 +8,9 @@ interface User {
   displayName: string;
   isAdmin: boolean;
   role: string;
+  isBanned?: boolean;
+  bannedUntil?: string | null;
+  banReason?: string | null;
 }
 
 interface AuthState {
