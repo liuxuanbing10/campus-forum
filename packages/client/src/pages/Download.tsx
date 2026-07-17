@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Smartphone, Watch, Globe, Download, ExternalLink, CheckCircle, Clock, Apple } from 'lucide-react';
+import { Smartphone, Watch, Globe, Download as DownloadIcon, ExternalLink, CheckCircle, Clock, Apple } from 'lucide-react';
 import api from '../lib/api';
 
 interface DownloadInfo {
@@ -64,7 +64,7 @@ export default function Download() {
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium mb-4">
-            <Download className="w-4 h-4" />
+            <DownloadIcon className="w-4 h-4" />
             下载校园论坛
           </div>
           <h1 className="text-3xl font-bold text-text mb-3 font-display">选择你的平台</h1>
@@ -108,7 +108,7 @@ export default function Download() {
                         className={`inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r ${p.color} text-white rounded-xl font-medium hover:opacity-90 transition-opacity text-sm`}
                         {...(p.downloadUrl.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                       >
-                        <Download className="w-4 h-4" />
+                        <DownloadIcon className="w-4 h-4" />
                         {p.name === 'Web 网页版' ? '立即访问' : p.name === 'iOS (iPhone/iPad)' ? '前往构建' : '下载安装包'}
                         {p.downloadUrl.startsWith('http') && <ExternalLink className="w-3 h-3" />}
                       </a>
