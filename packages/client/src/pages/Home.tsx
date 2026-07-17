@@ -245,21 +245,37 @@ export default function HomePage() {
           <div className="ink-blob ink-blob-3" />
           <div className="ink-blob ink-blob-4" />
         </div>
-        {/* 标语：手写动画 */}
-        <h1 className="relative z-10 font-slogan text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-campus-text-primary leading-tight">
-          <span className={`slogan-write ${sloganDone ? 'slogan-write-done' : ''}`}>
-            代码改变世界
+        {/* 标语：对联式手写动画 */}
+        <h1 className="relative z-10 font-slogan text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-campus-text-primary leading-tight">
+          <span className={`block slogan-write ${sloganDone ? 'slogan-write-done' : ''}`}>
+            指尖流淌星辰海
+          </span>
+          <span className={`block slogan-write slogan-write-delay ${sloganDone ? 'slogan-write-done' : ''} mt-1`}>
+            笔端绽放百花开
           </span>
         </h1>
-        {/* 副标语：手写字体 + 延迟渐入 */}
+        {/* 横批：手写字体 + 延迟渐入 */}
         <p className="relative z-10 text-lg sm:text-xl text-campus-text-secondary font-handwrite max-w-2xl mx-auto mt-4 sm:mt-6 text-fade-in text-fade-in-delay-1">
-          从此刻起，与优秀的你同行
+          —— 文采飞扬 ——
         </p>
         {/* APP 下载入口 */}
         <Link to="/download" className="relative z-10 inline-flex items-center gap-2 mt-6 px-6 py-3 bg-gradient-to-r from-primary to-primary-hover text-white rounded-xl font-medium hover:opacity-90 transition-opacity shadow-lg">
           <Download className="w-5 h-5" />
           下载 APP
         </Link>
+      </div>
+
+      {/* 第二副对联：知识分享理念 */}
+      <div className="max-w-2xl mx-auto px-4 py-8 sm:py-10 text-center">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-campus-text-secondary">
+          <span className="font-slogan text-2xl sm:text-3xl text-campus-text-primary text-fade-in tracking-wider">分享让知识增值</span>
+          <span className="hidden sm:inline text-campus-text-tertiary text-2xl font-light">·</span>
+          <span className="sm:hidden text-campus-text-tertiary text-lg font-light">·</span>
+          <span className="font-slogan text-2xl sm:text-3xl text-campus-text-primary text-fade-in text-fade-in-delay-1 tracking-wider">讨论让思维升级</span>
+        </div>
+        <p className="mt-4 text-base sm:text-lg text-campus-text-tertiary font-handwrite text-fade-in text-fade-in-delay-2">
+          —— 共同成长 ——
+        </p>
       </div>
 
       {user ? (

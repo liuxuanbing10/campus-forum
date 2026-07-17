@@ -446,8 +446,11 @@
   font-family: var(--font-slogan);
   position: relative;
   padding-right: 4px;
-  animation: slogan-typewriter 2.5s steps(6, end) forwards;
+  animation: slogan-typewriter 2.8s steps(7, end) forwards;
   width: 0;
+}
+.slogan-write-delay {
+  animation-delay: 0.8s;
 }
 /* 光标作为伪元素，独立于文字宽度动画 */
 .slogan-write::after {
