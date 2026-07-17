@@ -25,12 +25,15 @@ jobs:
       - run: npm run build:server
       - run: npm run build:client
 
-      - name: Build APK
-        working-directory: packages/client
+      - name: Fix gradle wrapper
+        working-directory: packages/client/android
         run: |
-          npx cap sync android
-          chmod +x android/gradlew
-          cd android && ./gradlew assembleDebug
+          sed -i 's|distributionUrl=file.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.14.3-all.zip|' gradle/wrapper/gradle-wrapper.properties
+          chmod +x gradlew
+
+      - name: Build APK
+        working-directory: packages/client/android
+        run: ./gradlew assembleDebug
 
       - uses: actions/upload-artifact@v4
         with:
