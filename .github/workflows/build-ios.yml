@@ -1,0 +1,33 @@
+name: Build iOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm install
+      - run: npm run build:server
+      - run: npm run build:client
+
+      - name: Setup Capacitor
+        working-directory: packages/client
+        run: npx cap sync ios
+
+      - name: Build iOS (unsigned)
+        working-directory: packages/client/ios
+        run: |
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -derivedDataPath build -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: campus-forum-ios.zip
+          path: packages/client/ios/build/Build/Products/Release-iphoneos/
