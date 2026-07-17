@@ -605,8 +605,24 @@ function parseBrowser(ua?: string | null): string {
     [/Version\/(\d+).*Safari/, 'Safari $1'],
     [/Safari\/(\d+)/, 'Safari $1'],
   ];
-  for (const [re, name] of patterns) { const m = ua.match(re); if (m) return name; }
+  for (const [re, name] of patterns) { const m = ua.match(re); if (m) return name.replace('$1', m[1]); }
   return '未知浏览器';
+}
+
+function parseDevice(ua?: string | null): string {
+  if (!ua) return '未知设备';
+  if (/iPhone|iPad/.test(ua)) return 'iPhone';
+  if (/Android/.test(ua)) {
+    const m = ua.match(/;\s*([^;)]+)\s*Build/);
+    return m ? m[1].trim() : 'Android';
+  }
+  if (/Macintosh/.test(ua)) return 'Mac';
+  if (/Windows NT 10/.test(ua)) return 'Windows 10';
+  if (/Windows NT 6\.3/.test(ua)) return 'Windows 8.1';
+  if (/Windows NT 6\.1/.test(ua)) return 'Windows 7';
+  if (/Windows/.test(ua)) return 'Windows';
+  if (/Linux/.test(ua)) return 'Linux';
+  return '未知设备';
 }
 
 function DevicesTab() {
@@ -655,8 +671,10 @@ function DevicesTab() {
   const filteredDevices = deviceFilter
     ? devices.filter(d => {
         const f = deviceFilter.toLowerCase();
-        const browser = parseBrowser(d.device_name || d.device_info).toLowerCase();
-        return d.username?.toLowerCase().includes(f) || browser.includes(f);
+        const ua = d.device_name || d.device_info || '';
+        const browser = parseBrowser(ua).toLowerCase();
+        const device = parseDevice(ua).toLowerCase();
+        return d.username?.toLowerCase().includes(f) || browser.includes(f) || device.includes(f);
       })
     : devices;
 
@@ -712,7 +730,7 @@ function DevicesTab() {
           <div className="space-y-2">
             {filteredDevices.map(d => (
               <div key={d.id} className="flex items-center justify-between p-2 rounded-lg bg-surface-hover text-sm font-body">
-                <span className="text-campus-text-primary">{d.username || '未知用户'} 在 {parseBrowser(d.device_name || d.device_info)} 的设备上</span>
+                <span className="text-campus-text-primary">{d.username || '未知用户'} · {parseDevice(d.device_name || d.device_info)} · {parseBrowser(d.device_name || d.device_info)}</span>
                 <span className="text-campus-text-tertiary shrink-0 text-xs">
                   {d.last_login_at ? new Date(d.last_login_at).toLocaleString() : '-'}
                 </span>
