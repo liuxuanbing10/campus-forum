@@ -102,6 +102,22 @@ export async function buildApp(options?: { plugins?: any[] }) {
     }),
   });
 
+  // ── 全局错误处理 ──────────────────────────────
+  app.setErrorHandler(async (error, request, reply) => {
+    const err = error as any;
+    const statusCode = err.statusCode || 500;
+    const message = statusCode === 500 && process.env.NODE_ENV === 'production'
+      ? '服务器内部错误'
+      : err.message || String(error);
+    if (statusCode === 500) {
+      console.error(`[ERROR] ${request.method} ${request.url}:`, error);
+    }
+    return reply.status(statusCode).send({
+      error: statusCode >= 500 ? 'Internal Server Error' : err.code || 'Error',
+      message,
+    });
+  });
+
   // ── POST/PUT/DELETE 写入接口额外限流（路由级）─
   app.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
     if (!['POST', 'PUT', 'DELETE'].includes(request.method)) return;

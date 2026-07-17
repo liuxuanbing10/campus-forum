@@ -168,11 +168,13 @@ export interface AdminUser {
   id: number;
   username: string;
   email: string;
-  display_name: string;
+  display_name: string | null;
   avatar_url: string | null;
-  role: string;
+  is_admin: number;
   is_banned: number;
+  role: string;
   created_at: string;
+  device_code: string | null;
   post_count: number;
   comment_count: number;
 }
@@ -449,4 +451,65 @@ export interface UserDevice {
   is_active: number;
   last_login_at: string;
   created_at: string;
+}
+
+// ── 插件共享类型 ──────────────────────────────
+
+export interface BoardRow {
+  id: number;
+  name: string;
+  description: string;
+  icon: string;
+  sort_order: number;
+  post_count?: number;
+}
+
+export interface PostRow {
+  id: number;
+  title: string;
+  content: string;
+  author_id: number;
+  board_id: number;
+  is_anonymous: number;
+  created_at: string;
+}
+
+export interface UserRow {
+  id: number;
+  username: string;
+  password_hash: string;
+  display_name: string;
+  device_code: string | null;
+  is_admin: number;
+  email: string | null;
+  avatar_url: string | null;
+  role: string;
+  is_banned: number;
+  banned_until: string | null;
+  ban_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommentRow {
+  id: number;
+  content: string;
+  author_id: number;
+  post_id: number;
+  parent_id: number | null;
+}
+
+export interface TeamRow {
+  id: number;
+  name: string;
+  description: string;
+  avatar: string | null;
+  is_public: number;
+  creator_id: number;
+  max_members: number;
+  category_id: number | null;
+  invite_code: string;
+  hide_members: number;
+  member_count?: number;
+  post_count?: number;
 }

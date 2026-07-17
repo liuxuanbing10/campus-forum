@@ -357,6 +357,34 @@ export async function migrateSchema(db: DatabaseAdapter): Promise<void> {
     )`],
     ['add_ban_until_reason', `ALTER TABLE users ADD COLUMN banned_until TEXT`],
     ['add_ban_reason', `ALTER TABLE users ADD COLUMN ban_reason TEXT`],
+    ['add_performance_indexes', `
+      CREATE INDEX IF NOT EXISTS idx_posts_board_id ON posts(board_id);
+      CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);
+      CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_posts_is_pinned ON posts(is_pinned);
+      
+      CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);
+      CREATE INDEX IF NOT EXISTS idx_comments_author_id ON comments(author_id);
+      CREATE INDEX IF NOT EXISTS idx_comments_created_at ON comments(created_at DESC);
+      
+      CREATE INDEX IF NOT EXISTS idx_votes_post_id ON votes(post_id);
+      CREATE INDEX IF NOT EXISTS idx_votes_user_id ON votes(user_id);
+      
+      CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+      CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
+      CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+      
+      CREATE INDEX IF NOT EXISTS idx_team_members_team_id ON team_members(team_id);
+      CREATE INDEX IF NOT EXISTS idx_team_members_user_id ON team_members(user_id);
+      CREATE INDEX IF NOT EXISTS idx_team_members_status ON team_members(status);
+      
+      CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
+      CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id);
+      CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at DESC);
+      
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_admin_id ON audit_logs(admin_id);
+    `],
   ];
 
   for (const [name, sql] of migrations) {

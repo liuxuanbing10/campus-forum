@@ -2,33 +2,38 @@ import { useEffect, lazy, Suspense, useState, useCallback } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuthStore } from './stores/auth';
 import { useThemeStore } from './stores/theme';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Login from './pages/Login';
-import ForgotPassword from './pages/ForgotPassword';
-import MyPosts from './pages/MyPosts';
-import Board from './pages/Board';
-import PostDetail from './pages/PostDetail';
-import NewPost from './pages/NewPost';
-import Teams from './pages/Teams';
-import TeamDetail from './pages/TeamDetail';
-import CreateTeam from './pages/CreateTeam';
-import EditTeam from './pages/EditTeam';
-import MyTeams from './pages/MyTeams';
-import Search from './pages/Search';
-import Favorites from './pages/Favorites';
-import EditPost from './pages/EditPost';
-import Notifications from './pages/Notifications';
-import Admin from './pages/Admin';
-import UserProfile from './pages/UserProfile';
-import Messages from './pages/Messages';
-import OAuthSetup from './pages/OAuthSetup';
-import Ostracism from './pages/Ostracism';
-import Download from './pages/Download';
 import { ToastContainer, ToastProps } from './components/Toast';
 import { wsService } from './lib/websocket';
 
-const Settings = lazy(() => import('./pages/Settings').catch(() => ({ default: () => <div>加载中...</div> })));
+// ── Lazy-loaded pages ────────────────────────────
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const MyPosts = lazy(() => import('./pages/MyPosts'));
+const Board = lazy(() => import('./pages/Board'));
+const PostDetail = lazy(() => import('./pages/PostDetail'));
+const NewPost = lazy(() => import('./pages/NewPost'));
+const Teams = lazy(() => import('./pages/Teams'));
+const TeamDetail = lazy(() => import('./pages/TeamDetail'));
+const CreateTeam = lazy(() => import('./pages/CreateTeam'));
+const EditTeam = lazy(() => import('./pages/EditTeam'));
+const MyTeams = lazy(() => import('./pages/MyTeams'));
+const Search = lazy(() => import('./pages/Search'));
+const Favorites = lazy(() => import('./pages/Favorites'));
+const EditPost = lazy(() => import('./pages/EditPost'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const Admin = lazy(() => import('./pages/Admin'));
+const UserProfile = lazy(() => import('./pages/UserProfile'));
+const Messages = lazy(() => import('./pages/Messages'));
+const OAuthSetup = lazy(() => import('./pages/OAuthSetup'));
+const Ostracism = lazy(() => import('./pages/Ostracism'));
+const Download = lazy(() => import('./pages/Download'));
+const SignatureDemo = lazy(() => import('./pages/SignatureDemo'));
+const Settings = lazy(() => import('./pages/Settings'));
+
+const SuspenseFallback = () => <div className="text-center py-12 text-campus-text-tertiary font-handwrite text-lg">加载中...</div>;
 
 let toastList: ToastProps[] = [];
 const listeners = new Set<() => void>();
@@ -91,37 +96,38 @@ export default function App() {
   }, [forceUpdate]);
 
   return (
-    <>
+    <ErrorBoundary>
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/settings" element={<Suspense fallback={<div>加载中...</div>}><Settings /></Suspense>} />
-          <Route path="/my-posts" element={<MyPosts />} />
-          <Route path="/favorites" element={<Favorites />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/board/:id" element={<Board />} />
-          <Route path="/post/:id" element={<PostDetail />} />
-          <Route path="/user/:id" element={<UserProfile />} />
-          <Route path="/messages" element={<Messages />} />
-          <Route path="/messages/:id" element={<Messages />} />
-          <Route path="/edit-post/:id" element={<EditPost />} />
-          <Route path="/new" element={<NewPost />} />
-          <Route path="/teams" element={<Teams />} />
-          <Route path="/teams/my" element={<MyTeams />} />
-          <Route path="/teams/new" element={<CreateTeam />} />
-          <Route path="/teams/:id" element={<TeamDetail />} />
-          <Route path={"/teams/:id/edit"} element={<EditTeam />} />
-          <Route path="/download" element={<Download />} />
-          <Route path={"*"} element={<Navigate to="/" />} />
+          <Route path="/forgot-password" element={<Suspense fallback={<SuspenseFallback />}><ForgotPassword /></Suspense>} />
+          <Route path="/settings" element={<Suspense fallback={<SuspenseFallback />}><Settings /></Suspense>} />
+          <Route path="/my-posts" element={<Suspense fallback={<SuspenseFallback />}><MyPosts /></Suspense>} />
+          <Route path="/favorites" element={<Suspense fallback={<SuspenseFallback />}><Favorites /></Suspense>} />
+          <Route path="/notifications" element={<Suspense fallback={<SuspenseFallback />}><Notifications /></Suspense>} />
+          <Route path="/search" element={<Suspense fallback={<SuspenseFallback />}><Search /></Suspense>} />
+          <Route path="/admin" element={<Suspense fallback={<SuspenseFallback />}><Admin /></Suspense>} />
+          <Route path="/board/:id" element={<Suspense fallback={<SuspenseFallback />}><Board /></Suspense>} />
+          <Route path="/post/:id" element={<Suspense fallback={<SuspenseFallback />}><PostDetail /></Suspense>} />
+          <Route path="/user/:id" element={<Suspense fallback={<SuspenseFallback />}><UserProfile /></Suspense>} />
+          <Route path="/messages" element={<Suspense fallback={<SuspenseFallback />}><Messages /></Suspense>} />
+          <Route path="/messages/:id" element={<Suspense fallback={<SuspenseFallback />}><Messages /></Suspense>} />
+          <Route path="/edit-post/:id" element={<Suspense fallback={<SuspenseFallback />}><EditPost /></Suspense>} />
+          <Route path="/new" element={<Suspense fallback={<SuspenseFallback />}><NewPost /></Suspense>} />
+          <Route path="/teams" element={<Suspense fallback={<SuspenseFallback />}><Teams /></Suspense>} />
+          <Route path="/teams/my" element={<Suspense fallback={<SuspenseFallback />}><MyTeams /></Suspense>} />
+          <Route path="/teams/new" element={<Suspense fallback={<SuspenseFallback />}><CreateTeam /></Suspense>} />
+          <Route path="/teams/:id" element={<Suspense fallback={<SuspenseFallback />}><TeamDetail /></Suspense>} />
+          <Route path="/teams/:id/edit" element={<Suspense fallback={<SuspenseFallback />}><EditTeam /></Suspense>} />
+          <Route path="/download" element={<Suspense fallback={<SuspenseFallback />}><Download /></Suspense>} />
+          <Route path="/signature-demo" element={<Suspense fallback={<SuspenseFallback />}><SignatureDemo /></Suspense>} />
+          <Route path="*" element={<Navigate to="/" />} />
         </Route>
-        <Route path="/ostracism" element={<Ostracism />} />
-        <Route path={"/oauth/setup"} element={<OAuthSetup />} />
+        <Route path="/ostracism" element={<Suspense fallback={<SuspenseFallback />}><Ostracism /></Suspense>} />
+        <Route path="/oauth/setup" element={<Suspense fallback={<SuspenseFallback />}><OAuthSetup /></Suspense>} />
       </Routes>
       <ToastContainer toasts={toastList} onClose={toastStore.remove} />
-    </>
+    </ErrorBoundary>
   );
 }
