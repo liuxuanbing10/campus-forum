@@ -39,3 +39,4 @@ pnpm-workspace.yaml
 
 .vercel
 .env*
+release/
