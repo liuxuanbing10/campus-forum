@@ -1,9 +1,5 @@
-import { PluginContext, uid, isAdmin } from '@campus-forum/core';
+import { PluginContext, uid, isAdmin, notify } from '@campus-forum/core';
 import { createTeamSchema, updateTeamSchema, announcementSchema, TeamRow, MemberRow, AnnouncementRow, genInviteCode } from './schemas.js';
-
-async function notify(ctx: PluginContext, userId: number, type: string, msg: string, teamId?: number, fromUserId?: number) {
-  try { await (ctx as any).createNotification?.(userId, type, msg, null, null, fromUserId, teamId); } catch {}
-}
 
 export function registerTeamRoutes(ctx: PluginContext) {
   const { app, db } = ctx;

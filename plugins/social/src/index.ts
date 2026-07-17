@@ -1,14 +1,6 @@
-import { Plugin, PluginContext, uid, isAdmin } from '@campus-forum/core';
+import { Plugin, PluginContext, uid, isAdmin, addPoints, logAction } from '@campus-forum/core';
 
 let ctx: PluginContext;
-
-async function log(adminId: number, action: string, targetType?: string, targetId?: number, detail?: string) {
-  try { await ctx.db.run('INSERT INTO audit_logs (admin_id,action,target_type,target_id,detail) VALUES (?,?,?,?,?)', adminId, action, targetType || null, targetId || null, detail || null); } catch {}
-}
-
-async function addPoints(userId: number, delta: number) {
-  await ctx.db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', delta, userId);
-}
 
 export const socialPlugin: Plugin = {
   manifest: { name: 'social', version: '0.1.0', description: '社交功能: 关注/举报/积分/日志', author: 'campus-forum' },
@@ -83,7 +75,7 @@ export const socialPlugin: Plugin = {
       const { action } = req.body as { action: string };
       if (!['resolve','dismiss'].includes(action)) return rep.status(400).send({ error: 'action 需为 resolve 或 dismiss' });
       await db.run('UPDATE reports SET status=?,handled_by=? WHERE id=?', action === 'resolve' ? 'resolved' : 'dismissed', u, id);
-      await log(u, action === 'resolve' ? '举报已处理' : '举报已驳回', 'report', id);
+      await logAction(db, u, action === 'resolve' ? '举报已处理' : '举报已驳回', 'report', id);
       return { success: true };
     });
 

@@ -90,3 +90,55 @@ export function paginate<T>(items: T[], page: number, pageSize: number): { data:
     pageSize,
   };
 }
+
+// ── 公共业务工具函数 ──────────────────────────────
+
+// 积分操作
+export async function addPoints(db: DatabaseAdapter, userId: number, delta: number): Promise<void> {
+  await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', delta, userId);
+}
+
+// 敏感词检查
+export async function checkSensitive(db: DatabaseAdapter, text: string): Promise<string | null> {
+  const rows = await db.all<{ word: string }>('SELECT word FROM sensitive_words');
+  for (const w of rows) {
+    if (text.includes(w.word)) return w.word;
+  }
+  return null;
+}
+
+// 审计日志
+export async function logAction(
+  db: DatabaseAdapter,
+  adminId: number,
+  action: string,
+  targetType?: string,
+  targetId?: number,
+  detail?: string
+): Promise<void> {
+  await db.run(
+    'INSERT INTO audit_logs (admin_id,action,target_type,target_id,detail) VALUES (?,?,?,?,?)',
+    adminId,
+    action,
+    targetType || null,
+    targetId || null,
+    detail || null
+  );
+}
+
+// 通知发送（通过 PluginContext，createNotification 是运行时注入的）
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function notify(
+  ctx: any,
+  userId: number,
+  type: string,
+  message: string,
+  postId?: number,
+  commentId?: number,
+  fromUserId?: number,
+  teamId?: number
+): Promise<void> {
+  if (ctx?.createNotification) {
+    await ctx.createNotification(userId, type, message, postId, commentId, fromUserId, teamId);
+  }
+}

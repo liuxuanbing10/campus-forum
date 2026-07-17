@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, uid, isAdmin, paginate } from '@campus-forum/core';
+import { Plugin, PluginContext, uid, isAdmin, paginate, addPoints, checkSensitive, logAction, notify } from '@campus-forum/core';
 import { z } from 'zod';
 
 // ── 类型定义 ──────────────────────────────────
@@ -49,27 +49,9 @@ const boardSchema = z.object({ name: z.string().min(1, '版块名称不能为空
 const uploadSchema = z.object({ image: z.string().min(1, '请提供图片数据'), filename: z.string().optional() });
 const paginationSchema = z.object({ page: z.coerce.number().int().positive().max(100).optional().default(1), boardId: z.coerce.number().int().positive().optional(), sort: z.enum(['latest', 'hot', 'replied']).optional().default('latest') });
 
-// ── 工具函数 ──────────────────────────────────
-async function addPoints(db: any, userId: number, delta: number) {
-  try { await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', delta, userId); } catch {}
-}
-
-async function checkSensitive(db: any, text: string): Promise<string | null> {
-  const rows = await db.all('SELECT word FROM sensitive_words');
-  for (const w of (rows as { word: string }[])) if (text.includes(w.word)) return w.word;
-  return null;
-}
-
-async function logAction(db: any, adminId: number, action: string, targetType?: string, targetId?: number, detail?: string) {
-  try { await db.run('INSERT INTO audit_logs (admin_id,action,target_type,target_id,detail) VALUES (?,?,?,?,?)', adminId, action, targetType || null, targetId || null, detail || null); } catch {}
-}
-
+// ── 工具函数（使用 core 包的公共函数） ──────────────────
 function parseMentions(text: string): string[] {
   return [...text.matchAll(/@(\w{2,20})/g)].map(m => m[1]);
-}
-
-async function notify(ctx: PluginContext, userId: number, type: string, message: string, postId?: number, commentId?: number, fromUserId?: number) {
-  try { await (ctx as any).createNotification?.(userId, type, message, postId, commentId, fromUserId); } catch {}
 }
 
 // ── SQL 构建 ──────────────────────────────────
