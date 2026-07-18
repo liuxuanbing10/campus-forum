@@ -5,6 +5,9 @@ import { adminApi, adminExtendedApi, adminDeviceApi } from '../lib/api';
 import type { AdminUser, PendingPost, SensitiveWord, AdminReport, AuditLog, AdminStats, DeviceBlacklistEntry, UserDevice } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/dialog';
 
 type AdminTab = 'stats' | 'users' | 'pending' | 'words' | 'reports' | 'logs' | 'devices';
 
@@ -58,7 +61,7 @@ export default function AdminPage() {
 
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button onClick={onClick} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-body transition-colors ${active ? 'bg-primary text-white' : 'bg-surface-hover text-campus-text-secondary hover:bg-border'}`}>
+    <button onClick={onClick} className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-body transition-colors ${active ? 'bg-primary text-white shadow-sm' : 'bg-secondary text-secondary-foreground hover:bg-border'}`}>
       {children}
     </button>
   );
@@ -423,34 +426,33 @@ function UsersTab() {
       {hasMore && <button onClick={() => setPage(p => p + 1)} className="w-full py-3 text-sm text-primary hover:text-primary-hover font-body mt-4">加载更多</button>}
 
       {/* 封禁弹窗 */}
-      {banModal.open && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setBanModal(p => ({ ...p, open: false }))}>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-96 shadow-xl" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold font-display mb-4">封禁设置</h3>
-            <div className="mb-4">
-              <label className="block text-sm font-body text-campus-text-secondary mb-1">封禁时长</label>
-              <div className="grid grid-cols-5 gap-1">
-                {[1, 3, 7, 14, 0].map(d => (
-                  <button key={d} onClick={() => setBanDuration(d)}
-                    className={`py-1.5 rounded-lg text-xs font-body transition-colors ${banDuration === d ? 'bg-primary text-white' : 'bg-surface-hover text-campus-text-secondary hover:bg-primary/10'}`}>
-                    {d === 0 ? '永久' : `${d}天`}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-body text-campus-text-secondary mb-1">封禁原因</label>
-              <textarea value={banReason} onChange={e => setBanReason(e.target.value)} rows={3}
-                placeholder="违反社区规定" className="w-full px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary resize-none" />
-            </div>
-            <p className="text-xs text-campus-text-tertiary mb-4">将封禁 {banModal.userIds.length} 个用户</p>
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setBanModal(p => ({ ...p, open: false }))} className="px-4 py-2 rounded-lg bg-surface-hover text-sm font-body">取消</button>
-              <button onClick={confirmBan} className="px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-body hover:bg-red-600">确认封禁</button>
-            </div>
+      <Dialog open={banModal.open} onOpenChange={(o) => !o && setBanModal(p => ({ ...p, open: false }))}>
+        <DialogHeader>
+          <DialogTitle>封禁设置</DialogTitle>
+          <DialogDescription>配置封禁时长和原因</DialogDescription>
+        </DialogHeader>
+        <div className="mb-4">
+          <label className="block text-sm font-body text-secondary-foreground mb-1">封禁时长</label>
+          <div className="grid grid-cols-5 gap-1">
+            {[1, 3, 7, 14, 0].map(d => (
+              <button key={d} onClick={() => setBanDuration(d)}
+                className={`py-1.5 rounded-lg text-xs font-body transition-colors ${banDuration === d ? 'bg-primary text-white' : 'bg-secondary text-secondary-foreground hover:bg-primary/10'}`}>
+                {d === 0 ? '永久' : `${d}天`}
+              </button>
+            ))}
           </div>
         </div>
-      )}
+        <div className="mb-4">
+          <label className="block text-sm font-body text-secondary-foreground mb-1">封禁原因</label>
+          <textarea value={banReason} onChange={e => setBanReason(e.target.value)} rows={3}
+            placeholder="违反社区规定" className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-sm font-body focus:outline-none focus:border-primary resize-none" />
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">将封禁 {banModal.userIds.length} 个用户</p>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setBanModal(p => ({ ...p, open: false }))}>取消</Button>
+          <Button variant="destructive" onClick={confirmBan}>确认封禁</Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 }

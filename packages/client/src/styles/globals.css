@@ -616,3 +616,103 @@
     transform: translateY(0);
   }
 }
+
+/* ═══════════════════════════════════════════════
+   shadcn/ui CSS 变量层
+   映射到我们已有的主题变量，自动跟随主题切换
+   ═══════════════════════════════════════════════ */
+@layer base {
+  :root,
+  [data-theme="campus"] {
+    --background: var(--color-bg);
+    --foreground: var(--color-text-primary);
+    --card: var(--color-surface);
+    --card-foreground: var(--color-text-primary);
+    --popover: var(--color-surface);
+    --popover-foreground: var(--color-text-primary);
+    --primary: var(--color-primary);
+    --primary-foreground: 255 255 255;
+    --secondary: var(--color-surface-hover);
+    --secondary-foreground: var(--color-text-secondary);
+    --muted: var(--color-bg);
+    --muted-foreground: var(--color-text-tertiary);
+    --accent: var(--color-accent);
+    --accent-foreground: 255 255 255;
+    --destructive: var(--color-destructive);
+    --destructive-foreground: 255 255 255;
+    --border: var(--color-border);
+    --input: var(--color-border);
+    --ring: var(--color-primary);
+    --radius: var(--radius-md);
+    --sidebar-background: var(--color-surface);
+    --sidebar-foreground: var(--color-text-primary);
+    --sidebar-primary: var(--color-primary);
+    --sidebar-primary-foreground: 255 255 255;
+    --sidebar-accent: var(--color-surface-hover);
+    --sidebar-accent-foreground: var(--color-text-primary);
+    --sidebar-border: var(--color-border);
+    --sidebar-ring: var(--color-primary);
+  }
+
+  [data-theme="glass"] {
+    --background: var(--color-bg);
+    --foreground: var(--color-text-primary);
+    --card: var(--color-surface);
+    --card-foreground: var(--color-text-primary);
+    --popover: var(--color-surface);
+    --popover-foreground: var(--color-text-primary);
+    --primary: var(--color-primary);
+    --primary-foreground: 255 255 255;
+    --secondary: var(--color-surface-hover);
+    --secondary-foreground: var(--color-text-secondary);
+    --muted: var(--color-bg);
+    --muted-foreground: var(--color-text-tertiary);
+    --accent: var(--color-accent);
+    --accent-foreground: 255 255 255;
+    --destructive: var(--color-destructive);
+    --destructive-foreground: 255 255 255;
+    --border: var(--color-border);
+    --input: var(--color-border);
+    --ring: var(--color-primary);
+    --radius: var(--radius-md);
+    --sidebar-background: var(--color-surface);
+    --sidebar-foreground: var(--color-text-primary);
+    --sidebar-primary: var(--color-primary);
+    --sidebar-primary-foreground: 255 255 255;
+    --sidebar-accent: var(--color-surface-hover);
+    --sidebar-accent-foreground: var(--color-text-primary);
+    --sidebar-border: var(--color-border);
+    --sidebar-ring: var(--color-primary);
+  }
+
+  [data-theme="dark"] {
+    --background: var(--color-bg);
+    --foreground: var(--color-text-primary);
+    --card: var(--color-surface);
+    --card-foreground: var(--color-text-primary);
+    --popover: var(--color-surface);
+    --popover-foreground: var(--color-text-primary);
+    --primary: var(--color-primary);
+    --primary-foreground: 15 10 31;
+    --secondary: var(--color-surface-hover);
+    --secondary-foreground: var(--color-text-secondary);
+    --muted: var(--color-bg);
+    --muted-foreground: var(--color-text-tertiary);
+    --accent: var(--color-accent);
+    --accent-foreground: 15 10 31;
+    --destructive: var(--color-destructive);
+    --destructive-foreground: 255 255 255;
+    --border: var(--color-border);
+    --input: var(--color-border);
+    --ring: var(--color-primary);
+    --radius: var(--radius-md);
+    --sidebar-background: var(--color-surface);
+    --sidebar-foreground: var(--color-text-primary);
+    --sidebar-primary: var(--color-primary);
+    --sidebar-primary-foreground: 15 10 31;
+    --sidebar-accent: var(--color-surface-hover);
+    --sidebar-accent-foreground: var(--color-text-primary);
+    --sidebar-border: var(--color-border);
+    --sidebar-ring: var(--color-primary);
+  }
+}
