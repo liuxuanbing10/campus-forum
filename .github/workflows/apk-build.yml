@@ -1,0 +1,78 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/client/**'
+      - '.github/workflows/apk-build.yml'
+  workflow_dispatch:  # 手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npx cap sync android
+
+      - name: Build frontend
+        run: |
+          cd packages/client
+          npm run build
+
+      - name: Sync Capacitor
+        run: |
+          cd packages/client
+          npx cap sync android
+
+      - name: Build APK (Debug)
+        run: |
+          cd packages/client/android
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: campus-forum-apk
+          path: packages/client/android/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+
+      - name: Rename APK for deployment
+        run: |
+          cp packages/client/android/app/build/outputs/apk/debug/*.apk \
+             packages/client/android/app/build/outputs/apk/debug/campus-forum-debug.apk
+
+      - name: Deploy APK to server
+        env:
+          SSH_HOST: ${{ secrets.SERVER_HOST }}
+          SSH_USER: ${{ secrets.SERVER_USER }}
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          scp -o StrictHostKeyChecking=no \
+            packages/client/android/app/build/outputs/apk/debug/campus-forum-debug.apk \
+            $SSH_USER@$SSH_HOST:/opt/campus-forum/data/campus-forum-debug.apk
