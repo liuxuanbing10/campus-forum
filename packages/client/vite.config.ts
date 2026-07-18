@@ -87,8 +87,8 @@ export default defineConfig(({ mode }) => ({
     }),
   ],
   build: {
-    target: 'es2018',
-    cssTarget: 'chrome61',
+    target: 'es2015',
+    cssTarget: 'chrome49',
   },
   resolve: {
     alias: {
