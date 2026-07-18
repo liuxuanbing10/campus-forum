@@ -5,17 +5,38 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Capacitor / WebView
+-keep class com.getcapacitor.** { *; }
+-keep class * extends com.getcapacitor.BridgeActivity { *; }
+-keep class * extends com.getcapacitor.Plugin { *; }
+-keepclassmembers class * extends com.getcapacitor.Plugin {
+    @com.getcapacitor.annotation.CapacitorPlugin *;
+    <methods>;
+}
+-keep class * extends com.getcapacitor.Plugin { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Retrofit / OkHttp (if used)
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-dontwarn javax.annotation.**
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Gson / JSON
+-keepattributes Signature
+-keepattributes *Annotation*
+-keep class com.google.gson.** { *; }
+-keepattributes EnclosingMethod
+
+# JavaScript interface for WebView
+-keepclassmembers class fqcn.of.javascript.interface.for.webview {
+   public *;
+}
+
+# Keep JavaScriptInterface annotations
+-keepattributes *Annotation*
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# Keep line number information for debugging
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

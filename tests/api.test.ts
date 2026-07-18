@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { buildApp } from '@campus-forum/server';
 import { authPlugin } from '@campus-forum/plugin-auth';
+import { teamsPlugin } from '@campus-forum/plugin-teams';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -13,7 +14,7 @@ const dbPath = path.join(tmpDir, 'test.db');
 process.env.DATABASE_PATH = dbPath;
 
 beforeAll(async () => {
-  app = await buildApp({ plugins: [authPlugin] });
+  app = await buildApp({ plugins: [authPlugin, teamsPlugin] });
   await app.ready();
 });
 
@@ -189,5 +190,141 @@ describe('user profile', () => {
     const body = res.json();
     expect(body.username).toBe(username);
     expect(body.postCount).toBe(0);
+  });
+});
+
+// ── Teams ───────────────────────────────────────
+describe('teams', () => {
+  const testUser = {
+    username: 'team_' + Date.now(),
+    password: 'pass123456',
+    confirmPassword: 'pass123456',
+    deviceCode: 'dc-teams-' + Date.now(),
+  };
+
+  let token: string;
+  let userId: number;
+  const teamName = '测试团队_' + Date.now();
+
+  it('POST /api/teams requires auth', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/teams',
+      payload: { name: teamName, description: 'test' },
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('creates team after login', async () => {
+    // Register user first
+    const regRes = await app.inject({
+      method: 'POST',
+      url: '/api/auth/register',
+      payload: { ...testUser },
+    });
+    expect(regRes.statusCode).toBe(200);
+    token = regRes.json().token;
+    userId = regRes.json().user.id;
+
+    // Create team with JWT
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/teams',
+      payload: {
+        name: teamName,
+        description: '通过 API 测试创建的团队',
+        isPublic: true,
+        maxMembers: 50,
+      },
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.success).toBe(true);
+    expect(body.team).toBeDefined();
+    expect(body.team.name).toBe(teamName);
+    expect(body.team.creator_id).toBe(userId);
+    expect(body.team.is_public).toBe(1);
+    expect(body.team.invite_code).toBeTruthy();
+  });
+
+  it('rejects duplicate team name', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/teams',
+      payload: { name: teamName, description: 'duplicate' },
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error).toBe('团队名已存在');
+  });
+
+  it('rejects team name shorter than 2 chars', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/teams',
+      payload: { name: 'x', description: 'too short' },
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.statusCode).toBe(500);
+  });
+
+  it('GET /api/teams lists public teams', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/teams',
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(Array.isArray(body.teams)).toBe(true);
+    expect(body.teams.length).toBeGreaterThanOrEqual(1);
+    expect(body.teams.some((t: any) => t.name === teamName)).toBe(true);
+  });
+
+  it('GET /api/teams/my returns created team', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/teams/my',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.owned.length).toBeGreaterThanOrEqual(1);
+    expect(body.owned.some((t: any) => t.name === teamName)).toBe(true);
+  });
+
+  it('GET /api/teams/:id returns team detail', async () => {
+    // Get the team ID from the list
+    const listRes = await app.inject({
+      method: 'GET',
+      url: '/api/teams',
+    });
+    const team = listRes.json().teams.find((t: any) => t.name === teamName);
+    expect(team).toBeDefined();
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/teams/${team.id}`,
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.name).toBe(teamName);
+    expect(body.myRole).toBeNull(); // unauthenticated
+  });
+
+  it('GET /api/teams/:id returns myRole for creator', async () => {
+    const listRes = await app.inject({
+      method: 'GET',
+      url: '/api/teams',
+    });
+    const team = listRes.json().teams.find((t: any) => t.name === teamName);
+
+    const res = await app.inject({
+      method: 'GET',
+      url: `/api/teams/${team.id}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().myRole).toBe('owner');
   });
 });

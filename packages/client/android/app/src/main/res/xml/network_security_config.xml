@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
+    <!-- 允许生产服务器明文 HTTP 访问 -->
     <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">47.121.137.231</domain>
+        <domain includeSubdomains="true">campus-forum.duckdns.org</domain>
         <domain includeSubdomains="true">10.0.2.2</domain>
         <domain includeSubdomains="true">localhost</domain>
-        <domain includeSubdomains="true">192.168.1.0/24</domain>
+        <domain includeSubdomains="true">192.168.0.0/16</domain>
     </domain-config>
+    <!-- 默认阻止其他明文 -->
+    <base-config cleartextTrafficPermitted="false" />
 </network-security-config>
