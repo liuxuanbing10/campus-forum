@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { postsApi } from '../lib/api';
 import { X, Link as LinkIcon, Check, Share2, MessageCircle } from 'lucide-react';
 import { toastStore } from '../App';
+import { Dialog, DialogHeader, DialogTitle, DialogClose } from './ui/dialog';
+import { Button } from './ui/button';
 
 interface Props {
   postId: number;
@@ -21,21 +22,28 @@ export default function ShareModal({ postId, title, onClose }: Props) {
     }).catch(() => toastStore.error('复制失败'));
   };
 
+  const shareToWechat = () => {
+    // 微信分享 - 复制链接引导
+    copyLink();
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-surface rounded-xl shadow-xl w-full max-w-sm mx-4 p-6" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold font-display flex items-center gap-2"><Share2 className="w-5 h-5" /> 分享</h3>
-          <button onClick={onClose} className="p-1 hover:bg-surface-hover rounded-lg"><X className="w-5 h-5" /></button>
-        </div>
-        <p className="text-sm font-medium mb-1 font-display truncate">{title}</p>
-        <p className="text-xs text-campus-text-tertiary mb-4 font-body">{shareUrl}</p>
-        <div className="flex gap-3">
-          <button onClick={copyLink} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors font-body">
-            {copied ? <><Check className="w-4 h-4" /> 已复制</> : <><LinkIcon className="w-4 h-4" /> 复制链接</>}
-          </button>
-        </div>
+    <Dialog open={true} onOpenChange={(o) => !o && onClose()}>
+      <DialogClose onClick={onClose} />
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <Share2 className="w-5 h-5" /> 分享
+        </DialogTitle>
+      </DialogHeader>
+
+      <p className="text-sm font-medium mb-1 font-display truncate">{title}</p>
+      <p className="text-xs text-muted-foreground mb-4 font-body break-all">{shareUrl}</p>
+
+      <div className="flex gap-3">
+        <Button onClick={copyLink} className="flex-1">
+          {copied ? <><Check className="w-4 h-4" /> 已复制</> : <><LinkIcon className="w-4 h-4" /> 复制链接</>}
+        </Button>
       </div>
-    </div>
+    </Dialog>
   );
 }
