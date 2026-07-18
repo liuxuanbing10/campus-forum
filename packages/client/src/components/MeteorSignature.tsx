@@ -1,8 +1,18 @@
 import { useEffect, useRef } from 'react';
 
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface Stroke {
+  points: Point[];
+}
+
 interface MeteorSignatureProps {
   lines: string[];
   className?: string;
+  customStrokes?: Stroke[][][]; // [lineIdx][charIdx][strokeIdx]
 }
 
 interface Particle {
@@ -17,31 +27,35 @@ interface Particle {
   hue: number;
 }
 
-export default function MeteorSignature({ lines, className }: MeteorSignatureProps) {
+export default function MeteorSignature({ lines, className, customStrokes }: MeteorSignatureProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const particlesRef = useRef<Particle[]>([]);
   const animFrameRef = useRef<number>(0);
   const dprRef = useRef(1);
+  const revealCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const stateRef = useRef({
     lineIdx: 0,
     charIdx: 0,
-    charProgress: 0,
+    strokeIdx: 0,
+    strokeProgress: 0,
     phase: 'writing',
     pauseTimer: 0,
     fadeAlpha: 1,
   });
 
-  // 每个字的轮廓数据：每列的中心y坐标（用于笔尖起伏）
   const charContoursRef = useRef<{
-    centerYs: number[]; // 每列的中心y（相对于字的top）
+    centerYs: number[];
     width: number;
     height: number;
-    x: number; // 字的左边界
-    y: number; // 字的中心y
+    x: number;
+    y: number;
   }[][]>([]);
+
+  // 把编辑器的笔画坐标（相对 1:1 画布）映射到实际渲染坐标
+  const mappedStrokesRef = useRef<Stroke[][][] | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -69,7 +83,6 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
       const lineH = h / lineCount;
       const fontSize = Math.min(w * 0.11, 56);
 
-      // 预渲染文字（仅 alpha，用于提取轮廓）
       const alphaCanvas = document.createElement('canvas');
       alphaCanvas.width = w * dpr;
       alphaCanvas.height = h * dpr;
@@ -79,7 +92,6 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
       actx.textBaseline = 'middle';
       actx.font = `bold ${fontSize}px "ZCOOL KuaiLe", "Ma Shan Zheng", "STXingkai", "Xingkai SC", cursive`;
 
-      // 离屏 canvas：带渐变发光的彩色文字
       const offscreen = document.createElement('canvas');
       offscreen.width = w * dpr;
       offscreen.height = h * dpr;
@@ -104,16 +116,13 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
           const cw = m.width;
           const left = xCenter - cw / 2;
 
-          // 渲染到 alpha canvas（纯黑色，只取 alpha）
           actx.fillStyle = '#000';
           actx.fillText(char, xCenter, yCenter);
 
-          // 提取该字的轮廓：每列的中心y
           const colCount = Math.ceil(cw);
           const centerYs: number[] = [];
           const charTop = yCenter - fontSize / 2;
 
-          // 获取该字区域的像素数据
           const imgData = actx.getImageData(
             Math.floor(left * dpr),
             Math.floor(charTop * dpr),
@@ -125,16 +134,13 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
           const pxH = Math.ceil(fontSize * dpr);
 
           for (let cx = 0; cx < colCount; cx++) {
-            // 每列对应的像素范围
             const pxStart = Math.floor(cx / colCount * pxW);
             const pxEnd = Math.min(Math.ceil((cx + 1) / colCount * pxW), pxW);
-
             let topY = Infinity;
             let bottomY = -Infinity;
-
             for (let px = pxStart; px < pxEnd; px++) {
               for (let py = 0; py < pxH; py++) {
-                const idx = (py * pxW + px) * 4 + 3; // alpha
+                const idx = (py * pxW + px) * 4 + 3;
                 if (data[idx] > 128) {
                   const yReal = py / dpr;
                   if (yReal < topY) topY = yReal;
@@ -142,11 +148,10 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
                 }
               }
             }
-
             if (topY !== Infinity && bottomY !== -Infinity) {
-              centerYs.push((topY + bottomY) / 2); // 相对于字顶部
+              centerYs.push((topY + bottomY) / 2);
             } else {
-              centerYs.push(-1); // 该列没有文字
+              centerYs.push(-1);
             }
           }
 
@@ -162,7 +167,7 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
         allContours.push(lineContours);
       });
 
-      // 渲染彩色文字（多层渐变 + 发光）
+      // 渲染彩色文字
       lines.forEach((line, lineIdx) => {
         const chars = [...line];
         const charCount = chars.length;
@@ -172,7 +177,6 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
         chars.forEach((char, charIdx) => {
           const xCenter = charIdx * charW + charW / 2;
 
-          // 底层外发光
           octx.save();
           octx.shadowColor = 'rgba(255, 120, 0, 0.6)';
           octx.shadowBlur = 20;
@@ -181,7 +185,6 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
           octx.fillText(char, xCenter, yCenter);
           octx.restore();
 
-          // 中层渐变主体
           octx.save();
           octx.shadowColor = 'rgba(255, 200, 50, 0.4)';
           octx.shadowBlur = 10;
@@ -194,7 +197,6 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
           octx.fillText(char, xCenter, yCenter);
           octx.restore();
 
-          // 顶层高光
           octx.save();
           octx.globalCompositeOperation = 'source-atop';
           octx.globalAlpha = 0.35;
@@ -209,6 +211,51 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
 
       textCanvasRef.current = offscreen;
       charContoursRef.current = allContours;
+
+      // 初始化揭示用离屏 canvas
+      const revealCanvas = document.createElement('canvas');
+      revealCanvas.width = w * dpr;
+      revealCanvas.height = h * dpr;
+      revealCanvasRef.current = revealCanvas;
+
+      // 映射自定义笔画坐标
+      if (customStrokes && customStrokes.length > 0) {
+        const mapped: Stroke[][][] = [];
+        const editorSize = 400; // 编辑器画布尺寸（假设）
+        lines.forEach((line, lineIdx) => {
+          const chars = [...line];
+          const charCount = chars.length;
+          const charW = w / charCount;
+          const yCenter = lineIdx * lineH + lineH / 2;
+          const lineMapped: Stroke[][] = [];
+
+          chars.forEach((char, charIdx) => {
+            const xCenter = charIdx * charW + charW / 2;
+            const cm = allContours[lineIdx]?.[charIdx];
+            if (!cm) {
+              lineMapped.push([]);
+              return;
+            }
+            const scale = cm.width / editorSize * 1.8; // 缩放因子
+            const offsetX = xCenter - editorSize * scale / 2;
+            const offsetY = yCenter - editorSize * scale / 2;
+
+            const charStrokes = customStrokes[lineIdx]?.[charIdx] || [];
+            const charMapped: Stroke[] = charStrokes.map(stroke => ({
+              points: stroke.points.map(p => ({
+                x: p.x * scale + offsetX,
+                y: p.y * scale + offsetY,
+              })),
+            }));
+            lineMapped.push(charMapped);
+          });
+
+          mapped.push(lineMapped);
+        });
+        mappedStrokesRef.current = mapped;
+      } else {
+        mappedStrokesRef.current = null;
+      }
 
       // ── 粒子生成 ──
       const spawnBurst = (x: number, y: number, count: number, intensity: number) => {
@@ -289,7 +336,6 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
         }
       };
 
-      // 获取笔尖的 y 坐标（沿文字轮廓起伏）
       const getPenY = (contour: typeof charContoursRef.current[0][0], progress: number) => {
         const { centerYs, height, y } = contour;
         const charTop = y - height / 2;
@@ -297,7 +343,6 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
         const clampedIdx = Math.max(0, Math.min(centerYs.length - 1, idx));
         const cy = centerYs[clampedIdx];
         if (cy < 0) {
-          // 该列没有文字，用前后插值
           let prevIdx = clampedIdx - 1;
           while (prevIdx >= 0 && centerYs[prevIdx] < 0) prevIdx--;
           let nextIdx = clampedIdx + 1;
@@ -310,26 +355,110 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
           } else if (nextIdx < centerYs.length) {
             return charTop + centerYs[nextIdx];
           }
-          return y; // fallback
+          return y;
         }
         return charTop + cy;
       };
 
-      // ── 动画主循环 ──
-      const animate = () => {
-        ctx.clearRect(0, 0, w, h);
+      // 沿笔画路径获取点
+      const getPointOnStroke = (stroke: Stroke, progress: number): Point => {
+        const pts = stroke.points;
+        if (pts.length === 0) return { x: 0, y: 0 };
+        if (pts.length === 1) return pts[0];
 
+        let totalLen = 0;
+        const segLens: number[] = [];
+        for (let i = 1; i < pts.length; i++) {
+          const dx = pts[i].x - pts[i - 1].x;
+          const dy = pts[i].y - pts[i - 1].y;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          segLens.push(len);
+          totalLen += len;
+        }
+
+        if (totalLen === 0) return pts[0];
+        const target = progress * totalLen;
+        let acc = 0;
+        for (let i = 0; i < segLens.length; i++) {
+          if (acc + segLens[i] >= target) {
+            const t = (target - acc) / segLens[i];
+            return {
+              x: pts[i].x + (pts[i + 1].x - pts[i].x) * t,
+              y: pts[i].y + (pts[i + 1].y - pts[i].y) * t,
+            };
+          }
+          acc += segLens[i];
+        }
+        return pts[pts.length - 1];
+      };
+
+      // 计算笔画总长度（用于速度控制）
+      const getStrokeLength = (stroke: Stroke): number => {
+        const pts = stroke.points;
+        let total = 0;
+        for (let i = 1; i < pts.length; i++) {
+          const dx = pts[i].x - pts[i - 1].x;
+          const dy = pts[i].y - pts[i - 1].y;
+          total += Math.sqrt(dx * dx + dy * dy);
+        }
+        return total;
+      };
+
+      // 绘制笔尖光球 + 彗星尾
+      const drawPenTip = (x: number, y: number, alpha: number) => {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        const outerG = ctx.createRadialGradient(x, y, 0, x, y, 24);
+        outerG.addColorStop(0, 'rgba(255, 200, 80, 0.5)');
+        outerG.addColorStop(0.6, 'rgba(255, 140, 20, 0.15)');
+        outerG.addColorStop(1, 'rgba(255, 100, 0, 0)');
+        ctx.fillStyle = outerG;
+        ctx.beginPath();
+        ctx.arc(x, y, 24, 0, Math.PI * 2);
+        ctx.fill();
+
+        const midG = ctx.createRadialGradient(x, y, 0, x, y, 14);
+        midG.addColorStop(0, 'rgba(255, 240, 180, 0.9)');
+        midG.addColorStop(0.5, 'rgba(255, 200, 80, 0.5)');
+        midG.addColorStop(1, 'rgba(255, 150, 30, 0)');
+        ctx.fillStyle = midG;
+        ctx.beginPath();
+        ctx.arc(x, y, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        const coreG = ctx.createRadialGradient(x, y, 0, x, y, 6);
+        coreG.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        coreG.addColorStop(0.5, 'rgba(255, 240, 200, 0.8)');
+        coreG.addColorStop(1, 'rgba(255, 200, 100, 0)');
+        ctx.fillStyle = coreG;
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        const tailG = ctx.createLinearGradient(x - 60, y, x + 5, y);
+        tailG.addColorStop(0, 'rgba(255, 120, 20, 0)');
+        tailG.addColorStop(0.4, 'rgba(255, 180, 40, 0.25)');
+        tailG.addColorStop(0.8, 'rgba(255, 220, 100, 0.6)');
+        tailG.addColorStop(1, 'rgba(255, 250, 200, 0.9)');
+        ctx.fillStyle = tailG;
+        ctx.beginPath();
+        ctx.ellipse(x - 27, y, 32, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      };
+
+      // ── 自定义笔画模式：沿路径揭示文字 ──
+      const drawCustomMode = (alpha: number) => {
         const state = stateRef.current;
         const allContours = charContoursRef.current;
         const textCanvas = textCanvasRef.current;
-
-        if (!textCanvas || allContours.length === 0) {
-          animFrameRef.current = requestAnimationFrame(animate);
-          return;
-        }
+        const mapped = mappedStrokesRef.current;
+        if (!textCanvas || !mapped) return;
 
         ctx.save();
-        ctx.globalAlpha = state.fadeAlpha;
+        ctx.globalAlpha = alpha;
 
         // 已完成的整行
         for (let li = 0; li < state.lineIdx; li++) {
@@ -346,7 +475,8 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
 
         // 当前行
         const currentLine = allContours[state.lineIdx];
-        if (currentLine && currentLine.length > 0) {
+        const currentMappedLine = mapped[state.lineIdx];
+        if (currentLine && currentMappedLine) {
           const firstChar = currentLine[0];
           const yCenter = firstChar.y;
 
@@ -355,7 +485,7 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
           ctx.rect(0, yCenter - firstChar.height * 1.2, w, firstChar.height * 2.4);
           ctx.clip();
 
-          // 已完成的字
+          // 已完成的字（全部显示）
           if (state.charIdx > 0) {
             const prevChar = currentLine[state.charIdx - 1];
             ctx.save();
@@ -366,69 +496,98 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
             ctx.restore();
           }
 
-          // 正在写的字
+          // 正在写的字：用笔画作为路径裁剪
           if (state.charIdx < currentLine.length) {
             const cc = currentLine[state.charIdx];
-            const revealW = cc.width * state.charProgress;
+            const charMapped = currentMappedLine[state.charIdx];
+            const revealCanvas = revealCanvasRef.current;
 
-            // 水平揭示文字
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(cc.x - 2, yCenter - cc.height * 1.2, cc.x + revealW + 4, cc.height * 2.4);
-            ctx.clip();
-            ctx.drawImage(textCanvas, 0, 0, textCanvas.width / dpr, textCanvas.height / dpr);
-            ctx.restore();
+            if (charMapped && charMapped.length > 0 && revealCanvas) {
+              const rctx = revealCanvas.getContext('2d')!;
+              rctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+              rctx.clearRect(0, 0, w, h);
 
-            // 笔尖位置（沿轮廓起伏）
-            const penX = cc.x + revealW;
-            const penY = getPenY(cc, state.charProgress);
+              // 计算当前笔画长度
+              let curStrokeLen = 0;
+              if (state.strokeIdx < charMapped.length) {
+                curStrokeLen = getStrokeLength(charMapped[state.strokeIdx]);
+              }
 
-            // 笔尖光球（三层）
-            ctx.save();
-            // 外层
-            const outerG = ctx.createRadialGradient(penX, penY, 0, penX, penY, 24);
-            outerG.addColorStop(0, 'rgba(255, 200, 80, 0.5)');
-            outerG.addColorStop(0.6, 'rgba(255, 140, 20, 0.15)');
-            outerG.addColorStop(1, 'rgba(255, 100, 0, 0)');
-            ctx.fillStyle = outerG;
-            ctx.beginPath();
-            ctx.arc(penX, penY, 24, 0, Math.PI * 2);
-            ctx.fill();
+              // 画笔画粗线
+              rctx.lineCap = 'round';
+              rctx.lineJoin = 'round';
+              rctx.lineWidth = cc.height * 0.5;
+              rctx.strokeStyle = '#fff';
 
-            // 中层
-            const midG = ctx.createRadialGradient(penX, penY, 0, penX, penY, 14);
-            midG.addColorStop(0, 'rgba(255, 240, 180, 0.9)');
-            midG.addColorStop(0.5, 'rgba(255, 200, 80, 0.5)');
-            midG.addColorStop(1, 'rgba(255, 150, 30, 0)');
-            ctx.fillStyle = midG;
-            ctx.beginPath();
-            ctx.arc(penX, penY, 14, 0, Math.PI * 2);
-            ctx.fill();
+              // 已完成的笔画
+              for (let si = 0; si < state.strokeIdx; si++) {
+                const stroke = charMapped[si];
+                if (!stroke || stroke.points.length < 2) continue;
+                rctx.beginPath();
+                rctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+                for (let pi = 1; pi < stroke.points.length; pi++) {
+                  rctx.lineTo(stroke.points[pi].x, stroke.points[pi].y);
+                }
+                rctx.stroke();
+              }
 
-            // 核心
-            const coreG = ctx.createRadialGradient(penX, penY, 0, penX, penY, 6);
-            coreG.addColorStop(0, 'rgba(255, 255, 255, 1)');
-            coreG.addColorStop(0.5, 'rgba(255, 240, 200, 0.8)');
-            coreG.addColorStop(1, 'rgba(255, 200, 100, 0)');
-            ctx.fillStyle = coreG;
-            ctx.beginPath();
-            ctx.arc(penX, penY, 6, 0, Math.PI * 2);
-            ctx.fill();
+              // 当前笔画
+              if (state.strokeIdx < charMapped.length && curStrokeLen > 0) {
+                const curStroke = charMapped[state.strokeIdx];
+                const targetLen = state.strokeProgress * curStrokeLen;
+                let accLen = 0;
+                rctx.beginPath();
+                rctx.moveTo(curStroke.points[0].x, curStroke.points[0].y);
+                let drawn = false;
+                for (let pi = 1; pi < curStroke.points.length; pi++) {
+                  const dx = curStroke.points[pi].x - curStroke.points[pi - 1].x;
+                  const dy = curStroke.points[pi].y - curStroke.points[pi - 1].y;
+                  const segLen = Math.sqrt(dx * dx + dy * dy);
+                  if (accLen + segLen >= targetLen) {
+                    const t = (targetLen - accLen) / segLen;
+                    const x = curStroke.points[pi - 1].x + dx * t;
+                    const y = curStroke.points[pi - 1].y + dy * t;
+                    rctx.lineTo(x, y);
+                    drawn = true;
+                    break;
+                  }
+                  rctx.lineTo(curStroke.points[pi].x, curStroke.points[pi].y);
+                  accLen += segLen;
+                }
+                if (!drawn && curStroke.points.length > 0) {
+                  const last = curStroke.points[curStroke.points.length - 1];
+                  rctx.lineTo(last.x, last.y);
+                }
+                rctx.stroke();
+              }
 
-            // 彗星尾（椭圆形）
-            const tailG = ctx.createLinearGradient(penX - 60, penY, penX + 5, penY);
-            tailG.addColorStop(0, 'rgba(255, 120, 20, 0)');
-            tailG.addColorStop(0.4, 'rgba(255, 180, 40, 0.25)');
-            tailG.addColorStop(0.8, 'rgba(255, 220, 100, 0.6)');
-            tailG.addColorStop(1, 'rgba(255, 250, 200, 0.9)');
-            ctx.fillStyle = tailG;
-            ctx.beginPath();
-            ctx.ellipse(penX - 27, penY, 32, 5, 0, 0, Math.PI * 2);
-            ctx.fill();
+              // 用 source-in 合成文字
+              rctx.globalCompositeOperation = 'source-in';
+              rctx.drawImage(textCanvas, 0, 0, textCanvas.width / dpr, textCanvas.height / dpr);
+              rctx.globalCompositeOperation = 'source-over';
 
-            ctx.restore();
+              ctx.drawImage(revealCanvas, 0, 0, w, h);
+            }
 
-            // 笔尖粒子
+            // 笔尖位置
+            let penX = cc.x;
+            let penY = cc.y;
+            if (charMapped.length > 0 && state.strokeIdx < charMapped.length) {
+              const curStroke = charMapped[state.strokeIdx];
+              if (curStroke && curStroke.points.length > 0) {
+                const pt = getPointOnStroke(curStroke, state.strokeProgress);
+                penX = pt.x;
+                penY = pt.y;
+              }
+            } else if (charMapped.length > 0 && state.strokeIdx > 0) {
+              const lastStroke = charMapped[state.strokeIdx - 1];
+              if (lastStroke && lastStroke.points.length > 0) {
+                penX = lastStroke.points[lastStroke.points.length - 1].x;
+                penY = lastStroke.points[lastStroke.points.length - 1].y;
+              }
+            }
+
+            drawPenTip(penX, penY, 1);
             spawnPenTip(penX, penY);
           }
 
@@ -436,38 +595,174 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
         }
 
         ctx.restore();
+      };
+
+      // ── 默认模式：逐字水平揭示 ──
+      const drawDefaultMode = (alpha: number) => {
+        const state = stateRef.current;
+        const allContours = charContoursRef.current;
+        const textCanvas = textCanvasRef.current;
+        if (!textCanvas || allContours.length === 0) return;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        for (let li = 0; li < state.lineIdx; li++) {
+          const lineContour = allContours[li];
+          if (!lineContour || lineContour.length === 0) continue;
+          const m = lineContour[0];
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(0, m.y - m.height * 1.2, w, m.height * 2.4);
+          ctx.clip();
+          ctx.drawImage(textCanvas, 0, 0, textCanvas.width / dpr, textCanvas.height / dpr);
+          ctx.restore();
+        }
+
+        const currentLine = allContours[state.lineIdx];
+        if (currentLine && currentLine.length > 0) {
+          const firstChar = currentLine[0];
+          const yCenter = firstChar.y;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(0, yCenter - firstChar.height * 1.2, w, firstChar.height * 2.4);
+          ctx.clip();
+
+          if (state.charIdx > 0) {
+            const prevChar = currentLine[state.charIdx - 1];
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, yCenter - firstChar.height * 1.2, prevChar.x + prevChar.width + 4, firstChar.height * 2.4);
+            ctx.clip();
+            ctx.drawImage(textCanvas, 0, 0, textCanvas.width / dpr, textCanvas.height / dpr);
+            ctx.restore();
+          }
+
+          if (state.charIdx < currentLine.length) {
+            const cc = currentLine[state.charIdx];
+            const revealW = cc.width * state.strokeProgress;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(cc.x - 2, yCenter - cc.height * 1.2, cc.x + revealW + 4, cc.height * 2.4);
+            ctx.clip();
+            ctx.drawImage(textCanvas, 0, 0, textCanvas.width / dpr, textCanvas.height / dpr);
+            ctx.restore();
+
+            const penX = cc.x + revealW;
+            const penY = getPenY(cc, state.strokeProgress);
+
+            drawPenTip(penX, penY, 1);
+            spawnPenTip(penX, penY);
+          }
+
+          ctx.restore();
+        }
+
+        ctx.restore();
+      };
+
+      // ── 动画主循环 ──
+      const animate = () => {
+        ctx.clearRect(0, 0, w, h);
+
+        const state = stateRef.current;
+        const allContours = charContoursRef.current;
+        const textCanvas = textCanvasRef.current;
+        const mapped = mappedStrokesRef.current;
+
+        if (!textCanvas || allContours.length === 0) {
+          animFrameRef.current = requestAnimationFrame(animate);
+          return;
+        }
+
+        const useCustom = mapped && mapped.length > 0;
+
+        if (useCustom) {
+          drawCustomMode(state.fadeAlpha);
+        } else {
+          drawDefaultMode(state.fadeAlpha);
+        }
 
         // 更新状态
         if (state.phase === 'writing') {
-          const lineChars = currentLine;
-          if (!lineChars) {
+          const currentLine = allContours[state.lineIdx];
+          const mappedLine = mapped?.[state.lineIdx];
+
+          if (!currentLine) {
             state.phase = 'pausing';
             state.pauseTimer = 0;
-          } else if (state.charIdx < lineChars.length) {
-            // 书写速度：起笔慢、行笔快、收笔稍慢
-            let speed = 0.032;
-            const p = state.charProgress;
-            if (p < 0.15) speed = 0.018 + p * 0.1;
-            else if (p > 0.85) speed = 0.028 - (p - 0.85) * 0.15;
-            else speed = 0.032;
+          } else if (state.charIdx < currentLine.length) {
+            if (useCustom && mappedLine) {
+              // 自定义笔画模式：逐笔书写
+              const charStrokes = mappedLine[state.charIdx];
+              if (!charStrokes || charStrokes.length === 0) {
+                // 没有笔画数据，跳过这个字
+                state.charIdx++;
+                state.strokeIdx = 0;
+                state.strokeProgress = 0;
+              } else if (state.strokeIdx < charStrokes.length) {
+                const stroke = charStrokes[state.strokeIdx];
+                const len = getStrokeLength(stroke);
+                // 速度：像素/帧，保持匀速
+                const speed = Math.min(3.5, Math.max(1.5, len / 40));
+                const progressDelta = speed / Math.max(len, 1);
 
-            state.charProgress += speed;
+                state.strokeProgress += progressDelta;
 
-            if (state.charProgress >= 1) {
-              state.charProgress = 1;
-              const cc = lineChars[state.charIdx];
-              // 字写完爆发
-              const penY = getPenY(cc, 1);
-              spawnBurst(cc.x + cc.width, penY, 16, 1.3);
-              state.charIdx++;
-              state.charProgress = 0;
+                if (state.strokeProgress >= 1) {
+                  state.strokeProgress = 1;
+                  const lastPt = stroke.points[stroke.points.length - 1];
+                  spawnBurst(lastPt.x, lastPt.y, 12, 1);
+                  state.strokeIdx++;
+                  state.strokeProgress = 0;
 
-              if (state.charIdx >= lineChars.length) {
-                state.lineIdx++;
-                state.charIdx = 0;
-                if (state.lineIdx >= allContours.length) {
-                  state.phase = 'pausing';
-                  state.pauseTimer = 0;
+                  if (state.strokeIdx >= charStrokes.length) {
+                    // 字写完了
+                    state.charIdx++;
+                    state.strokeIdx = 0;
+
+                    if (state.charIdx >= currentLine.length) {
+                      state.lineIdx++;
+                      state.charIdx = 0;
+                      if (state.lineIdx >= allContours.length) {
+                        state.phase = 'pausing';
+                        state.pauseTimer = 0;
+                      }
+                    }
+                  }
+                }
+              } else {
+                state.charIdx++;
+                state.strokeIdx = 0;
+                state.strokeProgress = 0;
+              }
+            } else {
+              // 默认模式：逐字水平揭示
+              let speed = 0.032;
+              const p = state.strokeProgress;
+              if (p < 0.15) speed = 0.018 + p * 0.1;
+              else if (p > 0.85) speed = 0.028 - (p - 0.85) * 0.15;
+              else speed = 0.032;
+
+              state.strokeProgress += speed;
+
+              if (state.strokeProgress >= 1) {
+                state.strokeProgress = 1;
+                const cc = currentLine[state.charIdx];
+                const penY = getPenY(cc, 1);
+                spawnBurst(cc.x + cc.width, penY, 16, 1.3);
+                state.charIdx++;
+                state.strokeProgress = 0;
+
+                if (state.charIdx >= currentLine.length) {
+                  state.lineIdx++;
+                  state.charIdx = 0;
+                  if (state.lineIdx >= allContours.length) {
+                    state.phase = 'pausing';
+                    state.pauseTimer = 0;
+                  }
                 }
               }
             }
@@ -483,7 +778,8 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
           if (state.fadeAlpha <= 0) {
             state.lineIdx = 0;
             state.charIdx = 0;
-            state.charProgress = 0;
+            state.strokeIdx = 0;
+            state.strokeProgress = 0;
             state.phase = 'writing';
             state.fadeAlpha = 1;
             state.pauseTimer = 0;
@@ -569,7 +865,7 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
       clearTimeout(initTimer);
       cancelAnimationFrame(animFrameRef.current);
     };
-  }, [lines]);
+  }, [lines, customStrokes]);
 
   return (
     <div
@@ -595,3 +891,5 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
     </div>
   );
 }
+
+export type { Stroke, Point };
