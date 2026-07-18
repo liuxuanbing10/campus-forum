@@ -83,7 +83,7 @@ export default function MeteorSignature({ lines, className }: MeteorSignaturePro
             delayBetweenStrokes: 80,
             showOutline: false,
             showCharacter: false,
-            onCharComplete: () => {},
+            onComplete: () => {},
           });
 
           writersRef.current.push({ writer, element: charDiv });
