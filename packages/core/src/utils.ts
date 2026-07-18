@@ -67,12 +67,16 @@ export function getTokenFromRequest(req: FastifyRequest): string | null {
 }
 
 export function uid(req: FastifyRequest): number | null {
-  const token = getTokenFromRequest(req);
-  if (!token) return null;
-  const payload = verifyJwt(token);
-  if (!payload || typeof payload.userId !== 'number') return null;
-  return payload.userId;
-}
+  const sessionUid = (req as any).session?.userId;
+  export function uid(req: FastifyRequest): number | null {
+    const sessionUid = (req as any).session?.userId;
+    if (typeof sessionUid === 'number') return sessionUid;
+    const token = getTokenFromRequest(req);
+    if (!token) return null;
+    const payload = verifyJwt(token);
+    if (!payload || typeof payload.userId !== 'number') return null;
+    return payload.userId;
+  }
 
 // 检查用户是否是管理员
 export async function isAdmin(db: DatabaseAdapter, userId: number): Promise<boolean> {
