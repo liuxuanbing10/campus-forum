@@ -29,13 +29,10 @@ android {
         }
     }
 
-    // 为不同 CPU 架构分拆 APK（减小体积）
+    // 统一 APK（包含所有 ABI）
     splits {
         abi {
-            enable true
-            reset()
-            include 'arm64-v8a', 'armeabi-v7a', 'x86_64'
-            universalApk false
+            enable false
         }
     }
 
