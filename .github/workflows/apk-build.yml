@@ -33,22 +33,22 @@ jobs:
       - uses: android-actions/setup-android@v3
 
       - name: Install dependencies
-        run: |
-          npm ci
-          npx cap add android || true
-
-      - name: Sync Capacitor
-        run: npx cap sync android
+        run: npm ci
 
       - name: Build frontend
         run: npm run build
+
+      - name: Add & Sync Capacitor
+        run: |
+          npx cap add android --force || true
+          npx cap sync android
 
       - name: Build APK
         run: |
           cd android
           ./gradlew assembleDebug
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: campus-forum-apk
@@ -66,3 +66,4 @@ jobs:
           APK=$(ls packages/client/android/app/build/outputs/apk/debug/*.apk | head -1)
           scp -o StrictHostKeyChecking=no "$APK" \
             $SSH_USER@$SSH_HOST:/opt/campus-forum/data/campus-forum-debug.apk
+          echo "Deployed: $APK"
