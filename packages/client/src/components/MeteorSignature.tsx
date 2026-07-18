@@ -476,7 +476,8 @@ export default function MeteorSignature({ lines, className, customStrokes }: Met
         // 当前行
         const currentLine = allContours[state.lineIdx];
         const currentMappedLine = mapped[state.lineIdx];
-        if (currentLine && currentMappedLine) {
+        const hasCustomStrokes = currentMappedLine && currentMappedLine.some(s => s && s.length > 0);
+        if (currentLine && hasCustomStrokes) {
           const firstChar = currentLine[0];
           const yCenter = firstChar.y;
 
@@ -592,6 +593,38 @@ export default function MeteorSignature({ lines, className, customStrokes }: Met
           }
 
           ctx.restore();
+        } else if (currentLine) {
+          // 没有自定义笔画的行，用默认逐字揭示
+          const firstChar = currentLine[0];
+          const yCenter = firstChar.y;
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(0, yCenter - firstChar.height * 1.2, w, firstChar.height * 2.4);
+          ctx.clip();
+          if (state.charIdx > 0) {
+            const prevChar = currentLine[state.charIdx - 1];
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(0, yCenter - firstChar.height * 1.2, prevChar.x + prevChar.width + 4, firstChar.height * 2.4);
+            ctx.clip();
+            ctx.drawImage(textCanvas, 0, 0, textCanvas.width / dpr, textCanvas.height / dpr);
+            ctx.restore();
+          }
+          if (state.charIdx < currentLine.length) {
+            const cc = currentLine[state.charIdx];
+            const revealW = cc.width * state.strokeProgress;
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(cc.x - 2, yCenter - cc.height * 1.2, cc.x + revealW + 4, cc.height * 2.4);
+            ctx.clip();
+            ctx.drawImage(textCanvas, 0, 0, textCanvas.width / dpr, textCanvas.height / dpr);
+            ctx.restore();
+            const penX = cc.x + revealW;
+            const penY = getPenY(cc, state.strokeProgress);
+            drawPenTip(penX, penY, 1);
+            spawnPenTip(penX, penY);
+          }
+          ctx.restore();
         }
 
         ctx.restore();
@@ -694,15 +727,10 @@ export default function MeteorSignature({ lines, className, customStrokes }: Met
             state.phase = 'pausing';
             state.pauseTimer = 0;
           } else if (state.charIdx < currentLine.length) {
-            if (useCustom && mappedLine) {
+            const charStrokes = useCustom ? mappedLine?.[state.charIdx] : null;
+            if (charStrokes && charStrokes.length > 0) {
               // 自定义笔画模式：逐笔书写
-              const charStrokes = mappedLine[state.charIdx];
-              if (!charStrokes || charStrokes.length === 0) {
-                // 没有笔画数据，跳过这个字
-                state.charIdx++;
-                state.strokeIdx = 0;
-                state.strokeProgress = 0;
-              } else if (state.strokeIdx < charStrokes.length) {
+              if (state.strokeIdx < charStrokes.length) {
                 const stroke = charStrokes[state.strokeIdx];
                 const len = getStrokeLength(stroke);
                 // 速度：像素/帧，保持匀速

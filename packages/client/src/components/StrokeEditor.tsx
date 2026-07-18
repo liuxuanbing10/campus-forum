@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import VideoStrokeExtractor from './VideoStrokeExtractor';
 
 interface Point {
   x: number;
@@ -23,6 +24,7 @@ export default function StrokeEditor({ text, onSave, onClose }: StrokeEditorProp
   const [strokes, setStrokes] = useState<Stroke[][]>([]);
   const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
   const [fontSize, setFontSize] = useState(120);
+  const [showVideo, setShowVideo] = useState(false);
   const lastPointRef = useRef<Point | null>(null);
 
   const chars = [...text];
@@ -204,6 +206,15 @@ export default function StrokeEditor({ text, onSave, onClose }: StrokeEditorProp
     if (charIdx < chars.length - 1) setCharIdx(charIdx + 1);
   };
 
+  const handleVideoExtract = (extracted: Stroke[]) => {
+    setStrokes(prev => {
+      const next = [...prev];
+      next[charIdx] = extracted;
+      return next;
+    });
+    setShowVideo(false);
+  };
+
   const handleSave = () => {
     onSave(strokes);
   };
@@ -295,6 +306,12 @@ export default function StrokeEditor({ text, onSave, onClose }: StrokeEditorProp
 
         <div className="flex flex-wrap gap-2">
           <button
+            onClick={() => setShowVideo(true)}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500"
+          >
+            📹 导入视频
+          </button>
+          <button
             onClick={undoStroke}
             className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-500"
           >
@@ -325,6 +342,13 @@ export default function StrokeEditor({ text, onSave, onClose }: StrokeEditorProp
           提示：用鼠标在字上面描笔画，每描完一笔松开鼠标。描完所有字后点击"保存并使用"。
         </p>
       </div>
+
+      {showVideo && (
+        <VideoStrokeExtractor
+          onExtract={handleVideoExtract}
+          onClose={() => setShowVideo(false)}
+        />
+      )}
     </div>
   );
 }
