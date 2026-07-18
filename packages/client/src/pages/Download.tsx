@@ -8,7 +8,7 @@ export default function Download() {
       icon: <Smartphone className="w-8 h-8" />,
       color: 'from-green-500 to-green-600',
       available: true,
-      downloadUrl: '/downloads/campus-forum.apk',
+      downloadUrl: '/api/download/apk',
       fileName: 'campus-forum.apk',
       version: '1.0.0',
       instructions: '下载 APK → 允许安装未知来源 → 安装',
