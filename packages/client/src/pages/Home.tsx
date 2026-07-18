@@ -6,6 +6,7 @@ import { Pin, MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Hear
 import { THEMES, useThemeStore } from '../stores/theme';
 import MetaManager from '../components/MetaManager';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import MeteorSignature from '../components/MeteorSignature';
 
 interface Board {
   id: number;
@@ -50,7 +51,6 @@ export default function HomePage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [canScroll, setCanScroll] = useState(false);
-  const [sloganDone, setSloganDone] = useState(false);
 
   // ── 最新帖子无限滚动状态 ──
   const [posts, setPosts] = useState<Post[]>([]);
@@ -65,12 +65,6 @@ export default function HomePage() {
       .then((res) => setBoards(res.data))
       .catch(() => {})
       .finally(() => setBoardsLoading(false));
-  }, []);
-
-  // 标语手写动画完成后隐藏光标
-  useEffect(() => {
-    const timer = setTimeout(() => setSloganDone(true), 2800);
-    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -245,15 +239,11 @@ export default function HomePage() {
           <div className="ink-blob ink-blob-3" />
           <div className="ink-blob ink-blob-4" />
         </div>
-        {/* 标语：对联式手写动画 */}
-        <h1 className="relative z-10 font-slogan text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-campus-text-primary leading-tight">
-          <span className={`block slogan-write ${sloganDone ? 'slogan-write-done' : ''}`}>
-            指尖流淌星辰海
-          </span>
-          <span className={`block slogan-write slogan-write-delay ${sloganDone ? 'slogan-write-done' : ''} mt-1`}>
-            笔端绽放百花开
-          </span>
-        </h1>
+        {/* 标语：流星手写签名动画 */}
+        <MeteorSignature
+          lines={['指尖流淌星辰海', '笔端绽放百花开']}
+          className="relative z-10 w-full max-w-lg mx-auto"
+        />
         {/* 横批：手写字体 + 延迟渐入 */}
         <p className="relative z-10 text-lg sm:text-xl text-campus-text-secondary font-handwrite max-w-2xl mx-auto mt-4 sm:mt-6 text-fade-in text-fade-in-delay-1">
           —— 文采飞扬 ——
