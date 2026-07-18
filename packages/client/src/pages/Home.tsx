@@ -6,8 +6,7 @@ import { Pin, MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Hear
 import { THEMES, useThemeStore } from '../stores/theme';
 import MetaManager from '../components/MetaManager';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
-import MeteorSignature, { Stroke } from '../components/MeteorSignature';
-import StrokeEditor from '../components/StrokeEditor';
+import MeteorSignature from '../components/MeteorSignature';
 
 interface Board {
   id: number;
@@ -52,29 +51,8 @@ export default function HomePage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [canScroll, setCanScroll] = useState(false);
-  const [showEditor, setShowEditor] = useState(false);
-  const [customStrokes, setCustomStrokes] = useState<Stroke[][][] | null>(null);
 
   const sloganLines = ['指尖流淌星辰海', '笔端绽放百花开'];
-
-  useEffect(() => {
-    const saved = localStorage.getItem('signature-strokes');
-    if (saved) {
-      try {
-        setCustomStrokes(JSON.parse(saved));
-      } catch (e) {}
-    }
-  }, []);
-
-  const handleSaveStrokes = (strokes: Stroke[][]) => {
-    // strokes 是单行吗？编辑器目前只支持一行？不对，编辑器 text 是一个字符串
-    // 我们的标语是两行，所以编辑器需要改一下
-    // 先简单点：只支持第一行
-    const fullStrokes: Stroke[][][] = [strokes, []];
-    setCustomStrokes(fullStrokes);
-    localStorage.setItem('signature-strokes', JSON.stringify(fullStrokes));
-    setShowEditor(false);
-  };
 
   // ── 最新帖子无限滚动状态 ──
   const [posts, setPosts] = useState<Post[]>([]);
@@ -266,23 +244,8 @@ export default function HomePage() {
         {/* 标语：流星手写签名动画 */}
         <MeteorSignature
           lines={sloganLines}
-          customStrokes={customStrokes || undefined}
           className="relative z-10 w-full max-w-lg mx-auto"
         />
-        {/* 编辑笔画按钮 */}
-        <button
-          onClick={() => setShowEditor(true)}
-          className="relative z-10 mt-2 px-3 py-1 text-xs text-amber-500/70 hover:text-amber-400 transition-colors"
-        >
-          ✎ 自定义笔画
-        </button>
-        {showEditor && (
-          <StrokeEditor
-            text={sloganLines[0]}
-            onSave={handleSaveStrokes}
-            onClose={() => setShowEditor(false)}
-          />
-        )}
         {/* 横批：手写字体 + 延迟渐入 */}
         <p className="relative z-10 text-lg sm:text-xl text-campus-text-secondary font-handwrite max-w-2xl mx-auto mt-4 sm:mt-6 text-fade-in text-fade-in-delay-1">
           —— 文采飞扬 ——
