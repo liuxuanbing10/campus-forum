@@ -87,8 +87,8 @@ export default defineConfig(({ mode }) => ({
     }),
   ],
   build: {
-    target: 'es2018', // ponytail: 转译 ?. 和 ?? 兼容微信/QQ/UC 内置浏览器
-    cssTarget: 'chrome61', // CSS 兼容目标
+    target: 'es2018',
+    cssTarget: 'chrome61',
   },
   resolve: {
     alias: {
