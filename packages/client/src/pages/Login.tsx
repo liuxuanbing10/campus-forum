@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/auth';
 import { toastStore } from '../App';
 import { Eye, EyeOff, User } from 'lucide-react';
 import api from '../lib/api';
+import { Button } from '../components/ui/button';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -112,13 +113,14 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="btn-primary font-body"
+            size="lg"
+            className="w-full font-body"
           >
             {loading ? '登录中...' : '登录'}
-          </button>
+          </Button>
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>

@@ -3,8 +3,10 @@ import { useAuthStore } from '../stores/auth';
 import NotificationBell from './NotificationBell';
 import ThemeSwitcher from './ThemeSwitcher';
 import BottomNav from './BottomNav';
-import { Home, Users, Heart, Search, Shield, MessageCircle, Bell, X, Menu, Download, Plus, User } from 'lucide-react';
+import { Home, Users, Heart, Search, Shield, MessageCircle, Bell, X, Menu, Download, Plus, User, LogOut, Settings, FileText, ChevronDown } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { Button } from './ui/button';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from './ui/dropdown-menu';
 
 // ponytail: inline PWA install — no separate hook/component for one event listener + one button
 
@@ -67,13 +69,17 @@ export default function Layout() {
             <Link to="/" className="text-lg font-bold text-primary hover:text-primary-hover font-display whitespace-nowrap">
               校园论坛
             </Link>
-            <Link
-              to="/"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-full text-sm font-medium font-body transition-all duration-200 hover:-translate-y-0.5"
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="flex items-center gap-1.5 rounded-full"
             >
-              <Home className="w-4 h-4" />
-              <span className="hidden sm:inline">返回首页</span>
-            </Link>
+              <Link to="/">
+                <Home className="w-4 h-4" />
+                <span className="hidden sm:inline">返回首页</span>
+              </Link>
+            </Button>
           </div>
 
           <form onSubmit={handleSearch} className="flex-1 max-w-xs hidden sm:block">
@@ -117,28 +123,35 @@ export default function Layout() {
                 <Link to="/teams" className="hidden sm:flex items-center gap-1 p-2 hover:bg-background rounded-lg transition-colors">
                   <Users className="w-5 h-5 text-campus-text-secondary" />
                 </Link>
-                <div className="hidden sm:block relative group">
-                  <Link to="/my-posts" className="text-sm text-campus-text-secondary hover:text-primary transition-colors font-body">
-                    我的帖子
-                  </Link>
+                <div className="hidden sm:flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-primary font-body">
+                      {user.displayName}
+                      <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground border-b border-border mb-1">@{user.displayName}</div>
+                      <DropdownMenuItem onClick={() => navigate('/my-posts')}>
+                        <FileText className="w-4 h-4" /> 我的帖子
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/favorites')}>
+                        <Heart className="w-4 h-4" /> 我的收藏
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/settings')}>
+                        <Settings className="w-4 h-4" /> 设置
+                      </DropdownMenuItem>
+                      {user.role === 'admin' && (
+                        <DropdownMenuItem onClick={() => navigate('/admin')}>
+                          <Shield className="w-4 h-4" /> 管理后台
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+                        <LogOut className="w-4 h-4" /> 退出登录
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                {user.role === 'admin' && (
-                  <Link to="/admin" className="hidden sm:flex items-center gap-1 p-2 hover:bg-background rounded-lg transition-colors">
-                    <Shield className="w-5 h-5 text-campus-text-secondary" />
-                  </Link>
-                )}
-                <Link to="/settings" className="hidden sm:block text-sm text-campus-text-secondary hover:text-primary transition-colors font-body">
-                  设置
-                </Link>
-                <span className="hidden md:inline text-sm text-campus-text-primary font-body">
-                  {user.displayName}
-                </span>
-                <button
-                  onClick={handleLogout}
-                  className="text-sm text-campus-text-secondary hover:text-destructive transition-colors font-body"
-                >
-                  退出
-                </button>
               </>
             ) : (
               <>
