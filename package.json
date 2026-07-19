@@ -20,7 +20,7 @@
     "start:server": "node packages/server/dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint .",
     "format": "prettier --write \"packages/**/*.{ts,tsx}\""
   },
   "devDependencies": {
