@@ -21,7 +21,7 @@ jobs:
 
       - name: Package dist
         run: |
-          tar -czf /tmp/deploy.tar.gz \
+          tar -czf deploy.tar.gz \
             packages/client/dist \
             packages/server/dist \
             packages/core/dist \
@@ -45,8 +45,8 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "/tmp/deploy.tar.gz"
-          target: /tmp/
+          source: "deploy.tar.gz"
+          target: /opt/campus-forum/
           strip_components: 0
 
       - name: Restart service
@@ -57,5 +57,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /opt/campus-forum
-            tar -xzf /tmp/deploy.tar.gz
+            tar -xzf deploy.tar.gz
+            rm -f deploy.tar.gz
             npx pm2 restart campus-forum || npx pm2 start packages/server/dist/index.js --name campus-forum
