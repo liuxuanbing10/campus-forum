@@ -1,5 +1,6 @@
 import { PluginContext, uid, isAdmin, notify } from '@campus-forum/core';
 import { createTeamSchema, updateTeamSchema, announcementSchema, TeamRow, MemberRow, AnnouncementRow, genInviteCode } from './schemas.js';
+import { generateOssKey, getUploadUrl, getDownloadUrl, deleteObject } from './oss.js';
 
 export function registerTeamRoutes(ctx: PluginContext) {
   const { app, db } = ctx;
@@ -466,6 +467,28 @@ export function registerTeamRoutes(ctx: PluginContext) {
   });
 
   // ══════════════════════════════════════════
+  // OSS 签名 URL（前端直传用）
+  // ══════════════════════════════════════════
+
+  app.post('/api/oss/upload-url', async (req, rep) => {
+    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    const { teamId, name } = req.body as { teamId?: number; name?: string };
+    if (!teamId || !name) return rep.status(400).send({ error: '参数不足' });
+    const role = await memberRole(teamId, userId);
+    if (!role) return rep.status(403).send({ error: '仅成员可上传' });
+    const ossKey = generateOssKey(teamId, name);
+    const uploadUrl = getUploadUrl(ossKey);
+    return { uploadUrl, ossKey };
+  });
+
+  app.get('/api/oss/sign-url', async (req, rep) => {
+    const key = (req.query as any).key as string;
+    if (!key) return rep.status(400).send({ error: '缺少 key' });
+    const downloadUrl = getDownloadUrl(key);
+    return { downloadUrl };
+  });
+
+  // ══════════════════════════════════════════
   // 团队文件
   // ══════════════════════════════════════════
 
@@ -477,7 +500,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const role = u ? await memberRole(id, u) : null;
     if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
     const files = await db.all<any>(`
-      SELECT f.id, f.team_id, f.author_id, f.name, f.original_name, f.mime_type, f.size, f.created_at,
+      SELECT f.id, f.team_id, f.author_id, f.name, f.original_name, f.mime_type, f.size, f.created_at, f.storage, f.oss_key,
         u.username, u.display_name
       FROM team_files f JOIN users u ON f.author_id=u.id
       WHERE f.team_id=? ORDER BY f.created_at DESC
@@ -490,17 +513,37 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const id = Number((req.params as { id: string }).id);
     const role = await memberRole(id, userId);
     if (!role) return rep.status(403).send({ error: '仅成员可上传文件' });
-    const { name, mimeType, data } = req.body as { name?: string; mimeType?: string; data?: string };
+    const { name, mimeType, size, ossKey } = req.body as { name?: string; mimeType?: string; size?: number; ossKey?: string; data?: string };
     if (!name?.trim()) return rep.status(400).send({ error: '文件名不能为空' });
-    if (!data) return rep.status(400).send({ error: '文件数据不能为空' });
-    const rawSize = Math.round((data.length * 3) / 4); // approximate base64 decoded size
-    if (rawSize > 50 * 1024 * 1024) return rep.status(400).send({ error: '文件不能超过 50MB' });
+
+    let storage = 'oss';
+    let finalData: string | null = null;
+    let finalOssKey: string | null = ossKey || null;
+    let finalSize = size || 0;
+
+    if (ossKey) {
+      // OSS 直传模式：只存元数据
+      storage = 'oss';
+      finalOssKey = ossKey;
+    } else {
+      const body = req.body as any;
+      if (body.data) {
+        // 兼容旧模式：base64 存数据库
+        storage = 'db';
+        finalData = body.data;
+        finalSize = Math.round((finalData!.length * 3) / 4);
+        if (finalSize > 50 * 1024 * 1024) return rep.status(400).send({ error: '文件不能超过 50MB' });
+      } else {
+        return rep.status(400).send({ error: '请提供文件数据或 OSS key' });
+      }
+    }
+
     const result = await db.run(
-      'INSERT INTO team_files (team_id, author_id, name, original_name, mime_type, size, data) VALUES (?,?,?,?,?,?,?)',
-      id, userId, name.trim(), name.trim(), mimeType || 'application/octet-stream', rawSize, data
+      'INSERT INTO team_files (team_id, author_id, name, original_name, mime_type, size, data, storage, oss_key) VALUES (?,?,?,?,?,?,?,?,?)',
+      id, userId, name.trim(), name.trim(), mimeType || 'application/octet-stream', String(finalSize), finalData, storage, finalOssKey
     );
     const file = await db.get<any>(`
-      SELECT f.id, f.team_id, f.author_id, f.name, f.original_name, f.mime_type, f.size, f.created_at,
+      SELECT f.id, f.team_id, f.author_id, f.name, f.original_name, f.mime_type, f.size, f.created_at, f.storage, f.oss_key,
         u.username, u.display_name
       FROM team_files f JOIN users u ON f.author_id=u.id WHERE f.id=?
     `, result.lastInsertRowid);
@@ -511,9 +554,12 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
     const id = Number((req.params as { id: string }).id);
     const fileId = Number((req.params as { fileId: string }).fileId);
-    const file = await db.get<{ author_id: number }>('SELECT author_id FROM team_files WHERE id=? AND team_id=?', fileId, id);
+    const file = await db.get<{ author_id: number; storage?: string; oss_key?: string }>('SELECT author_id, storage, oss_key FROM team_files WHERE id=? AND team_id=?', fileId, id);
     if (!file) return rep.status(404).send({ error: '文件不存在' });
     if (file.author_id !== userId && !(await isTeamAdmin(id, userId))) return rep.status(403).send({ error: '无权删除' });
+    if (file.storage === 'oss' && file.oss_key) {
+      try { await deleteObject(file.oss_key); } catch { /* ignore OSS errors */ }
+    }
     await db.run('DELETE FROM team_files WHERE id=?', fileId);
     return { success: true, message: '已删除' };
   });
@@ -528,6 +574,14 @@ export function registerTeamRoutes(ctx: PluginContext) {
     if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
     const file = await db.get<any>('SELECT * FROM team_files WHERE id=? AND team_id=?', fileId, id);
     if (!file) return rep.status(404).send({ error: '文件不存在' });
+
+    if (file.storage === 'oss' && file.oss_key) {
+      // OSS 文件：跳转到签名 URL
+      const url = getDownloadUrl(file.oss_key, 3600);
+      return rep.redirect(url);
+    }
+
+    // 旧模式：base64 走服务器
     const buf = Buffer.from(file.data, 'base64');
     rep.header('Content-Type', file.mime_type);
     rep.header('Content-Disposition', `attachment; filename="${encodeURIComponent(file.original_name)}"`);

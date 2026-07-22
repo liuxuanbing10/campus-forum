@@ -170,7 +170,9 @@ export async function initializeSchema(db: DatabaseAdapter): Promise<void> {
       original_name TEXT NOT NULL,
       mime_type TEXT NOT NULL,
       size INTEGER NOT NULL,
-      data TEXT NOT NULL,
+      data TEXT,
+      storage TEXT DEFAULT 'db',
+      oss_key TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -405,6 +407,10 @@ export async function migrateSchema(db: DatabaseAdapter): Promise<void> {
       data TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now'))
     )`],
+    ['add_oss_file_storage', `
+      ALTER TABLE team_files ADD COLUMN storage TEXT DEFAULT 'db';
+      ALTER TABLE team_files ADD COLUMN oss_key TEXT;
+    `],
     ['add_performance_indexes', `
       CREATE INDEX IF NOT EXISTS idx_posts_board_id ON posts(board_id);
       CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);

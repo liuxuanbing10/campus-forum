@@ -137,9 +137,13 @@ export const teamsApi = {
 
   // ── 团队文件 ──────────────────────────
   getTeamFiles: (id: number) => api.get<{ files: TeamFile[] }>(`/teams/${id}/files`),
-  uploadTeamFile: (id: number, data: { name: string; mimeType: string; data: string }) => api.post<{ success: boolean; file: TeamFile }>(`/teams/${id}/files`, data),
+  uploadTeamFile: (id: number, data: { name: string; mimeType: string; data?: string; ossKey?: string; size?: number }) => api.post<{ success: boolean; file: TeamFile }>(`/teams/${id}/files`, data),
   deleteTeamFile: (teamId: number, fileId: number) => api.delete<{ success: boolean; message: string }>(`/teams/${teamId}/files/${fileId}`),
   getTeamFileDownloadUrl: (teamId: number, fileId: number) => `/api/teams/${teamId}/files/${fileId}/download`,
+
+  // ── OSS 直传 ──────────────────────────
+  getOssUploadUrl: (teamId: number, name: string) => api.post<{ uploadUrl: string; ossKey: string }>('/oss/upload-url', { teamId, name }),
+  getOssSignUrl: (key: string) => api.get<{ downloadUrl: string }>('/oss/sign-url', { params: { key } }),
 };
 
 export default api;

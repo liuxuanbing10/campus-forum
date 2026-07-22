@@ -272,24 +272,32 @@ export default function TeamDetail() {
     if (file.size > 50 * 1024 * 1024) { toastStore.warning('文件不能超过 50MB'); return; }
     setFileUploading(true);
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = (reader.result as string).split(',')[1] || reader.result as string;
-        try {
-          await teamsApi.uploadTeamFile(teamId, {
-            name: file.name,
-            mimeType: file.type || 'application/octet-stream',
-            data: base64,
-          });
-          toastStore.success('上传成功');
-          setShowFileUploadModal(false);
-          loadData();
-        } catch (err: any) {
-          toastStore.error(err.response?.data?.error || '上传失败');
-        } finally { setFileUploading(false); }
-      };
-      reader.readAsDataURL(file);
-    } catch { setFileUploading(false); toastStore.error('文件读取失败'); }
+      // Step 1: 获取 OSS 签名上传 URL
+      const urlRes = await teamsApi.getOssUploadUrl(teamId, file.name);
+      const { uploadUrl, ossKey } = urlRes.data;
+
+      // Step 2: 直传到 OSS
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        body: file,
+      });
+      if (!uploadRes.ok) throw new Error('上传到 OSS 失败');
+
+      // Step 3: 保存元数据
+      await teamsApi.uploadTeamFile(teamId, {
+        name: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        data: '', // 不需要 base64
+        ossKey,
+        size: file.size,
+      } as any);
+      toastStore.success('上传成功');
+      setShowFileUploadModal(false);
+      loadData();
+    } catch (err: any) {
+      toastStore.error(err.response?.data?.error || err.message || '上传失败');
+    } finally { setFileUploading(false); }
   };
 
   const handleDeleteFile = async (fileId: number) => {
