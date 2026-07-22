@@ -1,3 +1,5 @@
+import { getToken } from './api';
+
 interface WsEventMap {
   connected: (data: { userId: number }) => void;
   new_message: (data: { conversationId: number; senderId: number; senderName: string; content: string }) => void;
@@ -18,7 +20,9 @@ class WebSocketService {
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/ws`;
+    const token = getToken();
+    const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+    const wsUrl = `${protocol}//${host}/ws${tokenParam}`;
 
     this.socket = new WebSocket(wsUrl);
 

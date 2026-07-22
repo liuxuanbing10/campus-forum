@@ -58,7 +58,7 @@ export class WsManager {
         }
       });
 
-      ws.send(JSON.stringify({ type: 'connected', userId }));
+      ws.send(JSON.stringify({ event: 'connected', data: { userId } }));
     });
 
     // 心跳：每 30 秒检测一次
@@ -82,11 +82,11 @@ export class WsManager {
   }
 
   /** 发送消息给指定用户 */
-  sendToUser(userId: number, type: string, data: Record<string, unknown>): void {
+  sendToUser(userId: number, event: string, data: Record<string, unknown>): void {
     const set = this.connections.get(userId);
     if (!set || set.size === 0) return;
 
-    const message = JSON.stringify({ type, ...data });
+    const message = JSON.stringify({ event, data });
     for (const ws of set) {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(message);
