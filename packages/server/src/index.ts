@@ -27,7 +27,7 @@ const PUBLIC_ASSET_PATHS = ['/uploads/', '/health'];
 export async function buildApp(options?: { plugins?: any[] }) {
   const app = Fastify({
     logger: true,
-    bodyLimit: 1024 * 1024, // 请求体最大 1MB
+    bodyLimit: 50 * 1024 * 1024, // 请求体最大 50MB（团队文件上传需要）
     maxParamLength: 200,    // URL 参数最大长度
   });
   const port = Number(process.env.PORT) || 3001;
