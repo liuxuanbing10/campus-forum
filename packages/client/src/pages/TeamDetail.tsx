@@ -28,6 +28,8 @@ export default function TeamDetail() {
   const [applications, setApplications] = useState<TeamMember[]>([]);
   const [announcements, setAnnouncements] = useState<TeamAnnouncement[]>([]);
   const [posts, setPosts] = useState<TeamContentPost[]>([]);
+  const [postSearch, setPostSearch] = useState('');
+  const [postSort, setPostSort] = useState<'newest' | 'oldest'>('newest');
   const [files, setFiles] = useState<TeamFile[]>([]);
   const [membersHidden, setMembersHidden] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -582,6 +584,28 @@ export default function TeamDetail() {
 
       {tab === 'posts' && (
         <div className="space-y-3">
+          {/* Search + sort */}
+          <div className="flex items-center justify-between gap-4 mb-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-campus-text-tertiary">{posts.length} 篇帖子</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={postSearch}
+                onChange={e => setPostSearch(e.target.value)}
+                placeholder="搜索帖子..."
+                className="px-3 py-1.5 bg-surface border border-border rounded-lg text-sm text-campus-text-primary placeholder-campus-text-tertiary focus:outline-none focus:border-primary/50 w-36"
+              />
+              <button
+                onClick={() => setPostSort(postSort === 'newest' ? 'oldest' : 'newest')}
+                className="px-3 py-1.5 bg-surface border border-border rounded-lg text-sm text-campus-text-secondary hover:border-primary/30 transition-colors whitespace-nowrap"
+              >
+                {postSort === 'newest' ? '最新' : '最早'}
+              </button>
+            </div>
+          </div>
+
           {/* 发帖按钮 */}
           {isMember && (
             <button
@@ -600,7 +624,16 @@ export default function TeamDetail() {
               {!isMember && <p className="text-xs text-campus-text-tertiary mt-2">加入团队后可发帖</p>}
             </div>
           ) : (
-            posts.map(post => (
+            (() => {
+              const filtered = posts.filter(p =>
+                !postSearch || p.title.toLowerCase().includes(postSearch.toLowerCase())
+              );
+              const sorted = [...filtered].sort((a, b) =>
+                postSort === 'newest'
+                  ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                  : new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+              );
+              return sorted.map(post => (
               <div
                 key={post.id}
                 onClick={() => navigate(`/teams/${teamId}/post/${post.id}`)}
@@ -626,11 +659,11 @@ export default function TeamDetail() {
                 <p className="text-sm text-campus-text-secondary line-clamp-2 mb-2">{post.content}</p>
                 <div className="flex items-center gap-3 text-xs text-campus-text-tertiary">
                   <span>{post.display_name || post.username}</span>
-                  <span>{new Date(post.created_at).toLocaleDateString('zh-CN')}</span>
+                <span>{new Date(post.created_at).toLocaleDateString('zh-CN')}</span>
                 </div>
               </div>
-            ))
-          )}
+            )))
+          })()}
         </div>
       )}
 

@@ -467,6 +467,58 @@ export function registerTeamRoutes(ctx: PluginContext) {
   });
 
   // ══════════════════════════════════════════
+  // 团队内容评论
+  // ══════════════════════════════════════════
+
+  app.get('/api/teams/:id/content-posts/:postId/comments', async (req, rep) => {
+    const id = Number((req.params as { id: string }).id);
+    const postId = Number((req.params as { postId: string }).postId);
+    const team = await db.get<TeamRow>('SELECT id, is_public FROM teams WHERE id=?', id);
+    if (!team) return rep.status(404).send({ error: '团队不存在' });
+    const u = uid(req);
+    const role = u ? await memberRole(id, u) : null;
+    if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
+    const comments = await db.all<any>(`
+      SELECT c.id, c.post_id, c.author_id, c.content, c.created_at,
+        u.username, u.display_name, u.avatar_url
+      FROM team_content_comments c JOIN users u ON c.author_id=u.id
+      WHERE c.post_id=? ORDER BY c.created_at ASC
+    `, postId);
+    return { comments };
+  });
+
+  app.post('/api/teams/:id/content-posts/:postId/comments', async (req, rep) => {
+    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    const id = Number((req.params as { id: string }).id);
+    const postId = Number((req.params as { postId: string }).postId);
+    const role = await memberRole(id, userId);
+    if (!role) return rep.status(403).send({ error: '仅成员可评论' });
+    const { content } = req.body as { content?: string };
+    if (!content?.trim()) return rep.status(400).send({ error: '内容不能为空' });
+    const result = await db.run(
+      'INSERT INTO team_content_comments (post_id, author_id, content) VALUES (?,?,?)',
+      postId, userId, content.trim()
+    );
+    const comment = await db.get<any>(`
+      SELECT c.id, c.post_id, c.author_id, c.content, c.created_at,
+        u.username, u.display_name, u.avatar_url
+      FROM team_content_comments c JOIN users u ON c.author_id=u.id WHERE c.id=?
+    `, result.lastInsertRowid);
+    return { success: true, comment };
+  });
+
+  app.delete('/api/teams/:id/content-posts/:postId/comments/:commentId', async (req, rep) => {
+    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    const id = Number((req.params as { id: string }).id);
+    const commentId = Number((req.params as { commentId: string }).commentId);
+    const comment = await db.get<{ author_id: number }>('SELECT author_id FROM team_content_comments WHERE id=?', commentId);
+    if (!comment) return rep.status(404).send({ error: '评论不存在' });
+    if (comment.author_id !== userId && !(await isTeamAdmin(id, userId))) return rep.status(403).send({ error: '无权删除' });
+    await db.run('DELETE FROM team_content_comments WHERE id=?', commentId);
+    return { success: true, message: '已删除' };
+  });
+
+  // ══════════════════════════════════════════
   // OSS 签名 URL（前端直传用）
   // ══════════════════════════════════════════
 

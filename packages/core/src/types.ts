@@ -288,6 +288,19 @@ export interface TeamFile {
   username: string;
   display_name?: string;
   created_at: string;
+  storage?: string;
+  oss_key?: string;
+}
+
+export interface TeamContentComment {
+  id: number;
+  post_id: number;
+  author_id: number;
+  content: string;
+  created_at: string;
+  username: string;
+  display_name?: string;
+  avatar_url?: string;
 }
 
 export interface MyTeamsResponse {

@@ -176,6 +176,15 @@ export async function initializeSchema(db: DatabaseAdapter): Promise<void> {
       created_at TEXT DEFAULT (datetime('now'))
     );
 
+    -- Team content comments
+    CREATE TABLE IF NOT EXISTS team_content_comments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      post_id INTEGER NOT NULL REFERENCES team_content_posts(id) ON DELETE CASCADE,
+      author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      content TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
     -- Notifications
     CREATE TABLE IF NOT EXISTS notifications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -410,6 +419,15 @@ export async function migrateSchema(db: DatabaseAdapter): Promise<void> {
     ['add_oss_file_storage', `
       ALTER TABLE team_files ADD COLUMN storage TEXT DEFAULT 'db';
       ALTER TABLE team_files ADD COLUMN oss_key TEXT;
+    `],
+    ['add_team_content_comments', `
+      CREATE TABLE IF NOT EXISTS team_content_comments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        post_id INTEGER NOT NULL REFERENCES team_content_posts(id) ON DELETE CASCADE,
+        author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
     `],
     ['add_performance_indexes', `
       CREATE INDEX IF NOT EXISTS idx_posts_board_id ON posts(board_id);

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, UpdateProfileData, ChangePasswordData, Post, SearchResult, Notification, AdminUser, ShareInfo, PostStats, TeamCategory, Team, TeamMember, TeamAnnouncement, TeamPost, TeamContentPost, TeamFile, MyTeamsResponse, CreateTeamData, UpdateTeamData, UserProfile, UserPost, UserComment, FollowStatus, Conversation, Message, ReportData, OAuthAccount, PendingPost, SensitiveWord, AdminReport, AuditLog, PostVersion, CaptchaData, AdminStats, DeviceBlacklistEntry, UserDevice } from '@campus-forum/core';
+import type { User, UpdateProfileData, ChangePasswordData, Post, SearchResult, Notification, AdminUser, ShareInfo, PostStats, TeamCategory, Team, TeamMember, TeamAnnouncement, TeamPost, TeamContentPost, TeamFile, TeamContentComment, MyTeamsResponse, CreateTeamData, UpdateTeamData, UserProfile, UserPost, UserComment, FollowStatus, Conversation, Message, ReportData, OAuthAccount, PendingPost, SensitiveWord, AdminReport, AuditLog, PostVersion, CaptchaData, AdminStats, DeviceBlacklistEntry, UserDevice } from '@campus-forum/core';
 import { getDeviceCode } from './device';
 
 const baseURL = import.meta.env.VITE_API_URL || '/api';
@@ -140,6 +140,11 @@ export const teamsApi = {
   uploadTeamFile: (id: number, data: { name: string; mimeType: string; data?: string; ossKey?: string; size?: number }) => api.post<{ success: boolean; file: TeamFile }>(`/teams/${id}/files`, data),
   deleteTeamFile: (teamId: number, fileId: number) => api.delete<{ success: boolean; message: string }>(`/teams/${teamId}/files/${fileId}`),
   getTeamFileDownloadUrl: (teamId: number, fileId: number) => `/api/teams/${teamId}/files/${fileId}/download`,
+
+  // ── 团队评论 ──────────────────────────
+  getComments: (teamId: number, postId: number) => api.get<{ comments: TeamContentComment[] }>(`/teams/${teamId}/content-posts/${postId}/comments`),
+  createComment: (teamId: number, postId: number, content: string) => api.post<{ success: boolean; comment: TeamContentComment }>(`/teams/${teamId}/content-posts/${postId}/comments`, { content }),
+  deleteComment: (teamId: number, postId: number, commentId: number) => api.delete<{ success: boolean; message: string }>(`/teams/${teamId}/content-posts/${postId}/comments/${commentId}`),
 
   // ── OSS 直传 ──────────────────────────
   getOssUploadUrl: (teamId: number, name: string) => api.post<{ uploadUrl: string; ossKey: string }>('/oss/upload-url', { teamId, name }),
