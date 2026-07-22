@@ -624,16 +624,11 @@ export default function TeamDetail() {
               {!isMember && <p className="text-xs text-campus-text-tertiary mt-2">加入团队后可发帖</p>}
             </div>
           ) : (
-            (() => {
-              const filtered = posts.filter(p =>
-                !postSearch || p.title.toLowerCase().includes(postSearch.toLowerCase())
-              );
-              const sorted = [...filtered].sort((a, b) =>
-                postSort === 'newest'
-                  ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-                  : new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-              );
-              return sorted.map(post => (
+            posts.filter(p => !postSearch || p.title.toLowerCase().includes(postSearch.toLowerCase()))
+              .sort((a, b) => postSort === 'newest'
+                ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                : new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+              ).map(post => (
               <div
                 key={post.id}
                 onClick={() => navigate(`/teams/${teamId}/post/${post.id}`)}
@@ -659,11 +654,11 @@ export default function TeamDetail() {
                 <p className="text-sm text-campus-text-secondary line-clamp-2 mb-2">{post.content}</p>
                 <div className="flex items-center gap-3 text-xs text-campus-text-tertiary">
                   <span>{post.display_name || post.username}</span>
-                <span>{new Date(post.created_at).toLocaleDateString('zh-CN')}</span>
+                  <span>{new Date(post.created_at).toLocaleDateString('zh-CN')}</span>
                 </div>
               </div>
             )))
-          })()}
+          }
         </div>
       )}
 
