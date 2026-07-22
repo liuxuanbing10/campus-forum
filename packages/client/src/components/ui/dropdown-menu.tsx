@@ -90,7 +90,8 @@ const DropdownMenuContent = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        'absolute z-50 mt-1 min-w-[8rem] overflow-hidden rounded-lg border border-border bg-card p-1 shadow-float',
+        'absolute z-50 mt-1 min-w-[8rem] overflow-hidden rounded-lg border border-neutral-200 dark:border-neutral-700 shadow-float p-1',
+        'bg-white dark:bg-neutral-900',
         'animate-in fade-in zoom-in-95 duration-150',
         align === 'end' ? 'right-0' : align === 'start' ? 'left-0' : 'left-1/2 -translate-x-1/2',
         className
@@ -111,8 +112,8 @@ const DropdownMenuItem = React.forwardRef<
       ref={ref}
       className={cn(
         'relative flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none transition-colors',
-        'hover:bg-secondary focus-visible:bg-secondary',
-        variant === 'destructive' && 'text-destructive hover:bg-destructive/10',
+        'hover:bg-neutral-100 dark:hover:bg-neutral-800 focus-visible:bg-neutral-100 dark:focus-visible:bg-neutral-800',
+        variant === 'destructive' && 'text-red-600 hover:bg-red-50 dark:hover:bg-red-950',
         inset && 'pl-8',
         className
       )}
@@ -127,7 +128,7 @@ const DropdownMenuSeparator = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn('-mx-1 my-1 h-px bg-border', className)} {...props} />
+  <div ref={ref} className={cn('-mx-1 my-1 h-px bg-neutral-200 dark:bg-neutral-700', className)} {...props} />
 ));
 DropdownMenuSeparator.displayName = 'DropdownMenuSeparator';
 
