@@ -277,6 +277,19 @@ export interface TeamContentPost {
   updated_at: string;
 }
 
+export interface TeamFile {
+  id: number;
+  team_id: number;
+  author_id: number;
+  name: string;
+  original_name: string;
+  mime_type: string;
+  size: number;
+  username: string;
+  display_name?: string;
+  created_at: string;
+}
+
 export interface MyTeamsResponse {
   teams: Team[];
   owned: Team[];

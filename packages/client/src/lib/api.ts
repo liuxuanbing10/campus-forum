@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, UpdateProfileData, ChangePasswordData, Post, SearchResult, Notification, AdminUser, ShareInfo, PostStats, TeamCategory, Team, TeamMember, TeamAnnouncement, TeamPost, TeamContentPost, MyTeamsResponse, CreateTeamData, UpdateTeamData, UserProfile, UserPost, UserComment, FollowStatus, Conversation, Message, ReportData, OAuthAccount, PendingPost, SensitiveWord, AdminReport, AuditLog, PostVersion, CaptchaData, AdminStats, DeviceBlacklistEntry, UserDevice } from '@campus-forum/core';
+import type { User, UpdateProfileData, ChangePasswordData, Post, SearchResult, Notification, AdminUser, ShareInfo, PostStats, TeamCategory, Team, TeamMember, TeamAnnouncement, TeamPost, TeamContentPost, TeamFile, MyTeamsResponse, CreateTeamData, UpdateTeamData, UserProfile, UserPost, UserComment, FollowStatus, Conversation, Message, ReportData, OAuthAccount, PendingPost, SensitiveWord, AdminReport, AuditLog, PostVersion, CaptchaData, AdminStats, DeviceBlacklistEntry, UserDevice } from '@campus-forum/core';
 import { getDeviceCode } from './device';
 
 const baseURL = import.meta.env.VITE_API_URL || '/api';
@@ -134,6 +134,12 @@ export const teamsApi = {
   getTeamContentPost: (teamId: number, postId: number) => api.get<TeamContentPost>(`/teams/${teamId}/content-posts/${postId}`),
   updateTeamContentPost: (teamId: number, postId: number, data: { title?: string; content?: string; images?: string[]; isPinned?: boolean }) => api.put<{ success: boolean; message: string }>(`/teams/${teamId}/content-posts/${postId}`, data),
   deleteTeamContentPost: (teamId: number, postId: number) => api.delete<{ success: boolean; message: string }>(`/teams/${teamId}/content-posts/${postId}`),
+
+  // ── 团队文件 ──────────────────────────
+  getTeamFiles: (id: number) => api.get<{ files: TeamFile[] }>(`/teams/${id}/files`),
+  uploadTeamFile: (id: number, data: { name: string; mimeType: string; data: string }) => api.post<{ success: boolean; file: TeamFile }>(`/teams/${id}/files`, data),
+  deleteTeamFile: (teamId: number, fileId: number) => api.delete<{ success: boolean; message: string }>(`/teams/${teamId}/files/${fileId}`),
+  getTeamFileDownloadUrl: (teamId: number, fileId: number) => `/api/teams/${teamId}/files/${fileId}/download`,
 };
 
 export default api;

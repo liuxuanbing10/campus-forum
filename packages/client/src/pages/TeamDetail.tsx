@@ -3,16 +3,17 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Users, Lock, Unlock, ArrowLeft, Settings, LogOut,
   UserPlus, UserMinus, Crown, Shield, Heart, Copy,
-  FileText, Megaphone, Plus, Trash2, Pin, Check, X, ImagePlus
+  FileText, Megaphone, Plus, Trash2, Pin, Check, X, ImagePlus,
+  Upload, Download as DownloadIcon
 } from 'lucide-react';
 import { teamsApi } from '../lib/api';
 import api from '../lib/api';
-import type { Team, TeamMember, TeamAnnouncement, TeamContentPost } from '@campus-forum/core';
+import type { Team, TeamMember, TeamAnnouncement, TeamContentPost, TeamFile } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 import MarkdownEditor from '../components/MarkdownEditor';
 
-type TabType = 'announcements' | 'posts' | 'members';
+type TabType = 'announcements' | 'posts' | 'files' | 'members';
 
 export default function TeamDetail() {
   const { id } = useParams();
@@ -27,6 +28,7 @@ export default function TeamDetail() {
   const [applications, setApplications] = useState<TeamMember[]>([]);
   const [announcements, setAnnouncements] = useState<TeamAnnouncement[]>([]);
   const [posts, setPosts] = useState<TeamContentPost[]>([]);
+  const [files, setFiles] = useState<TeamFile[]>([]);
   const [membersHidden, setMembersHidden] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -43,6 +45,9 @@ export default function TeamDetail() {
   const [postSubmitting, setPostSubmitting] = useState(false);
   const [postImages, setPostImages] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [showFileUploadModal, setShowFileUploadModal] = useState(false);
+  const [fileUploading, setFileUploading] = useState(false);
+  const [fileDeleteLoading, setFileDeleteLoading] = useState<number | null>(null);
 
   const isOwner = team?.myRole === 'owner';
   const isAdmin = isOwner || team?.myRole === 'admin';
@@ -51,17 +56,19 @@ export default function TeamDetail() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [teamRes, membersRes, annRes, postsRes] = await Promise.all([
+      const [teamRes, membersRes, annRes, postsRes, filesRes] = await Promise.all([
         teamsApi.getTeam(teamId),
         teamsApi.getTeamMembers(teamId),
         teamsApi.getAnnouncements(teamId),
         teamsApi.getTeamContentPosts(teamId),
+        teamsApi.getTeamFiles(teamId),
       ]);
       setTeam(teamRes.data);
       setMembers(membersRes.data.members);
       setMembersHidden(!!membersRes.data.hidden);
       setAnnouncements(annRes.data.announcements);
       setPosts(postsRes.data.posts);
+      setFiles(filesRes.data.files);
 
       if (isOwner || teamRes.data.myRole === 'admin') {
         const appRes = await teamsApi.getTeamApplications(teamId);
@@ -259,6 +266,51 @@ export default function TeamDetail() {
     }
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 50 * 1024 * 1024) { toastStore.warning('文件不能超过 50MB'); return; }
+    setFileUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = (reader.result as string).split(',')[1] || reader.result as string;
+        try {
+          await teamsApi.uploadTeamFile(teamId, {
+            name: file.name,
+            mimeType: file.type || 'application/octet-stream',
+            data: base64,
+          });
+          toastStore.success('上传成功');
+          setShowFileUploadModal(false);
+          loadData();
+        } catch (err: any) {
+          toastStore.error(err.response?.data?.error || '上传失败');
+        } finally { setFileUploading(false); }
+      };
+      reader.readAsDataURL(file);
+    } catch { setFileUploading(false); toastStore.error('文件读取失败'); }
+  };
+
+  const handleDeleteFile = async (fileId: number) => {
+    if (!confirm('确定删除该文件吗？')) return;
+    setFileDeleteLoading(fileId);
+    try {
+      await teamsApi.deleteTeamFile(teamId, fileId);
+      toastStore.success('已删除');
+      loadData();
+    } catch (err: any) {
+      toastStore.error(err.response?.data?.error || '操作失败');
+    } finally { setFileDeleteLoading(null); }
+  };
+
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+  }
+
   const handleCopyInvite = async () => {
     if (!team?.invite_code) return;
     try {
@@ -295,6 +347,7 @@ export default function TeamDetail() {
   const tabs = [
     { key: 'announcements', label: '公告', icon: Megaphone },
     { key: 'posts', label: '帖子', icon: FileText },
+    { key: 'files', label: '文件', icon: Upload },
     { key: 'members', label: '成员', icon: Users },
   ];
 
@@ -573,6 +626,68 @@ export default function TeamDetail() {
         </div>
       )}
 
+      {tab === 'files' && (
+        <div className="space-y-3">
+          {isMember && (
+            <button
+              onClick={() => setShowFileUploadModal(true)}
+              className="w-full p-4 bg-surface border-2 border-dashed border-border rounded-xl text-campus-text-secondary hover:border-primary/40 hover:text-primary transition-all flex items-center justify-center gap-2"
+            >
+              <Upload className="w-5 h-5" />
+              上传文件
+            </button>
+          )}
+
+          {files.length === 0 ? (
+            <div className="text-center py-12">
+              <Upload className="w-12 h-12 mx-auto text-campus-text-tertiary mb-3" />
+              <p className="text-campus-text-secondary">暂无文件</p>
+              {!isMember && <p className="text-xs text-campus-text-tertiary mt-2">加入团队后可上传文件</p>}
+            </div>
+          ) : (
+            files.map(file => (
+              <div key={file.id} className="bg-surface border border-border rounded-xl p-4 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-campus-text-primary truncate">{file.original_name}</h4>
+                  <div className="flex items-center gap-3 text-xs text-campus-text-tertiary mt-0.5">
+                    <span>{file.display_name || file.username}</span>
+                    <span>{formatFileSize(file.size)}</span>
+                    <span>{new Date(file.created_at).toLocaleDateString('zh-CN')}</span>
+                  </div>
+                </div>
+                <div className="flex gap-1 flex-shrink-0">
+                  <a
+                    href={teamsApi.getTeamFileDownloadUrl(teamId, file.id)}
+                    download={file.original_name}
+                    className="p-2 rounded-lg hover:bg-primary/10 text-campus-text-secondary hover:text-primary transition-colors"
+                    title="下载"
+                  >
+                    <DownloadIcon className="w-5 h-5" />
+                  </a>
+                  {(isAdmin || file.author_id === user?.id) && (
+                    <button
+                      onClick={() => handleDeleteFile(file.id)}
+                      disabled={fileDeleteLoading === file.id}
+                      className="p-2 rounded-lg hover:bg-destructive/10 text-campus-text-secondary hover:text-destructive transition-colors"
+                      title="删除"
+                    >
+                      {fileDeleteLoading === file.id ? (
+                        <span className="w-5 h-5 block animate-spin rounded-full border-2 border-destructive border-t-transparent" />
+                      ) : (
+                        <Trash2 className="w-5 h-5" />
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
       {tab === 'members' && (
         <div>
           {membersHidden ? (
@@ -788,6 +903,29 @@ export default function TeamDetail() {
                 className="btn-primary btn-inline text-sm disabled:opacity-50"
               >
                 {postSubmitting ? '发布中...' : '发布'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showFileUploadModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <h3 className="text-lg font-semibold text-campus-text-primary mb-4">上传文件</h3>
+            <p className="text-sm text-campus-text-secondary mb-4">单个文件最大 50MB</p>
+            <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all">
+              <Upload className="w-10 h-10 text-campus-text-tertiary mb-2" />
+              <span className="text-sm text-campus-text-secondary">{fileUploading ? '上传中...' : '点击选择文件'}</span>
+              <input type="file" className="hidden" onChange={handleFileUpload} disabled={fileUploading} />
+            </label>
+            <div className="flex gap-3 justify-end mt-4">
+              <button
+                onClick={() => setShowFileUploadModal(false)}
+                className="btn-secondary btn-inline text-sm"
+                disabled={fileUploading}
+              >
+                取消
               </button>
             </div>
           </div>

@@ -27,6 +27,7 @@ export type {
   TeamAnnouncement,
   TeamPost,
   TeamContentPost,
+  TeamFile,
   MyTeamsResponse,
   CreateTeamData,
   UpdateTeamData,

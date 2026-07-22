@@ -466,6 +466,76 @@ export function registerTeamRoutes(ctx: PluginContext) {
   });
 
   // ══════════════════════════════════════════
+  // 团队文件
+  // ══════════════════════════════════════════
+
+  app.get('/api/teams/:id/files', async (req, rep) => {
+    const id = Number((req.params as { id: string }).id);
+    const team = await db.get<TeamRow>('SELECT id, is_public FROM teams WHERE id=?', id);
+    if (!team) return rep.status(404).send({ error: '团队不存在' });
+    const u = uid(req);
+    const role = u ? await memberRole(id, u) : null;
+    if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
+    const files = await db.all<any>(`
+      SELECT f.id, f.team_id, f.author_id, f.name, f.original_name, f.mime_type, f.size, f.created_at,
+        u.username, u.display_name
+      FROM team_files f JOIN users u ON f.author_id=u.id
+      WHERE f.team_id=? ORDER BY f.created_at DESC
+    `, id);
+    return { files };
+  });
+
+  app.post('/api/teams/:id/files', async (req, rep) => {
+    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    const id = Number((req.params as { id: string }).id);
+    const role = await memberRole(id, userId);
+    if (!role) return rep.status(403).send({ error: '仅成员可上传文件' });
+    const { name, mimeType, data } = req.body as { name?: string; mimeType?: string; data?: string };
+    if (!name?.trim()) return rep.status(400).send({ error: '文件名不能为空' });
+    if (!data) return rep.status(400).send({ error: '文件数据不能为空' });
+    const rawSize = Math.round((data.length * 3) / 4); // approximate base64 decoded size
+    if (rawSize > 50 * 1024 * 1024) return rep.status(400).send({ error: '文件不能超过 50MB' });
+    const result = await db.run(
+      'INSERT INTO team_files (team_id, author_id, name, original_name, mime_type, size, data) VALUES (?,?,?,?,?,?,?)',
+      id, userId, name.trim(), name.trim(), mimeType || 'application/octet-stream', rawSize, data
+    );
+    const file = await db.get<any>(`
+      SELECT f.id, f.team_id, f.author_id, f.name, f.original_name, f.mime_type, f.size, f.created_at,
+        u.username, u.display_name
+      FROM team_files f JOIN users u ON f.author_id=u.id WHERE f.id=?
+    `, result.lastInsertRowid);
+    return { success: true, file };
+  });
+
+  app.delete('/api/teams/:id/files/:fileId', async (req, rep) => {
+    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    const id = Number((req.params as { id: string }).id);
+    const fileId = Number((req.params as { fileId: string }).fileId);
+    const file = await db.get<{ author_id: number }>('SELECT author_id FROM team_files WHERE id=? AND team_id=?', fileId, id);
+    if (!file) return rep.status(404).send({ error: '文件不存在' });
+    if (file.author_id !== userId && !(await isTeamAdmin(id, userId))) return rep.status(403).send({ error: '无权删除' });
+    await db.run('DELETE FROM team_files WHERE id=?', fileId);
+    return { success: true, message: '已删除' };
+  });
+
+  app.get('/api/teams/:id/files/:fileId/download', async (req, rep) => {
+    const id = Number((req.params as { id: string }).id);
+    const fileId = Number((req.params as { fileId: string }).fileId);
+    const team = await db.get<TeamRow>('SELECT id, is_public FROM teams WHERE id=?', id);
+    if (!team) return rep.status(404).send({ error: '团队不存在' });
+    const u = uid(req);
+    const role = u ? await memberRole(id, u) : null;
+    if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
+    const file = await db.get<any>('SELECT * FROM team_files WHERE id=? AND team_id=?', fileId, id);
+    if (!file) return rep.status(404).send({ error: '文件不存在' });
+    const buf = Buffer.from(file.data, 'base64');
+    rep.header('Content-Type', file.mime_type);
+    rep.header('Content-Disposition', `attachment; filename="${encodeURIComponent(file.original_name)}"`);
+    rep.header('Content-Length', buf.length);
+    return rep.send(buf);
+  });
+
+  // ══════════════════════════════════════════
   // 成员管理
   // ══════════════════════════════════════════
 

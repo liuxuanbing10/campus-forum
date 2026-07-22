@@ -161,6 +161,19 @@ export async function initializeSchema(db: DatabaseAdapter): Promise<void> {
       UNIQUE(user_id, team_id)
     );
 
+    -- Team files
+    CREATE TABLE IF NOT EXISTS team_files (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      original_name TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      data TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
     -- Notifications
     CREATE TABLE IF NOT EXISTS notifications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -380,6 +393,17 @@ export async function migrateSchema(db: DatabaseAdapter): Promise<void> {
       images TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
+    )`],
+    ['add_team_files', `CREATE TABLE IF NOT EXISTS team_files (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      original_name TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      data TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
     )`],
     ['add_performance_indexes', `
       CREATE INDEX IF NOT EXISTS idx_posts_board_id ON posts(board_id);
