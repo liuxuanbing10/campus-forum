@@ -477,15 +477,19 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const role = await memberRole(teamId, userId);
     if (!role) return rep.status(403).send({ error: '仅成员可上传' });
     const ossKey = generateOssKey(teamId, name);
-    const uploadUrl = getUploadUrl(ossKey);
+    const uploadUrl = await getUploadUrl(ossKey);
     return { uploadUrl, ossKey };
   });
 
   app.get('/api/oss/sign-url', async (req, rep) => {
     const key = (req.query as any).key as string;
     if (!key) return rep.status(400).send({ error: '缺少 key' });
-    const downloadUrl = getDownloadUrl(key);
-    return { downloadUrl };
+    try {
+      const downloadUrl = await getDownloadUrl(key);
+      return { downloadUrl };
+    } catch (err: any) {
+      return rep.status(500).send({ error: err.message || '获取签名 URL 失败' });
+    }
   });
 
   // ══════════════════════════════════════════
@@ -522,13 +526,11 @@ export function registerTeamRoutes(ctx: PluginContext) {
     let finalSize = size || 0;
 
     if (ossKey) {
-      // OSS 直传模式：只存元数据
       storage = 'oss';
       finalOssKey = ossKey;
     } else {
       const body = req.body as any;
       if (body.data) {
-        // 兼容旧模式：base64 存数据库
         storage = 'db';
         finalData = body.data;
         finalSize = Math.round((finalData!.length * 3) / 4);
@@ -577,7 +579,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
 
     if (file.storage === 'oss' && file.oss_key) {
       // OSS 文件：跳转到签名 URL
-      const url = getDownloadUrl(file.oss_key, 3600);
+      const url = await getDownloadUrl(file.oss_key, 3600);
       return rep.redirect(url);
     }
 

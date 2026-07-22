@@ -1,4 +1,3 @@
-import OSS from 'ali-oss';
 import crypto from 'crypto';
 
 const region = process.env.OSS_REGION || 'oss-cn-shenzhen';
@@ -6,21 +5,25 @@ const bucket = process.env.OSS_BUCKET || 'campus-forum-files';
 const accessKeyId = process.env.OSS_ACCESS_KEY_ID || '';
 const accessKeySecret = process.env.OSS_ACCESS_KEY_SECRET || '';
 
-let client: OSS | null = null;
+let ossModule: any = null;
+let ossReady = false;
 
-function getClient(): OSS {
-  if (!client) {
-    if (!accessKeyId || !accessKeySecret) {
-      throw new Error('OSS 未配置：请设置 OSS_ACCESS_KEY_ID 和 OSS_ACCESS_KEY_SECRET 环境变量');
-    }
-    client = new OSS({
-      region,
-      bucket,
-      accessKeyId,
-      accessKeySecret,
-    });
+async function ensureOSS() {
+  if (ossReady) return;
+  if (!accessKeyId || !accessKeySecret) {
+    throw new Error('OSS 未配置：请设置 OSS_ACCESS_KEY_ID 和 OSS_ACCESS_KEY_SECRET 环境变量');
   }
-  return client;
+  if (!ossModule) {
+    ossModule = await import('ali-oss');
+  }
+  ossReady = true;
+}
+
+async function getClient() {
+  await ensureOSS();
+  // Default 类型避免 TS 错误，实际运行时有 ali-oss
+  const OSS = (ossModule as any).default || ossModule;
+  return new OSS({ region, bucket, accessKeyId, accessKeySecret });
 }
 
 /** 生成唯一的 OSS 对象 key */
@@ -31,19 +34,19 @@ export function generateOssKey(teamId: number, originalName: string): string {
 }
 
 /** 生成 presigned PUT URL（前端直传用） */
-export function getUploadUrl(ossKey: string, expires = 3600): string {
-  return getClient().signatureUrl(ossKey, {
-    method: 'PUT',
-    expires,
-  });
+export async function getUploadUrl(ossKey: string, expires = 3600): Promise<string> {
+  const client = await getClient();
+  return client.signatureUrl(ossKey, { method: 'PUT', expires });
 }
 
 /** 生成 presigned GET URL（前端预览/下载用） */
-export function getDownloadUrl(ossKey: string, expires = 3600): string {
-  return getClient().signatureUrl(ossKey, { expires });
+export async function getDownloadUrl(ossKey: string, expires = 3600): Promise<string> {
+  const client = await getClient();
+  return client.signatureUrl(ossKey, { expires });
 }
 
 /** 删除 OSS 对象 */
 export async function deleteObject(ossKey: string): Promise<void> {
-  await getClient().delete(ossKey);
+  const client = await getClient();
+  await client.delete(ossKey);
 }
