@@ -207,7 +207,7 @@ export const postsPlugin: Plugin = {
       const page = Math.min(100, Math.max(1, Number((req.query as any).page) || 1));
       const limit = 20; const offset = (page - 1) * limit;
       const posts = await db.all<any>(
-        buildPostListSql({ where: 'WHERE p.author_id=?', orderBy: 'ORDER BY p.created_at DESC', limit: true }),
+        buildPostListSql({ where: 'WHERE p.author_id=? AND p.is_pending=0', orderBy: 'ORDER BY p.created_at DESC', limit: true }),
         userId, limit, offset
       );
       return { posts, page, limit };
@@ -220,8 +220,8 @@ export const postsPlugin: Plugin = {
       const limit = 20; const offset = (page - 1) * limit;
       const userIdVal = userId || 0;
 
-      // 私密帖子仅作者可见（管理员也不可见）
-      const privateFilter = `AND (p.is_private = 0 OR p.author_id = ?)`;
+      // 私密帖子仅作者可见（管理员也不可见），过滤待审核帖子
+      const privateFilter = `AND (p.is_private = 0 OR p.author_id = ?) AND p.is_pending = 0`;
       const params: unknown[] = [userIdVal];
       if (boardId) { params.push(boardId); }
       const where = boardId ? `WHERE p.board_id = ? ${privateFilter}` : `WHERE 1=1 ${privateFilter}`;
@@ -238,14 +238,12 @@ export const postsPlugin: Plugin = {
     app.get('/api/posts/:id', async (req, rep) => {
       const id = Number((req.params as { id: string }).id);
       const userId = uid(req);
-      const post = await db.get<PostDetail>(`SELECT p.id,p.title,p.content,p.board_id,p.is_anonymous,p.is_private,p.is_pinned,p.images,p.created_at,p.updated_at,
+      const post = await db.get<PostDetail>(`SELECT p.id,p.title,p.content,p.board_id,p.is_anonymous,p.is_private,p.is_pinned,p.images,p.created_at,p.updated_at,p.view_count,
         CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,
         u.id as author_id, b.name as board_name,
         COALESCE(v.like_count,0) as like_count, COALESCE(c.comment_count,0) as comment_count,
         CASE WHEN f.id IS NOT NULL THEN 1 ELSE 0 END as is_favorited,
-        CASE WHEN pv.id IS NOT NULL THEN pv.value ELSE 0 END as my_vote,
-        (SELECT COUNT(*) FROM votes WHERE post_id=p.id AND value=1) as upvotes,
-        (SELECT COUNT(*) FROM votes WHERE post_id=p.id AND value=-1) as downvotes
+        CASE WHEN pv.id IS NOT NULL THEN pv.value ELSE 0 END as my_vote
         FROM posts p JOIN users u ON p.author_id=u.id JOIN boards b ON p.board_id=b.id
         LEFT JOIN (SELECT post_id,COUNT(*) as like_count FROM votes WHERE value=1 GROUP BY post_id) v ON v.post_id=p.id
         LEFT JOIN (SELECT post_id,COUNT(*) as comment_count FROM comments GROUP BY post_id) c ON c.post_id=p.id

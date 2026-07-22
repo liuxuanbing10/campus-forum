@@ -1,11 +1,9 @@
 import { Plugin, PluginContext, uid, isAdmin, addPoints, logAction } from '@campus-forum/core';
 
-let ctx: PluginContext;
-
 export const socialPlugin: Plugin = {
   manifest: { name: 'social', version: '0.1.0', description: '社交功能: 关注/举报/积分/日志', author: 'campus-forum' },
   apply(_ctx: PluginContext) {
-    const { app, db } = _ctx; ctx = _ctx;
+    const { app, db } = _ctx;
 
     // ─── 关注/取消 ───
     app.post('/api/follow', async (req, rep) => {

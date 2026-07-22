@@ -91,7 +91,11 @@ export const authPlugin: Plugin = {
     // ========================================
     // 注册
     // ========================================
-    app.post('/api/auth/register', async (request, reply) => {
+    app.post('/api/auth/register', {
+      config: {
+        rateLimit: { max: 5, timeWindow: '1 minute' },
+      },
+    }, async (request, reply) => {
       const { username, password, confirmPassword, email } =
         request.body as RegisterBody;
       const deviceCode = getDeviceCode(request);
@@ -168,7 +172,11 @@ export const authPlugin: Plugin = {
     // ========================================
     // 登录
     // ========================================
-    app.post('/api/auth/login', async (request, reply) => {
+    app.post('/api/auth/login', {
+      config: {
+        rateLimit: { max: 10, timeWindow: '1 minute' },
+      },
+    }, async (request, reply) => {
       const { username, password } = request.body as LoginBody;
 
       if (!username || !password) {
@@ -272,7 +280,7 @@ export const authPlugin: Plugin = {
         return reply.status(401).send({ error: '未登录' });
       }
       // 更新在线时间
-      db.run("UPDATE users SET last_active_at = datetime('now') WHERE id = ?", userId);
+      await db.run("UPDATE users SET last_active_at = datetime('now') WHERE id = ?", userId).catch(() => {});
 
       const user = await db.get<UserRow>(
         'SELECT id, username, display_name, email, avatar_url, is_admin, role, is_banned, banned_until, ban_reason, created_at FROM users WHERE id = ?',
@@ -286,7 +294,7 @@ export const authPlugin: Plugin = {
       // 自动解封: 如果 banned_until 已过期，自动清除封禁
       const isActuallyBanned = user.is_banned === 1 && (!user.banned_until || new Date(user.banned_until + 'Z') > new Date());
       if (user.is_banned === 1 && user.banned_until && !isActuallyBanned) {
-        db.run("UPDATE users SET is_banned=0, banned_until=NULL, ban_reason=NULL WHERE id=?", userId);
+        await db.run("UPDATE users SET is_banned=0, banned_until=NULL, ban_reason=NULL WHERE id=?", userId).catch(() => {});
         user.is_banned = 0;
         user.banned_until = null;
         user.ban_reason = null;
@@ -348,7 +356,7 @@ export const authPlugin: Plugin = {
       }
 
       params.push(request.session.userId);
-      db.run(`UPDATE users SET ${updates.join(', ')}, updated_at = datetime('now') WHERE id = ?`, ...params);
+      await db.run(`UPDATE users SET ${updates.join(', ')}, updated_at = datetime('now') WHERE id = ?`, ...params);
 
       const updatedUser = (await db.get<UserRow>(
         'SELECT id, username, display_name, email, avatar_url, is_admin, role, is_banned, created_at FROM users WHERE id = ?',
@@ -410,7 +418,7 @@ export const authPlugin: Plugin = {
       }
 
       const hash = await bcrypt.hash(newPassword, 10);
-      db.run("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?", hash, request.session.userId);
+      await db.run("UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?", hash, request.session.userId);
 
       return {
         success: true,
@@ -442,7 +450,7 @@ export const authPlugin: Plugin = {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
       const { provider, providerId } = req.body as { provider: string; providerId: string };
       if (!provider || !providerId) return rep.status(400).send({ error: '参数不完整' });
-      try { db.run('INSERT INTO oauth_accounts (user_id,provider,provider_id) VALUES (?,?,?)', userId, provider, providerId); } catch { return rep.status(409).send({ error: '已绑定' }); }
+      try { await db.run('INSERT INTO oauth_accounts (user_id,provider,provider_id) VALUES (?,?,?)', userId, provider, providerId); } catch { return rep.status(409).send({ error: '已绑定' }); }
       return { success: true, message: '绑定成功' };
     });
 
@@ -454,7 +462,7 @@ export const authPlugin: Plugin = {
     app.delete('/api/auth/oauth/unbind', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
       const { provider } = req.body as { provider: string };
-      db.run('DELETE FROM oauth_accounts WHERE user_id=? AND provider=?', userId, provider);
+      await db.run('DELETE FROM oauth_accounts WHERE user_id=? AND provider=?', userId, provider);
       return { success: true };
     });
 
@@ -462,8 +470,14 @@ export const authPlugin: Plugin = {
     // OAuth 通用流程（GitHub / QQ / 微信）
     // ========================================
 
-    // 临时 token 存储
-    const oauthTempStore = new Map<string, { provider: string; providerUserId: string; providerUsername: string; expiresAt: number }>();
+    // 清理过期 token（启动时 + 每5分钟）
+    const cleanExpiredTokens = async () => {
+      try {
+        await db.run("DELETE FROM oauth_temp_tokens WHERE expires_at < datetime('now')");
+      } catch { /* ignore */ }
+    };
+    cleanExpiredTokens();
+    setInterval(cleanExpiredTokens, 5 * 60 * 1000);
 
     function httpsGet(url: string): Promise<string> {
       return new Promise((resolve, reject) => {
@@ -603,7 +617,7 @@ export const authPlugin: Plugin = {
               return rep.redirect(`${frontendUrl}/settings?tab=oauth&msg=bound_by_other`);
             }
             if (!loggedUserId) return rep.redirect(`${frontendUrl}/login`);
-            db.run('INSERT INTO oauth_accounts (user_id, provider, provider_id) VALUES (?, ?, ?)', loggedUserId, provider, userInfo.id);
+            await db.run('INSERT INTO oauth_accounts (user_id, provider, provider_id) VALUES (?, ?, ?)', loggedUserId, provider, userInfo.id);
             return rep.redirect(`${frontendUrl}/settings?tab=oauth&msg=bind_ok`);
           }
 
@@ -618,9 +632,13 @@ export const authPlugin: Plugin = {
             }
           }
 
-          // 未绑定 → 生成临时 token
+          // 未绑定 → 生成临时 token（存 DB 替代内存 Map）
           const tempToken = crypto.randomBytes(20).toString('hex');
-          oauthTempStore.set(tempToken, { provider, providerUserId: userInfo.id, providerUsername: userInfo.username, expiresAt: Date.now() + 10 * 60 * 1000 });
+          const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+          await db.run(
+            'INSERT INTO oauth_temp_tokens (token, provider, provider_user_id, provider_username, expires_at) VALUES (?, ?, ?, ?, ?)',
+            tempToken, provider, userInfo.id, userInfo.username, expiresAt
+          );
           return rep.redirect(`${frontendUrl}/oauth/setup?token=${tempToken}&provider=${provider}&username=${encodeURIComponent(userInfo.username)}`);
         } catch (err) {
           console.error(`${provider} OAuth error:`, err);
@@ -635,24 +653,29 @@ export const authPlugin: Plugin = {
       if (!token || !username) return rep.status(400).send({ error: '参数不完整' });
       if (username.length < 2 || username.length > 20) return rep.status(400).send({ error: '用户名长度应为 2-20 个字符' });
 
-      const store = oauthTempStore.get(token);
+      const store = await db.get<{ provider: string; provider_user_id: string; provider_username: string; expires_at: string }>(
+        'SELECT provider, provider_user_id, provider_username, expires_at FROM oauth_temp_tokens WHERE token=?', token
+      );
       if (!store) return rep.status(400).send({ error: 'token 无效或已过期' });
-      if (Date.now() > store.expiresAt) { oauthTempStore.delete(token); return rep.status(400).send({ error: 'token 已过期，请重新授权' }); }
+      if (store.expires_at && new Date(store.expires_at + 'Z') < new Date()) {
+        await db.run('DELETE FROM oauth_temp_tokens WHERE token=?', token);
+        return rep.status(400).send({ error: 'token 已过期，请重新授权' });
+      }
 
       const existingUser = await db.get<UserRow>('SELECT id FROM users WHERE username=?', username);
       if (existingUser) return rep.status(409).send({ error: '用户名已存在' });
 
       const deviceCode = getDeviceCode(req);
-      db.run('INSERT INTO users (username, password_hash, display_name, device_code) VALUES (?, ?, ?, ?)', username, '', username, deviceCode || null);
+      await db.run('INSERT INTO users (username, password_hash, display_name, device_code) VALUES (?, ?, ?, ?)', username, '', username, deviceCode || null);
       const user = await db.get<UserRow>('SELECT id, username FROM users WHERE username=?', username);
       if (!user) return rep.status(500).send({ error: '创建用户失败' });
 
-      try { db.run('INSERT INTO oauth_accounts (user_id, provider, provider_id) VALUES (?, ?, ?)', user.id, store.provider, store.providerUserId); } catch { /* ok */ }
+      try { await db.run('INSERT INTO oauth_accounts (user_id, provider, provider_id) VALUES (?, ?, ?)', user.id, store.provider, store.provider_user_id); } catch { /* ok */ }
 
       req.session.userId = user.id;
       req.session.username = user.username;
       await req.session.save();
-      oauthTempStore.delete(token);
+      await db.run('DELETE FROM oauth_temp_tokens WHERE token=?', token);
       return { success: true, user: { id: user.id, username: user.username } };
     });
 
@@ -670,9 +693,17 @@ export const authPlugin: Plugin = {
       if (buf.length > 2 * 1024 * 1024) return rep.status(400).send({ error: '图片不能超过 2MB' });
       const uploadsDir = path.resolve(__dirname, '../../../uploads');
       if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+      // 删除旧头像文件
+      const currentUser = await db.get<{ avatar_url: string | null }>('SELECT avatar_url FROM users WHERE id=?', userId);
+      if (currentUser?.avatar_url) {
+        const oldPath = path.join(__dirname, '../../..', currentUser.avatar_url);
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+
       const name = `avatar_${userId}_${Date.now()}.${ext}`;
       fs.writeFileSync(path.join(uploadsDir, name), buf);
-      db.run('UPDATE users SET avatar_url=? WHERE id=?', `/uploads/${name}`, userId);
+      await db.run('UPDATE users SET avatar_url=? WHERE id=?', `/uploads/${name}`, userId);
       return { success: true, url: `/uploads/${name}` };
     });
 
@@ -683,7 +714,7 @@ export const authPlugin: Plugin = {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
       const { email } = req.body as { email: string };
       if (!email || !email.includes('@')) return rep.status(400).send({ error: '邮箱格式不正确' });
-      db.run('UPDATE users SET email=? WHERE id=?', email, userId);
+      await db.run('UPDATE users SET email=? WHERE id=?', email, userId);
       // 此处可集成 nodemailer 发送验证邮件
       return { success: true, message: '验证邮件已发送（演示模式）' };
     });

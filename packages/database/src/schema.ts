@@ -457,6 +457,17 @@ export async function migrateSchema(db: DatabaseAdapter): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_audit_logs_admin_id ON audit_logs(admin_id);
     `],
+    ['add_oauth_temp_tokens', `
+      CREATE TABLE IF NOT EXISTS oauth_temp_tokens (
+        token TEXT PRIMARY KEY,
+        provider TEXT NOT NULL,
+        provider_user_id TEXT NOT NULL,
+        provider_username TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_oauth_temp_tokens_expires ON oauth_temp_tokens(expires_at);
+    `],
   ];
 
   for (const [name, sql] of migrations) {

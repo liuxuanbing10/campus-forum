@@ -8,9 +8,11 @@ import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import { PluginManager, SimpleEventBus, PluginContext, Logger } from '@campus-forum/core';
+import { ZodError } from 'zod';
 import 'dotenv/config';
 import { createDatabase, initializeSchema, migrateSchema, seedData } from '@campus-forum/database';
 import { TursoSessionStore } from './session-store.js';
+import { WsManager } from './websocket.js';
 
 let __dirname: string;
 try {
@@ -86,8 +88,11 @@ export async function buildApp(options?: { plugins?: any[] }) {
   const sessionSecret = process.env.SESSION_SECRET || process.env.JWT_SECRET || 'dev-session-secret-fallback-32chars!!';
   const sessionMaxAge = 7 * 24 * 60 * 60 * 1000;
   if (sessionSecret.length < 32) {
-    console.warn('⚠️ SESSION_SECRET 长度不足 32 字符，使用默认值');
+  console.warn('⚠️ SESSION_SECRET 长度不足 32 字符，使用默认值');
   }
+
+  // ── Cookie 安全配置 ─────────────────────────
+  const isProduction = process.env.NODE_ENV === 'production';
 
   // ── 限流 ─────────────────────────────────────
   await app.register(rateLimit, {
@@ -104,6 +109,14 @@ export async function buildApp(options?: { plugins?: any[] }) {
 
   // ── 全局错误处理 ──────────────────────────────
   app.setErrorHandler(async (error, request, reply) => {
+    // Zod 校验错误 → 400
+    if (error instanceof ZodError) {
+      return reply.status(400).send({
+        error: 'Validation Error',
+        message: error.issues?.[0]?.message || '请求参数校验失败',
+        issues: error.issues,
+      });
+    }
     const err = error as any;
     const statusCode = err.statusCode || 500;
     const message = statusCode === 500 && process.env.NODE_ENV === 'production'
@@ -141,7 +154,12 @@ export async function buildApp(options?: { plugins?: any[] }) {
   }
   await app.register(sessionPlugin, {
     secret: sessionSecret,
-    cookie: { secure: false, maxAge: sessionMaxAge },
+    cookie: {
+      secure: isProduction,
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: sessionMaxAge,
+    },
     saveUninitialized: false,
     store: new TursoSessionStore(db, sessionMaxAge),
   });
@@ -165,6 +183,12 @@ export async function buildApp(options?: { plugins?: any[] }) {
   };
 
   const pluginManager = new PluginManager(pluginCtx);
+
+  // ── WebSocket ───────────────────────────────
+  const wsManager = new WsManager(app.server);
+  (pluginCtx as any).sendToUser = (userId: number, type: string, data: Record<string, unknown>) => {
+    wsManager.sendToUser(userId, type, data);
+  };
 
   if (options?.plugins && options.plugins.length > 0) {
     for (const plugin of options.plugins) {

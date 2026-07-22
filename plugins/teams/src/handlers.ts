@@ -390,7 +390,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const role = u ? await memberRole(id, u) : null;
     if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
     const posts = await db.all<any>(`
-      SELECT p.*, u.username, u.display_name, u.avatar_url, 0 as comment_count
+      SELECT p.*, u.username, u.display_name, u.avatar_url,
+        (SELECT COUNT(*) FROM team_content_comments WHERE post_id=p.id) as comment_count
       FROM team_content_posts p JOIN users u ON p.author_id=u.id
       WHERE p.team_id=?
       ORDER BY p.is_pinned DESC, p.created_at DESC
@@ -412,7 +413,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
       id, title.trim(), content.trim(), userId, images && images.length > 0 ? JSON.stringify(images) : null
     );
     const post = await db.get<any>(`
-      SELECT p.*, u.username, u.display_name, u.avatar_url, 0 as comment_count
+      SELECT p.*, u.username, u.display_name, u.avatar_url,
+        (SELECT COUNT(*) FROM team_content_comments WHERE post_id=p.id) as comment_count
       FROM team_content_posts p JOIN users u ON p.author_id=u.id WHERE p.id=?
     `, result.lastInsertRowid);
     return { success: true, post };
@@ -427,7 +429,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const role = u ? await memberRole(id, u) : null;
     if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
     const post = await db.get<any>(`
-      SELECT p.*, u.username, u.display_name, u.avatar_url, 0 as comment_count
+      SELECT p.*, u.username, u.display_name, u.avatar_url,
+        (SELECT COUNT(*) FROM team_content_comments WHERE post_id=p.id) as comment_count
       FROM team_content_posts p JOIN users u ON p.author_id=u.id WHERE p.id=? AND p.team_id=?
     `, postId, id);
     if (!post) return rep.status(404).send({ error: '帖子不存在' });
@@ -594,7 +597,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
 
     const result = await db.run(
       'INSERT INTO team_files (team_id, author_id, name, original_name, mime_type, size, data, storage, oss_key) VALUES (?,?,?,?,?,?,?,?,?)',
-      id, userId, name.trim(), name.trim(), mimeType || 'application/octet-stream', String(finalSize), finalData || '', storage, finalOssKey
+      id, userId, name.trim(), name.trim(), mimeType || 'application/octet-stream', finalSize, finalData || '', storage, finalOssKey
     );
     const file = await db.get<any>(`
       SELECT f.id, f.team_id, f.author_id, f.name, f.original_name, f.mime_type, f.size, f.created_at, f.storage, f.oss_key,
