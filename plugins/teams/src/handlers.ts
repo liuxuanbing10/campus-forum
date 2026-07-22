@@ -542,7 +542,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
 
     const result = await db.run(
       'INSERT INTO team_files (team_id, author_id, name, original_name, mime_type, size, data, storage, oss_key) VALUES (?,?,?,?,?,?,?,?,?)',
-      id, userId, name.trim(), name.trim(), mimeType || 'application/octet-stream', String(finalSize), finalData, storage, finalOssKey
+      id, userId, name.trim(), name.trim(), mimeType || 'application/octet-stream', String(finalSize), finalData || '', storage, finalOssKey
     );
     const file = await db.get<any>(`
       SELECT f.id, f.team_id, f.author_id, f.name, f.original_name, f.mime_type, f.size, f.created_at, f.storage, f.oss_key,

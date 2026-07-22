@@ -279,7 +279,7 @@ export default function TeamDetail() {
       // Step 2: 直传到 OSS
       const uploadRes = await fetch(uploadUrl, {
         method: 'PUT',
-        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        headers: { 'Content-Type': 'application/octet-stream' },
         body: file,
       });
       if (!uploadRes.ok) throw new Error('上传到 OSS 失败');

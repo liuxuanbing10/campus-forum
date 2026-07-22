@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-const region = process.env.OSS_REGION || 'oss-cn-shenzhen';
+const region = process.env.OSS_REGION || 'oss-cn-heyuan';
 const bucket = process.env.OSS_BUCKET || 'campus-forum-files';
 const accessKeyId = process.env.OSS_ACCESS_KEY_ID || '';
 const accessKeySecret = process.env.OSS_ACCESS_KEY_SECRET || '';
@@ -36,7 +36,10 @@ export function generateOssKey(teamId: number, originalName: string): string {
 /** 生成 presigned PUT URL（前端直传用） */
 export async function getUploadUrl(ossKey: string, expires = 3600): Promise<string> {
   const client = await getClient();
-  return client.signatureUrl(ossKey, { method: 'PUT', expires });
+  // V4 签名支持 Content-Type，避免签名不匹配
+  return client.signatureUrlV4('PUT', expires, {
+    headers: { 'Content-Type': 'application/octet-stream' },
+  }, ossKey);
 }
 
 /** 生成 presigned GET URL（前端预览/下载用） */
