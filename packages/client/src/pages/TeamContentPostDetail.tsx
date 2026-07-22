@@ -114,9 +114,7 @@ export default function TeamContentPostDetail() {
         </div>
 
         {/* Content */}
-        <div className="prose prose-sm max-w-none text-campus-text-primary whitespace-pre-wrap leading-relaxed">
-          {post.content}
-        </div>
+        <div className="prose prose-sm max-w-none text-campus-text-primary leading-relaxed" dangerouslySetInnerHTML={{ __html: post.content }} />
 
         {/* Images */}
         {images.length > 0 && (

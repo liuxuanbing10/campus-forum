@@ -3,12 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Users, Lock, Unlock, ArrowLeft, Settings, LogOut,
   UserPlus, UserMinus, Crown, Shield, Heart, Copy,
-  FileText, Megaphone, Plus, Trash2, Pin, Check, X
+  FileText, Megaphone, Plus, Trash2, Pin, Check, X, ImagePlus
 } from 'lucide-react';
 import { teamsApi } from '../lib/api';
+import api from '../lib/api';
 import type { Team, TeamMember, TeamAnnouncement, TeamContentPost } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
+import MarkdownEditor from '../components/MarkdownEditor';
 
 type TabType = 'announcements' | 'posts' | 'members';
 
@@ -39,6 +41,8 @@ export default function TeamDetail() {
   const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostContent, setNewPostContent] = useState('');
   const [postSubmitting, setPostSubmitting] = useState(false);
+  const [postImages, setPostImages] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const isOwner = team?.myRole === 'owner';
   const isAdmin = isOwner || team?.myRole === 'admin';
@@ -204,17 +208,44 @@ export default function TeamDetail() {
       await teamsApi.createTeamContentPost(teamId, {
         title: newPostTitle.trim(),
         content: newPostContent.trim(),
+        images: postImages.length > 0 ? postImages : undefined,
       });
       toastStore.success('发帖成功！');
       setShowPostModal(false);
       setNewPostTitle('');
       setNewPostContent('');
+      setPostImages([]);
       loadData();
     } catch (err: any) {
       toastStore.error(err.response?.data?.error || '发帖失败');
     } finally {
       setPostSubmitting(false);
     }
+  };
+
+  const handlePostImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (postImages.length >= 9) { toastStore.warning('最多上传9张图片'); return; }
+    if (file.size > 5 * 1024 * 1024) { toastStore.warning('图片不能超过5MB'); return; }
+    setUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result as string;
+        try {
+          const res = await api.post('/upload', { image: base64, filename: file.name });
+          setPostImages(prev => [...prev, res.data.url]);
+          toastStore.success('图片上传成功');
+        } catch { toastStore.error('图片上传失败'); }
+        finally { setUploading(false); }
+      };
+      reader.readAsDataURL(file);
+    } catch { setUploading(false); toastStore.error('图片读取失败'); }
+  };
+
+  const removePostImage = (index: number) => {
+    setPostImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleDeleteContentPost = async (postId: number) => {
@@ -701,7 +732,7 @@ export default function TeamDetail() {
 
       {showPostModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-surface rounded-2xl p-6 w-full max-w-lg shadow-xl">
+          <div className="bg-surface rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[85vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-campus-text-primary mb-4">发表新帖</h3>
             <input
               type="text"
@@ -710,26 +741,50 @@ export default function TeamDetail() {
               placeholder="帖子标题"
               maxLength={100}
               className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-campus-text-primary placeholder-campus-text-tertiary focus:outline-none focus:border-primary/50 transition-colors mb-3"
-              onKeyDown={e => e.key === 'Enter' && !postSubmitting && handleCreatePost()}
             />
-            <textarea
-              value={newPostContent}
-              onChange={e => setNewPostContent(e.target.value)}
-              placeholder="帖子内容..."
-              maxLength={5000}
-              rows={8}
-              className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-campus-text-primary placeholder-campus-text-tertiary focus:outline-none focus:border-primary/50 transition-colors resize-none mb-4"
-            />
+            <div className="mb-4">
+              <MarkdownEditor
+                content={newPostContent}
+                onChange={setNewPostContent}
+                placeholder="写下你的内容..."
+                minHeight="min-h-[200px]"
+              />
+            </div>
+            {/* Image upload */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-campus-text-secondary mb-2">图片 ({postImages.length}/9)</label>
+              <div className="flex flex-wrap gap-2">
+                {postImages.map((img, i) => (
+                  <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border border-border">
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removePostImage(i)}
+                      className="absolute top-0.5 right-0.5 p-0.5 bg-destructive text-white rounded-full hover:bg-destructive-hover"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                {postImages.length < 9 && (
+                  <label className="w-20 h-20 flex flex-col items-center justify-center border border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors">
+                    <ImagePlus className="w-6 h-6 text-campus-text-tertiary" />
+                    <span className="text-xs text-campus-text-tertiary mt-1">{uploading ? '上传中...' : '添加'}</span>
+                    <input type="file" accept="image/*" className="hidden" onChange={handlePostImageUpload} disabled={uploading} />
+                  </label>
+                )}
+              </div>
+            </div>
             <div className="flex gap-3 justify-end">
               <button
-                onClick={() => { setShowPostModal(false); setNewPostTitle(''); setNewPostContent(''); }}
+                onClick={() => { setShowPostModal(false); setNewPostTitle(''); setNewPostContent(''); setPostImages([]); }}
                 className="btn-secondary btn-inline text-sm"
               >
                 取消
               </button>
               <button
                 onClick={handleCreatePost}
-                disabled={postSubmitting}
+                disabled={postSubmitting || uploading}
                 className="btn-primary btn-inline text-sm disabled:opacity-50"
               >
                 {postSubmitting ? '发布中...' : '发布'}
