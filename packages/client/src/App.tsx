@@ -17,6 +17,7 @@ const PostDetail = lazy(() => import('./pages/PostDetail'));
 const NewPost = lazy(() => import('./pages/NewPost'));
 const Teams = lazy(() => import('./pages/Teams'));
 const TeamDetail = lazy(() => import('./pages/TeamDetail'));
+const TeamContentPostDetail = lazy(() => import('./pages/TeamContentPostDetail'));
 const CreateTeam = lazy(() => import('./pages/CreateTeam'));
 const EditTeam = lazy(() => import('./pages/EditTeam'));
 const MyTeams = lazy(() => import('./pages/MyTeams'));
@@ -119,6 +120,7 @@ export default function App() {
           <Route path="/teams/my" element={<Suspense fallback={<SuspenseFallback />}><MyTeams /></Suspense>} />
           <Route path="/teams/new" element={<Suspense fallback={<SuspenseFallback />}><CreateTeam /></Suspense>} />
           <Route path="/teams/:id" element={<Suspense fallback={<SuspenseFallback />}><TeamDetail /></Suspense>} />
+          <Route path="/teams/:id/post/:postId" element={<Suspense fallback={<SuspenseFallback />}><TeamContentPostDetail /></Suspense>} />
           <Route path="/teams/:id/edit" element={<Suspense fallback={<SuspenseFallback />}><EditTeam /></Suspense>} />
           <Route path="/download" element={<Suspense fallback={<SuspenseFallback />}><Download /></Suspense>} />
           <Route path="/signature-demo" element={<Suspense fallback={<SuspenseFallback />}><SignatureDemo /></Suspense>} />

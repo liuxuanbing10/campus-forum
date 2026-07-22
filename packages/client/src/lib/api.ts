@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, UpdateProfileData, ChangePasswordData, Post, SearchResult, Notification, AdminUser, ShareInfo, PostStats, TeamCategory, Team, TeamMember, TeamAnnouncement, TeamPost, MyTeamsResponse, CreateTeamData, UpdateTeamData, UserProfile, UserPost, UserComment, FollowStatus, Conversation, Message, ReportData, OAuthAccount, PendingPost, SensitiveWord, AdminReport, AuditLog, PostVersion, CaptchaData, AdminStats, DeviceBlacklistEntry, UserDevice } from '@campus-forum/core';
+import type { User, UpdateProfileData, ChangePasswordData, Post, SearchResult, Notification, AdminUser, ShareInfo, PostStats, TeamCategory, Team, TeamMember, TeamAnnouncement, TeamPost, TeamContentPost, MyTeamsResponse, CreateTeamData, UpdateTeamData, UserProfile, UserPost, UserComment, FollowStatus, Conversation, Message, ReportData, OAuthAccount, PendingPost, SensitiveWord, AdminReport, AuditLog, PostVersion, CaptchaData, AdminStats, DeviceBlacklistEntry, UserDevice } from '@campus-forum/core';
 import { getDeviceCode } from './device';
 
 const baseURL = import.meta.env.VITE_API_URL || '/api';
@@ -127,6 +127,13 @@ export const teamsApi = {
   transferOwnership: (teamId: number, newOwnerId: number) => api.post<{ success: boolean; message: string }>(`/teams/${teamId}/transfer`, { newOwnerId }),
   toggleFavorite: (teamId: number) => api.post<{ success: boolean; favorited: boolean }>(`/teams/${teamId}/favorite`),
   resetInviteCode: (teamId: number) => api.post<{ success: boolean; inviteCode: string }>(`/teams/${teamId}/reset-invite`),
+
+  // ── 团队独立帖子（team_content_posts）────
+  getTeamContentPosts: (id: number, page?: number) => api.get<{ posts: TeamContentPost[]; page: number; limit: number }>(`/teams/${id}/content-posts`, { params: { page } }),
+  createTeamContentPost: (id: number, data: { title: string; content: string; images?: string[] }) => api.post<{ success: boolean; post: TeamContentPost }>(`/teams/${id}/content-posts`, data),
+  getTeamContentPost: (teamId: number, postId: number) => api.get<TeamContentPost>(`/teams/${teamId}/content-posts/${postId}`),
+  updateTeamContentPost: (teamId: number, postId: number, data: { title?: string; content?: string; images?: string[]; isPinned?: boolean }) => api.put<{ success: boolean; message: string }>(`/teams/${teamId}/content-posts/${postId}`, data),
+  deleteTeamContentPost: (teamId: number, postId: number) => api.delete<{ success: boolean; message: string }>(`/teams/${teamId}/content-posts/${postId}`),
 };
 
 export default api;

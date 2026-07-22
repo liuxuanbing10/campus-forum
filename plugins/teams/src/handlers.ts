@@ -18,7 +18,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
 
   async function withMemberCount(team: any): Promise<any> {
     const mc = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM team_members WHERE team_id=? AND status=\'approved\'', team.id))?.c || 0;
-    const pc = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM team_posts WHERE team_id=?', team.id))?.c || 0;
+    const pc = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM team_content_posts WHERE team_id=?', team.id))?.c || 0;
     return { ...team, member_count: mc, post_count: pc };
   }
 
@@ -91,7 +91,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     else if (sort === 'posts') orderBy = 'post_count DESC';
 
     params.push(limit, (page - 1) * limit);
-    const teams = await db.all<any>(`SELECT t.*, (SELECT COUNT(*) FROM team_members WHERE team_id=t.id AND status='approved') as member_count, (SELECT COUNT(*) FROM team_posts WHERE team_id=t.id) as post_count FROM teams t ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`, ...params);
+    const teams = await db.all<any>(`SELECT t.*, (SELECT COUNT(*) FROM team_members WHERE team_id=t.id AND status='approved') as member_count, (SELECT COUNT(*) FROM team_content_posts WHERE team_id=t.id) as post_count FROM teams t ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`, ...params);
     return { teams, page, limit, sort, category };
   });
 
@@ -108,7 +108,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const params: unknown[] = [`%${q}%`];
     if (category) { where += ' AND t.category_id=?'; params.push(category); }
 
-    const teams = await db.all<any>(`SELECT t.*, (SELECT COUNT(*) FROM team_members WHERE team_id=t.id AND status='approved') as member_count, (SELECT COUNT(*) FROM team_posts WHERE team_id=t.id) as post_count FROM teams t ${where} ORDER BY member_count DESC LIMIT 30`, ...params);
+    const teams = await db.all<any>(`SELECT t.*, (SELECT COUNT(*) FROM team_members WHERE team_id=t.id AND status='approved') as member_count, (SELECT COUNT(*) FROM team_content_posts WHERE team_id=t.id) as post_count FROM teams t ${where} ORDER BY member_count DESC LIMIT 30`, ...params);
     return { teams };
   });
 
@@ -157,7 +157,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
 
   app.get('/api/teams/:id', async (req, rep) => {
     const id = Number((req.params as { id: string }).id);
-    const team = await db.get<any>(`SELECT t.*, (SELECT COUNT(*) FROM team_members WHERE team_id=t.id AND status='approved') as member_count, (SELECT COUNT(*) FROM team_posts WHERE team_id=t.id) as post_count FROM teams t WHERE t.id=?`, id);
+    const team = await db.get<any>(`SELECT t.*, (SELECT COUNT(*) FROM team_members WHERE team_id=t.id AND status='approved') as member_count, (SELECT COUNT(*) FROM team_content_posts WHERE team_id=t.id) as post_count FROM teams t WHERE t.id=?`, id);
     if (!team) return rep.status(404).send({ error: '团队不存在' });
     const u = uid(req);
     if (!team.is_public && !(await memberRole(id, u || 0))) return rep.status(403).send({ error: '这是私密团队' });
@@ -373,6 +373,96 @@ export function registerTeamRoutes(ctx: PluginContext) {
     if (!(await isTeamAdmin(id, userId)) && post.author_id !== userId) return rep.status(403).send({ error: '无权移除' });
     await db.run('DELETE FROM team_posts WHERE team_id=? AND post_id=?', id, postId);
     return { success: true, message: '已移除' };
+  });
+
+  // ══════════════════════════════════════════
+  // 团队独立帖子（team_content_posts）
+  // ══════════════════════════════════════════
+
+  app.get('/api/teams/:id/content-posts', async (req, rep) => {
+    const id = Number((req.params as { id: string }).id);
+    const page = Math.max(1, Number((req.query as any).page) || 1);
+    const limit = 20;
+    const team = await db.get<TeamRow>('SELECT id, is_public FROM teams WHERE id=?', id);
+    if (!team) return rep.status(404).send({ error: '团队不存在' });
+    const u = uid(req);
+    const role = u ? await memberRole(id, u) : null;
+    if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
+    const posts = await db.all<any>(`
+      SELECT p.*, u.username, u.display_name, u.avatar_url, 0 as comment_count
+      FROM team_content_posts p JOIN users u ON p.author_id=u.id
+      WHERE p.team_id=?
+      ORDER BY p.is_pinned DESC, p.created_at DESC
+      LIMIT ? OFFSET ?
+    `, id, limit, (page - 1) * limit);
+    return { posts, page, limit };
+  });
+
+  app.post('/api/teams/:id/content-posts', async (req, rep) => {
+    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    const id = Number((req.params as { id: string }).id);
+    const role = await memberRole(id, userId);
+    if (!role) return rep.status(403).send({ error: '仅成员可发帖' });
+    const { title, content, images } = req.body as { title?: string; content?: string; images?: string[] };
+    if (!title?.trim()) return rep.status(400).send({ error: '请输入标题' });
+    if (!content?.trim()) return rep.status(400).send({ error: '请输入内容' });
+    const result = await db.run(
+      'INSERT INTO team_content_posts (team_id, title, content, author_id, images) VALUES (?,?,?,?,?)',
+      id, title.trim(), content.trim(), userId, images && images.length > 0 ? JSON.stringify(images) : null
+    );
+    const post = await db.get<any>(`
+      SELECT p.*, u.username, u.display_name, u.avatar_url, 0 as comment_count
+      FROM team_content_posts p JOIN users u ON p.author_id=u.id WHERE p.id=?
+    `, result.lastInsertRowid);
+    return { success: true, post };
+  });
+
+  app.get('/api/teams/:id/content-posts/:postId', async (req, rep) => {
+    const id = Number((req.params as { id: string }).id);
+    const postId = Number((req.params as { postId: string }).postId);
+    const team = await db.get<TeamRow>('SELECT id, is_public FROM teams WHERE id=?', id);
+    if (!team) return rep.status(404).send({ error: '团队不存在' });
+    const u = uid(req);
+    const role = u ? await memberRole(id, u) : null;
+    if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
+    const post = await db.get<any>(`
+      SELECT p.*, u.username, u.display_name, u.avatar_url, 0 as comment_count
+      FROM team_content_posts p JOIN users u ON p.author_id=u.id WHERE p.id=? AND p.team_id=?
+    `, postId, id);
+    if (!post) return rep.status(404).send({ error: '帖子不存在' });
+    return post;
+  });
+
+  app.put('/api/teams/:id/content-posts/:postId', async (req, rep) => {
+    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    const id = Number((req.params as { id: string }).id);
+    const postId = Number((req.params as { postId: string }).postId);
+    const post = await db.get<{ author_id: number }>('SELECT author_id FROM team_content_posts WHERE id=? AND team_id=?', postId, id);
+    if (!post) return rep.status(404).send({ error: '帖子不存在' });
+    if (post.author_id !== userId && !(await isTeamAdmin(id, userId))) return rep.status(403).send({ error: '无权编辑' });
+    const { title, content, images, isPinned } = req.body as any;
+    const updates: string[] = [];
+    const params: unknown[] = [];
+    if (title !== undefined) { updates.push('title=?'); params.push(title.trim()); }
+    if (content !== undefined) { updates.push('content=?'); params.push(content.trim()); }
+    if (images !== undefined) { updates.push('images=?'); params.push(images.length > 0 ? JSON.stringify(images) : null); }
+    if (isPinned !== undefined && (await isTeamAdmin(id, userId))) { updates.push('is_pinned=?'); params.push(isPinned ? 1 : 0); }
+    if (updates.length === 0) return rep.status(400).send({ error: '没有需要更新的字段' });
+    updates.push("updated_at=datetime('now')");
+    params.push(postId, id);
+    await db.run(`UPDATE team_content_posts SET ${updates.join(',')} WHERE id=? AND team_id=?`, ...params);
+    return { success: true, message: '已更新' };
+  });
+
+  app.delete('/api/teams/:id/content-posts/:postId', async (req, rep) => {
+    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    const id = Number((req.params as { id: string }).id);
+    const postId = Number((req.params as { postId: string }).postId);
+    const post = await db.get<{ author_id: number }>('SELECT author_id FROM team_content_posts WHERE id=? AND team_id=?', postId, id);
+    if (!post) return rep.status(404).send({ error: '帖子不存在' });
+    if (post.author_id !== userId && !(await isTeamAdmin(id, userId))) return rep.status(403).send({ error: '无权删除' });
+    await db.run('DELETE FROM team_content_posts WHERE id=?', postId);
+    return { success: true, message: '已删除' };
   });
 
   // ══════════════════════════════════════════

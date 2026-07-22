@@ -261,6 +261,22 @@ export interface TeamPost {
   created_at: string;
 }
 
+export interface TeamContentPost {
+  id: number;
+  team_id: number;
+  title: string;
+  content: string;
+  author_id: number;
+  is_pinned: number;
+  images: string[];
+  username: string;
+  display_name?: string;
+  avatar_url?: string;
+  comment_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface MyTeamsResponse {
   teams: Team[];
   owned: Team[];

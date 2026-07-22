@@ -127,6 +127,19 @@ export async function initializeSchema(db: DatabaseAdapter): Promise<void> {
       PRIMARY KEY (team_id, post_id)
     );
 
+    -- Team content posts (direct posts within team, independent from forum)
+    CREATE TABLE IF NOT EXISTS team_content_posts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      is_pinned INTEGER DEFAULT 0,
+      images TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
     -- Team announcements
     CREATE TABLE IF NOT EXISTS team_announcements (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -357,6 +370,17 @@ export async function migrateSchema(db: DatabaseAdapter): Promise<void> {
     )`],
     ['add_ban_until_reason', `ALTER TABLE users ADD COLUMN banned_until TEXT`],
     ['add_ban_reason', `ALTER TABLE users ADD COLUMN ban_reason TEXT`],
+    ['add_team_content_posts', `CREATE TABLE IF NOT EXISTS team_content_posts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      is_pinned INTEGER DEFAULT 0,
+      images TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )`],
     ['add_performance_indexes', `
       CREATE INDEX IF NOT EXISTS idx_posts_board_id ON posts(board_id);
       CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);

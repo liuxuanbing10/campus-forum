@@ -6,7 +6,7 @@ import {
   FileText, Megaphone, Plus, Trash2, Pin, Check, X
 } from 'lucide-react';
 import { teamsApi } from '../lib/api';
-import type { Team, TeamMember, TeamAnnouncement, TeamPost } from '@campus-forum/core';
+import type { Team, TeamMember, TeamAnnouncement, TeamContentPost } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 
@@ -24,7 +24,7 @@ export default function TeamDetail() {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [applications, setApplications] = useState<TeamMember[]>([]);
   const [announcements, setAnnouncements] = useState<TeamAnnouncement[]>([]);
-  const [posts, setPosts] = useState<TeamPost[]>([]);
+  const [posts, setPosts] = useState<TeamContentPost[]>([]);
   const [membersHidden, setMembersHidden] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -35,6 +35,10 @@ export default function TeamDetail() {
   const [annSubmitting, setAnnSubmitting] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showPostModal, setShowPostModal] = useState(false);
+  const [newPostTitle, setNewPostTitle] = useState('');
+  const [newPostContent, setNewPostContent] = useState('');
+  const [postSubmitting, setPostSubmitting] = useState(false);
 
   const isOwner = team?.myRole === 'owner';
   const isAdmin = isOwner || team?.myRole === 'admin';
@@ -47,7 +51,7 @@ export default function TeamDetail() {
         teamsApi.getTeam(teamId),
         teamsApi.getTeamMembers(teamId),
         teamsApi.getAnnouncements(teamId),
-        teamsApi.getTeamPosts(teamId),
+        teamsApi.getTeamContentPosts(teamId),
       ]);
       setTeam(teamRes.data);
       setMembers(membersRes.data.members);
@@ -185,6 +189,38 @@ export default function TeamDetail() {
     if (!confirm('确定删除该公告吗？')) return;
     try {
       await teamsApi.deleteAnnouncement(teamId, annId);
+      toastStore.success('已删除');
+      loadData();
+    } catch (err: any) {
+      toastStore.error(err.response?.data?.error || '操作失败');
+    }
+  };
+
+  const handleCreatePost = async () => {
+    if (!newPostTitle.trim()) { toastStore.warning('请输入标题'); return; }
+    if (!newPostContent.trim()) { toastStore.warning('请输入内容'); return; }
+    setPostSubmitting(true);
+    try {
+      await teamsApi.createTeamContentPost(teamId, {
+        title: newPostTitle.trim(),
+        content: newPostContent.trim(),
+      });
+      toastStore.success('发帖成功！');
+      setShowPostModal(false);
+      setNewPostTitle('');
+      setNewPostContent('');
+      loadData();
+    } catch (err: any) {
+      toastStore.error(err.response?.data?.error || '发帖失败');
+    } finally {
+      setPostSubmitting(false);
+    }
+  };
+
+  const handleDeleteContentPost = async (postId: number) => {
+    if (!confirm('确定删除该帖子吗？')) return;
+    try {
+      await teamsApi.deleteTeamContentPost(teamId, postId);
       toastStore.success('已删除');
       loadData();
     } catch (err: any) {
@@ -454,16 +490,28 @@ export default function TeamDetail() {
 
       {tab === 'posts' && (
         <div className="space-y-3">
+          {/* 发帖按钮 */}
+          {isMember && (
+            <button
+              onClick={() => setShowPostModal(true)}
+              className="w-full p-4 bg-surface border-2 border-dashed border-border rounded-xl text-campus-text-secondary hover:border-primary/40 hover:text-primary transition-all flex items-center justify-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              发表新帖
+            </button>
+          )}
+
           {posts.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="w-12 h-12 mx-auto text-campus-text-tertiary mb-3" />
               <p className="text-campus-text-secondary">暂无帖子</p>
+              {!isMember && <p className="text-xs text-campus-text-tertiary mt-2">加入团队后可发帖</p>}
             </div>
           ) : (
             posts.map(post => (
               <div
                 key={post.id}
-                onClick={() => navigate(`/post/${post.id}`)}
+                onClick={() => navigate(`/teams/${teamId}/post/${post.id}`)}
                 className="bg-surface border border-border rounded-xl p-4 cursor-pointer hover:border-primary/30 hover:shadow-card transition-all"
               >
                 <div className="flex items-start justify-between">
@@ -475,22 +523,15 @@ export default function TeamDetail() {
                     <button
                       onClick={async (e) => {
                         e.stopPropagation();
-                        if (confirm('确定从团队移除该帖子吗？')) {
-                          try {
-                            await teamsApi.removeTeamPost(teamId, post.id);
-                            toastStore.success('已移除');
-                            loadData();
-                          } catch (err: any) {
-                            toastStore.error(err.response?.data?.error || '操作失败');
-                          }
-                        }
+                        await handleDeleteContentPost(post.id);
                       }}
                       className="p-1 text-campus-text-tertiary hover:text-destructive transition-colors flex-shrink-0 ml-2"
                     >
-                      <UserMinus className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   )}
                 </div>
+                <p className="text-sm text-campus-text-secondary line-clamp-2 mb-2">{post.content}</p>
                 <div className="flex items-center gap-3 text-xs text-campus-text-tertiary">
                   <span>{post.display_name || post.username}</span>
                   <span>{new Date(post.created_at).toLocaleDateString('zh-CN')}</span>
@@ -652,6 +693,46 @@ export default function TeamDetail() {
                 className="btn-primary btn-inline text-sm disabled:opacity-50"
               >
                 {annSubmitting ? '发布中...' : '发布'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPostModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface rounded-2xl p-6 w-full max-w-lg shadow-xl">
+            <h3 className="text-lg font-semibold text-campus-text-primary mb-4">发表新帖</h3>
+            <input
+              type="text"
+              value={newPostTitle}
+              onChange={e => setNewPostTitle(e.target.value)}
+              placeholder="帖子标题"
+              maxLength={100}
+              className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-campus-text-primary placeholder-campus-text-tertiary focus:outline-none focus:border-primary/50 transition-colors mb-3"
+              onKeyDown={e => e.key === 'Enter' && !postSubmitting && handleCreatePost()}
+            />
+            <textarea
+              value={newPostContent}
+              onChange={e => setNewPostContent(e.target.value)}
+              placeholder="帖子内容..."
+              maxLength={5000}
+              rows={8}
+              className="w-full px-4 py-3 bg-surface border border-border rounded-xl text-campus-text-primary placeholder-campus-text-tertiary focus:outline-none focus:border-primary/50 transition-colors resize-none mb-4"
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => { setShowPostModal(false); setNewPostTitle(''); setNewPostContent(''); }}
+                className="btn-secondary btn-inline text-sm"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleCreatePost}
+                disabled={postSubmitting}
+                className="btn-primary btn-inline text-sm disabled:opacity-50"
+              >
+                {postSubmitting ? '发布中...' : '发布'}
               </button>
             </div>
           </div>
