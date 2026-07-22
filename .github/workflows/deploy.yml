@@ -19,7 +19,7 @@ jobs:
       - run: npm run build:server
       - run: npm run build:client
 
-      - name: Deploy to server
+      - name: Deploy dist files
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -37,8 +37,4 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /opt/campus-forum
-            git pull origin main
-            npm install
-            npm run build:server
-            npm run build:client
             npx pm2 restart campus-forum || npx pm2 start packages/server/dist/index.js --name campus-forum
