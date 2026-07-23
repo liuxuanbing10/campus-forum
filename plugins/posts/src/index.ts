@@ -70,6 +70,7 @@ function buildPostListSql(opts: {
     opts.withContent ? 'p.content' : '',
     'p.view_count',
     `CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name`,
+    'u.role as author_role',
     'b.name as board_name',
     'COALESCE(v.like_count,0) as like_count',
     'COALESCE(c.comment_count,0) as comment_count',
@@ -240,7 +241,7 @@ export const postsPlugin: Plugin = {
       const userId = uid(req);
       const post = await db.get<PostDetail>(`SELECT p.id,p.title,p.content,p.board_id,p.is_anonymous,p.is_private,p.is_pinned,p.images,p.created_at,p.updated_at,p.view_count,
         CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,
-        u.id as author_id, b.name as board_name,
+        u.role as author_role, u.id as author_id, b.name as board_name,
         COALESCE(v.like_count,0) as like_count, COALESCE(c.comment_count,0) as comment_count,
         CASE WHEN f.id IS NOT NULL THEN 1 ELSE 0 END as is_favorited,
         CASE WHEN pv.id IS NOT NULL THEN pv.value ELSE 0 END as my_vote
@@ -301,6 +302,7 @@ export const postsPlugin: Plugin = {
       return await db.all<any>(
         `SELECT c.id,c.content,c.post_id,c.parent_id,c.is_anonymous,c.created_at,c.edited_at,
           CASE WHEN c.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,
+          u.role as author_role,
           COALESCE(l.like_count,0) as like_count,
           COALESCE(v.value,0) as my_vote
          FROM comments c JOIN users u ON c.author_id=u.id
@@ -422,8 +424,8 @@ export const postsPlugin: Plugin = {
     // ─── 分享 ───
     app.get('/api/posts/:id/share', async (req, rep) => {
       const id = Number((req.params as { id: string }).id);
-      const post = await db.get<{ id: number; title: string; author_name: string }>(
-        `SELECT p.id,p.title,CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name
+      const post = await db.get<{ id: number; title: string; author_name: string; author_role: string }>(
+        `SELECT p.id,p.title,CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name, u.role as author_role
          FROM posts p JOIN users u ON p.author_id=u.id WHERE p.id=?`, id);
       if (!post) return rep.status(404).send({ error: '帖子不存在' });
       const url = `${process.env.CLIENT_URL || 'http://localhost:5173'}/post/${id}`;
@@ -482,7 +484,7 @@ export const postsPlugin: Plugin = {
     // ─── 审核队列（管理员）───
     app.get('/api/admin/pending-posts', async (req, rep) => {
       const u = uid(req); if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可查看' });
-      return { posts: await db.all<any>('SELECT p.id,p.title,p.content,p.created_at,u.username as author_name FROM posts p JOIN users u ON p.author_id=u.id WHERE p.is_pending=1 ORDER BY p.created_at DESC') };
+      return { posts: await db.all<any>('SELECT p.id,p.title,p.content,p.created_at,u.username as author_name, u.role as author_role FROM posts p JOIN users u ON p.author_id=u.id WHERE p.is_pending=1 ORDER BY p.created_at DESC') };
     });
 
     app.put('/api/admin/posts/:id/review', async (req, rep) => {
