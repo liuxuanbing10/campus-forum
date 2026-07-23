@@ -273,11 +273,26 @@ export const adminPlugin: Plugin = {
       const targetId = Number((req.params as { id: string }).id);
       const target = await db.get<{ id: number }>('SELECT id FROM users WHERE id=?', targetId);
       if (!target) return rep.status(404).send({ error: '用户不存在' });
-      const newPassword = '123456';
+      const { password } = req.body as { password?: string };
+      const newPassword = password?.trim() || '123456';
+      if (newPassword.length < 6) return rep.status(400).send({ error: '密码长度不能少于 6 位' });
       const bcrypt = await import('bcryptjs');
       const hash = await bcrypt.hash(newPassword, 10);
       await db.run('UPDATE users SET password_hash=? WHERE id=?', hash, targetId);
-      return { success: true, message: `密码已重置为 ${newPassword}` };
+      return { success: true, message: `密码已重置` };
+    });
+
+    // ── 二次验证密码（敏感操作前调用）───────
+    app.post('/api/admin/verify-password', { preHandler: requireAdmin }, async (req, rep) => {
+      const userId = getUid(req);
+      const { password } = req.body as { password?: string };
+      if (!password) return rep.status(400).send({ error: '请输入密码' });
+      const user = await db.get<{ password_hash: string }>('SELECT password_hash FROM users WHERE id=?', userId);
+      if (!user) return rep.status(404).send({ error: '用户不存在' });
+      const bcrypt = await import('bcryptjs');
+      const valid = await bcrypt.compare(password, user.password_hash);
+      if (!valid) return rep.status(403).send({ error: '密码错误', verified: false });
+      return { success: true, verified: true };
     });
   },
 };
