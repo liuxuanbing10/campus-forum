@@ -34,6 +34,7 @@ const Download = lazy(() => import('./pages/Download'));
 const SignatureDemo = lazy(() => import('./pages/SignatureDemo'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Achievements = lazy(() => import('./pages/Achievements'));
+const AchievementRules = lazy(() => import('./pages/AchievementRules'));
 
 const SuspenseFallback = () => <div className="text-center py-12 text-campus-text-tertiary font-handwrite text-lg">加载中...</div>;
 
@@ -126,6 +127,7 @@ export default function App() {
           <Route path="/download" element={<Suspense fallback={<SuspenseFallback />}><Download /></Suspense>} />
           <Route path="/signature-demo" element={<Suspense fallback={<SuspenseFallback />}><SignatureDemo /></Suspense>} />
           <Route path="/achievements" element={<Suspense fallback={<SuspenseFallback />}><Achievements /></Suspense>} />
+          <Route path="/achievements/rules" element={<Suspense fallback={<SuspenseFallback />}><AchievementRules /></Suspense>} />
           <Route path="*" element={<Navigate to="/" />} />
         </Route>
         <Route path="/ostracism" element={<Suspense fallback={<SuspenseFallback />}><Ostracism /></Suspense>} />

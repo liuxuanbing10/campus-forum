@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Medal, Star, TrendingUp, Sparkles, Lock, CheckCircle, Loader2, RefreshCw } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Trophy, Medal, Star, TrendingUp, Sparkles, Lock, CheckCircle, Loader2, RefreshCw, BookOpen } from 'lucide-react';
 import api from '../lib/api';
 import type { Achievement } from '@campus-forum/core';
 
@@ -111,6 +112,13 @@ export default function Achievements() {
             {checking ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             刷新成就
           </button>
+          <Link
+            to="/achievements/rules"
+            className="btn-secondary btn-sm btn-inline flex items-center gap-1.5"
+          >
+            <BookOpen className="w-4 h-4" />
+            规则
+          </Link>
         </div>
 
         {/* 经验条 */}
