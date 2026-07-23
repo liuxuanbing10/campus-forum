@@ -274,10 +274,20 @@ export function registerAchievementRoutes(ctx: PluginContext) {
 
   // 获取用户成就统计
   app.get('/api/achievements/stats', async (req) => {
-    const u = uid(req);
-    if (!u) return { total: 0, unlocked: 0, totalPoints: 0, earnedPoints: 0 };
-
     const totalRow = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM achievements');
+    const totalPointsRow = await db.get<{ c: number }>('SELECT COALESCE(SUM(points),0) as c FROM achievements');
+
+    const u = uid(req);
+    if (!u) {
+      return {
+        total: totalRow?.c ?? 0,
+        unlocked: 0,
+        totalPoints: totalPointsRow?.c ?? 0,
+        earnedPoints: 0,
+        userPoints: 0,
+      };
+    }
+
     const unlockedRow = await db.get<{ c: number }>(
       'SELECT COUNT(*) as c FROM user_achievements WHERE user_id=?', u,
     );
@@ -285,8 +295,6 @@ export function registerAchievementRoutes(ctx: PluginContext) {
       'SELECT COALESCE(SUM(a.points),0) as c FROM user_achievements ua JOIN achievements a ON ua.achievement_id=a.id WHERE ua.user_id=?',
       u,
     );
-    const totalPointsRow = await db.get<{ c: number }>('SELECT COALESCE(SUM(points),0) as c FROM achievements');
-
     const userRow = await db.get<{ points: number }>('SELECT points FROM users WHERE id=?', u);
 
     return {
