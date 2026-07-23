@@ -152,11 +152,11 @@ export default function Layout() {
                       <DropdownMenuItem onClick={() => navigate('/settings')}>
                         <Settings className="w-4 h-4" /> 设置
                       </DropdownMenuItem>
-                      {user.role === 'admin' && (
+                      {user.role === 'admin' || user.role === 'superadmin' ? (
                         <DropdownMenuItem onClick={() => navigate('/admin')}>
                           <Shield className="w-4 h-4" /> 管理后台
                         </DropdownMenuItem>
-                      )}
+                      ) : null}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem variant="destructive" onClick={handleLogout}>
                         <LogOut className="w-4 h-4" /> 退出登录
@@ -203,7 +203,7 @@ export default function Layout() {
                 <Link to="/settings" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
                   设置
                 </Link>
-                {user.role === 'admin' && (
+                {(user.role === 'admin' || user.role === 'superadmin') && (
                   <Link to="/admin" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
                     <Shield className="w-4 h-4" /> 管理后台
                   </Link>
