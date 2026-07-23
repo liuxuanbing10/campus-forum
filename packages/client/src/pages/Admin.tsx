@@ -299,10 +299,12 @@ function UsersTab({ currentUser }: { currentUser: { role: string } | null }) {
   };
 
   const handleResetPassword = async (id: number) => {
-    const pwd = prompt('请输入新的密码（至少 6 位）：');
-    if (!pwd || pwd.length < 6) { toastStore.warning('密码至少 6 位'); return; }
-    try { await api.post(`/admin/users/${id}/reset-password`, { password: pwd }); toastStore.success('密码已重置'); loadUsers(); }
-    catch { toastStore.error('操作失败'); }
+    requireVerify(async () => {
+      const pwd = prompt('请输入新的密码（至少 6 位）：');
+      if (!pwd || pwd.length < 6) { toastStore.warning('密码至少 6 位'); return; }
+      try { await api.post(`/admin/users/${id}/reset-password`, { password: pwd }); toastStore.success('密码已重置'); loadUsers(); }
+      catch { toastStore.error('操作失败'); }
+    });
   };
 
   const [verifyModal, setVerifyModal] = useState<{ open: boolean; pendingAction: (() => void) | null }>({ open: false, pendingAction: null });
@@ -343,15 +345,18 @@ function UsersTab({ currentUser }: { currentUser: { role: string } | null }) {
 
   const handleBatchBan = () => {
     if (!selected.size) return;
-    setBanModal({ open: true, userIds: [...selected], action: 'ban' });
+    requireVerify(() => setBanModal({ open: true, userIds: [...selected], action: 'ban' }));
   };
 
   const handleBatchDelete = async () => {
-    if (!selected.size || !confirm(`确定删除 ${selected.size} 个用户？此操作不可撤销。`)) return;
-    try {
-      const res = await adminApi.batchDeleteUsers([...selected]);
-      toastStore.success(res.data.message); setSelected(new Set()); loadUsers();
-    } catch { toastStore.error('批量删除失败'); }
+    if (!selected.size) return;
+    requireVerify(async () => {
+      if (!confirm(`确定删除 ${selected.size} 个用户？此操作不可撤销。`)) return;
+      try {
+        const res = await adminApi.batchDeleteUsers([...selected]);
+        toastStore.success(res.data.message); setSelected(new Set()); loadUsers();
+      } catch { toastStore.error('批量删除失败'); }
+    });
   };
 
   const handleCreate = async () => {
