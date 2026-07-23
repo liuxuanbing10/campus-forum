@@ -267,6 +267,18 @@ export const adminPlugin: Plugin = {
       }
       return { devices };
     });
+
+    // ── 重置用户密码（仅 superadmin）───────
+    app.post('/api/admin/users/:id/reset-password', { preHandler: requireSuperAdmin }, async (req, rep) => {
+      const targetId = Number((req.params as { id: string }).id);
+      const target = await db.get<{ id: number }>('SELECT id FROM users WHERE id=?', targetId);
+      if (!target) return rep.status(404).send({ error: '用户不存在' });
+      const newPassword = '123456';
+      const bcrypt = await import('bcryptjs');
+      const hash = await bcrypt.hash(newPassword, 10);
+      await db.run('UPDATE users SET password_hash=? WHERE id=?', hash, targetId);
+      return { success: true, message: `密码已重置为 ${newPassword}` };
+    });
   },
 };
 

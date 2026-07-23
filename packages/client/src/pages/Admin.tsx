@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, ArrowLeft, Search, Ban, UserCog, MoreVertical, UserX, UserCheck, FileText, Flag, History, AlertTriangle, Loader2, Trash2, Check, X, BarChart3, TrendingUp, Users, MessageSquare, Folder, Trophy, Smartphone } from 'lucide-react';
+import { Shield, ArrowLeft, Search, Ban, UserCog, MoreVertical, UserX, UserCheck, FileText, Flag, History, AlertTriangle, Loader2, Trash2, Check, X, BarChart3, TrendingUp, Users, MessageSquare, Folder, Trophy, Smartphone, Key } from 'lucide-react';
 import { adminApi, adminExtendedApi, adminDeviceApi } from '../lib/api';
+import api from '../lib/api';
 import type { AdminUser, PendingPost, SensitiveWord, AdminReport, AuditLog, AdminStats, DeviceBlacklistEntry, UserDevice } from '@campus-forum/core';
 import { ROLE_NAMES } from '@campus-forum/core';
 import { toastStore } from '../App';
@@ -297,6 +298,12 @@ function UsersTab({ currentUser }: { currentUser: { role: string } | null }) {
     catch { toastStore.error('操作失败'); }
   };
 
+  const handleResetPassword = async (id: number) => {
+    if (!confirm(`确定重置该用户密码为 123456？`)) return;
+    try { await api.post(`/admin/users/${id}/reset-password`); toastStore.success('密码已重置为 123456'); }
+    catch { toastStore.error('操作失败'); }
+  };
+
   const toggleSelect = (id: number) => {
     setSelected(prev => {
       const next = new Set(prev);
@@ -433,6 +440,7 @@ function UsersTab({ currentUser }: { currentUser: { role: string } | null }) {
                     <>
                       <button onClick={() => handleRole(u.id, 'admin')} className="p-2 hover:bg-surface-hover rounded-lg transition-colors" title="设为共创者"><UserCog className="w-4 h-4 text-blue-500" /></button>
                       <button onClick={() => handleRole(u.id, 'banned')} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors" title="封禁"><Ban className="w-4 h-4 text-destructive" /></button>
+                    <button onClick={() => handleResetPassword(u.id)} className="p-2 hover:bg-surface-hover rounded-lg transition-colors" title="重置密码为 123456"><Key className="w-4 h-4 text-amber-500" /></button>
                     </>
                   )}
                 </>
