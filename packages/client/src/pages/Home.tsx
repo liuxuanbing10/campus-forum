@@ -514,6 +514,34 @@ export default function HomePage() {
               </div>
             </Link>
           </div>
+
+          {/* ═══════════════════════════════════════════
+              社区公约 — 置顶公告
+              ═══════════════════════════════════════════ */}
+          <Link
+            to="/rules"
+            className="group relative mt-4 block rounded-2xl overflow-hidden border-2 border-primary/20 bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 hover:border-primary/40 transition-all hover:scale-[1.01] active:scale-[0.99]"
+          >
+            <div className="absolute inset-0 pointer-events-none opacity-10">
+              <div className="absolute w-40 h-40 -top-10 -left-10 rounded-full bg-primary blur-3xl" />
+              <div className="absolute w-40 h-40 -bottom-10 -right-10 rounded-full bg-accent blur-3xl" />
+            </div>
+            <div className="relative z-10 flex items-center gap-4 p-5 sm:p-6">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                <BookOpen className="w-6 h-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm sm:text-base font-semibold font-display text-campus-text-primary mb-1 flex items-center gap-2">
+                  社区公约
+                  <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-normal">置顶</span>
+                </h3>
+                <p className="text-xs sm:text-sm text-campus-text-tertiary font-body leading-relaxed">
+                  互相尊重 · 友善交流 · 理性讨论 · 保护隐私 — 查看完整社区公约
+                </p>
+              </div>
+              <span className="text-xs text-primary font-medium group-hover:underline shrink-0 hidden sm:inline">查看 →</span>
+            </div>
+          </Link>
         </div>
       ) : (
         <div className="text-center py-12 text-campus-text-secondary">

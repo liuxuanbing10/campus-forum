@@ -258,6 +258,24 @@ export function registerAchievementRoutes(ctx: PluginContext) {
       return { achievements: all.map(a => ({ ...a, unlocked: false, unlocked_at: null })) };
     }
 
+    // 🛡️ 管理员自动全成就
+    const userRow = await db.get<{ is_admin: number }>('SELECT is_admin FROM users WHERE id=?', u);
+    if (userRow?.is_admin) {
+      for (const ach of all) {
+        const existing = await db.get<UserAchievementRow>(
+          'SELECT id FROM user_achievements WHERE user_id=? AND achievement_id=?',
+          u, ach.id,
+        );
+        if (!existing) {
+          await db.run(
+            'INSERT INTO user_achievements (user_id, achievement_id) VALUES (?, ?)',
+            u, ach.id,
+          );
+          await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', ach.points, u);
+        }
+      }
+    }
+
     const unlocked = await db.all<UserAchievementRow>(
       'SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id=?', u,
     );
@@ -288,6 +306,21 @@ export function registerAchievementRoutes(ctx: PluginContext) {
       };
     }
 
+    // 🛡️ 管理员自动全成就
+    const userRow = await db.get<{ is_admin: number }>('SELECT is_admin FROM users WHERE id=?', u);
+    if (userRow?.is_admin) {
+      const all = await db.all<AchievementRow>('SELECT * FROM achievements');
+      for (const ach of all) {
+        const existing = await db.get<UserAchievementRow>(
+          'SELECT id FROM user_achievements WHERE user_id=? AND achievement_id=?', u, ach.id,
+        );
+        if (!existing) {
+          await db.run('INSERT INTO user_achievements (user_id, achievement_id) VALUES (?, ?)', u, ach.id);
+          await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', ach.points, u);
+        }
+      }
+    }
+
     const unlockedRow = await db.get<{ c: number }>(
       'SELECT COUNT(*) as c FROM user_achievements WHERE user_id=?', u,
     );
@@ -295,14 +328,14 @@ export function registerAchievementRoutes(ctx: PluginContext) {
       'SELECT COALESCE(SUM(a.points),0) as c FROM user_achievements ua JOIN achievements a ON ua.achievement_id=a.id WHERE ua.user_id=?',
       u,
     );
-    const userRow = await db.get<{ points: number }>('SELECT points FROM users WHERE id=?', u);
+    const userPointsRow = await db.get<{ points: number }>('SELECT points FROM users WHERE id=?', u);
 
     return {
       total: totalRow?.c ?? 0,
       unlocked: unlockedRow?.c ?? 0,
       totalPoints: totalPointsRow?.c ?? 0,
       earnedPoints: pointsRow?.c ?? 0,
-      userPoints: userRow?.points ?? 0,
+      userPoints: userPointsRow?.points ?? 0,
     };
   });
 
