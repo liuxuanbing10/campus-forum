@@ -74,10 +74,16 @@ export default function Achievements() {
   const unlockedCount = achievements.filter(a => a.unlocked).length;
 
   // 等级计算（与 LevelBadge 保持一致）
+  const MAX_POINTS = 5500;
   const points = stats?.userPoints ?? 0;
-  const level = Math.floor(points / 100) + 1;
-  const nextLevelPoints = level * 100;
-  const progress = ((points % 100) / 100) * 100;
+  const cappedPoints = Math.min(points, MAX_POINTS);
+  const level = Math.min(Math.floor(cappedPoints / 100) + 1, 10);
+  const nextLevelPoints = points >= MAX_POINTS ? MAX_POINTS : level * 100;
+  const prevLevelPoints = points >= MAX_POINTS ? 5500 : (level - 1) * 100;
+  const progress = nextLevelPoints > prevLevelPoints
+    ? ((cappedPoints - prevLevelPoints) / (nextLevelPoints - prevLevelPoints)) * 100
+    : 100;
+  const isMaxLevel = points >= MAX_POINTS;
 
   if (loading) {
     return (
@@ -100,7 +106,10 @@ export default function Achievements() {
             <div>
               <h1 className="text-2xl font-bold text-campus-text-primary font-display">成就系统</h1>
               <p className="text-sm text-campus-text-secondary mt-1">
-                等级 Lv.{level} · {points} 积分 · 下一级还需 {nextLevelPoints - points} 分
+                {isMaxLevel
+                  ? `等级 Lv.${level} · MAX · ${points} 积分 · 已达满级 🎉`
+                  : `等级 Lv.${level} · ${points} 积分 · 下一级还需 ${nextLevelPoints - points} 分`
+                }
               </p>
             </div>
           </div>
@@ -221,9 +230,11 @@ export default function Achievements() {
                     <span className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-1">
                       <Star className="w-3 h-3" />
                       +{ach.points}
+                      {(ach as any).repeat_interval > 0 && <span className="text-[10px] opacity-70">×{(ach as any).max_repeats || '∞'}</span>}
                     </span>
                     <span className="text-[11px] text-campus-text-tertiary">
                       {ach.condition_desc}
+                      {(ach as any).repeat_interval > 0 && ` · 已获 ${(ach as any).repeat_count || 0}/${(ach as any).max_repeats || '∞'}`}
                     </span>
                   </div>
                   {ach.unlocked && ach.unlocked_at && (

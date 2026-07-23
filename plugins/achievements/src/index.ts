@@ -10,6 +10,8 @@ interface AchievementRow {
   points: number;
   condition_desc: string;
   sort_order: number;
+  repeat_interval: number;
+  max_repeats: number;
 }
 
 interface UserAchievementRow {
@@ -17,6 +19,7 @@ interface UserAchievementRow {
   user_id: number;
   achievement_id: number;
   unlocked_at: string;
+  repeat_count: number;
 }
 
 // ── 成就命中检查 ──────────────────────────────
@@ -34,7 +37,64 @@ async function checkAndAward(
   );
   if (!ach) return { newlyUnlocked: false };
 
-  // 检查是否已获得
+  // ── 可重复成就 ──
+  if (ach.repeat_interval > 0) {
+    // 查询当前已获得的次数
+    const existingRows = await db.all<UserAchievementRow>(
+      'SELECT * FROM user_achievements WHERE user_id = ? AND achievement_id = ? ORDER BY repeat_count',
+      userId, ach.id,
+    );
+    const totalAwarded = existingRows.reduce((s, r) => s + r.repeat_count, 0);
+
+    // 计算总计数
+    let totalCount = 0;
+    switch (achievementKey) {
+      case 'repeat_posts': {
+        const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM posts WHERE author_id=?', userId);
+        totalCount = c?.c ?? 0;
+        break;
+      }
+      case 'repeat_comments': {
+        const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM comments WHERE author_id=?', userId);
+        totalCount = c?.c ?? 0;
+        break;
+      }
+      case 'repeat_likes': {
+        const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM votes WHERE value=1 AND post_id IN (SELECT id FROM posts WHERE author_id=?)', userId);
+        totalCount = c?.c ?? 0;
+        break;
+      }
+    }
+
+    const expectedTimes = Math.min(
+      Math.floor(totalCount / ach.repeat_interval),
+      ach.max_repeats,
+    );
+
+    if (expectedTimes > totalAwarded) {
+      const timesToAward = expectedTimes - totalAwarded;
+      for (let i = 0; i < timesToAward; i++) {
+        const nextCount = totalAwarded + i + 1;
+        await db.run(
+          'INSERT INTO user_achievements (user_id, achievement_id, repeat_count) VALUES (?, ?, ?)',
+          userId, ach.id, nextCount,
+        );
+        await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', ach.points, userId);
+      }
+      // 发送通知（合并次数）
+      try {
+        await (ctx as any).createNotification?.(
+          userId,
+          'achievement',
+          `🎉 成就「${ach.name}」×${timesToAward}！获得 ${ach.points * timesToAward} 积分`,
+        );
+      } catch { /* 通知非必需 */ }
+      return { newlyUnlocked: true, achievement: ach };
+    }
+    return { newlyUnlocked: false };
+  }
+
+  // ── 一次性成就 ──
   const existing = await db.get<UserAchievementRow>(
     'SELECT id FROM user_achievements WHERE user_id = ? AND achievement_id = ?',
     userId, ach.id,
@@ -262,31 +322,55 @@ export function registerAchievementRoutes(ctx: PluginContext) {
     const userRow = await db.get<{ is_admin: number }>('SELECT is_admin FROM users WHERE id=?', u);
     if (userRow?.is_admin) {
       for (const ach of all) {
-        const existing = await db.get<UserAchievementRow>(
-          'SELECT id FROM user_achievements WHERE user_id=? AND achievement_id=?',
-          u, ach.id,
-        );
-        if (!existing) {
-          await db.run(
-            'INSERT INTO user_achievements (user_id, achievement_id) VALUES (?, ?)',
+        if (ach.repeat_interval > 0) {
+          // 管理员可重复成就：设满 max_repeats
+          const existingRows = await db.all<UserAchievementRow>(
+            'SELECT repeat_count FROM user_achievements WHERE user_id=? AND achievement_id=?',
             u, ach.id,
           );
-          await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', ach.points, u);
+          const totalAwarded = existingRows.reduce((s, r) => s + r.repeat_count, 0);
+          for (let r = totalAwarded + 1; r <= ach.max_repeats; r++) {
+            await db.run('INSERT INTO user_achievements (user_id, achievement_id, repeat_count) VALUES (?,?,?)', u, ach.id, r);
+            await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', ach.points, u);
+          }
+        } else {
+          const existing = await db.get<UserAchievementRow>(
+            'SELECT id FROM user_achievements WHERE user_id=? AND achievement_id=?', u, ach.id,
+          );
+          if (!existing) {
+            await db.run('INSERT INTO user_achievements (user_id, achievement_id) VALUES (?, ?)', u, ach.id);
+            await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', ach.points, u);
+          }
         }
       }
     }
 
-    const unlocked = await db.all<UserAchievementRow>(
-      'SELECT achievement_id, unlocked_at FROM user_achievements WHERE user_id=?', u,
+    const unlocked = await db.all<any>(
+      `SELECT ua.achievement_id, ua.unlocked_at, ua.repeat_count
+       FROM user_achievements ua WHERE ua.user_id=?`, u,
     );
-    const unlockedMap = new Map(unlocked.map(u => [u.achievement_id, u.unlocked_at]));
+    const unlockedMap = new Map<number, { unlocked_at: string; repeat_count: number }>();
+    for (const ua of unlocked) {
+      const prev = unlockedMap.get(ua.achievement_id);
+      unlockedMap.set(ua.achievement_id, {
+        unlocked_at: ua.unlocked_at,
+        repeat_count: (prev?.repeat_count || 0) + (ua.repeat_count || 1),
+      });
+    }
 
     return {
-      achievements: all.map(a => ({
-        ...a,
-        unlocked: unlockedMap.has(a.id),
-        unlocked_at: unlockedMap.get(a.id) || null,
-      })),
+      achievements: all.map(a => {
+        const ua = unlockedMap.get(a.id);
+        const isRepeat = a.repeat_interval > 0;
+        return {
+          ...a,
+          unlocked: !!ua,
+          unlocked_at: ua?.unlocked_at || null,
+          repeat_count: ua?.repeat_count || 0,
+          max_repeats: a.max_repeats,
+          repeat_interval: a.repeat_interval,
+        };
+      }),
     };
   });
 

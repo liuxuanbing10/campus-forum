@@ -522,6 +522,20 @@ export async function migrateSchema(db: DatabaseAdapter): Promise<void> {
         ('viral_post', '一夜爆红', '单帖获得 50+ 赞', '💥', 'special', 80, '单帖点赞 50+', 23),
         ('first_report', '论坛守护者', '成功举报违规内容', '🛡️', 'special', 10, '举报并处理违规', 24);
     `],
+    ['add_repeatable_achievements', `
+      -- 为成就表添加重复区间与上限字段
+      ALTER TABLE achievements ADD COLUMN repeat_interval INTEGER DEFAULT 0;
+      ALTER TABLE achievements ADD COLUMN max_repeats INTEGER DEFAULT 0;
+
+      -- 为用户成就表添加重复计数
+      ALTER TABLE user_achievements ADD COLUMN repeat_count INTEGER DEFAULT 1;
+
+      -- 可重复成就：每 N 个单位触发一次，有上限
+      INSERT OR IGNORE INTO achievements (key, name, description, icon, category, points, condition_desc, sort_order, repeat_interval, max_repeats) VALUES
+        ('repeat_posts',   '发帖狂人',   '每累计 100 个帖子自动获得（可重复）', '📈', 'content',    50,  '每 100 帖', 25, 100, 99),
+        ('repeat_comments','评论先锋',   '每累计 200 条评论自动获得（可重复）', '📊', 'social',     40,  '每 200 评', 26, 200, 99),
+        ('repeat_likes',   '人气超新星', '每累计 500 个赞自动获得（可重复）',   '💫', 'popularity', 100, '每 500 赞', 27, 500, 99);
+    `],
   ];
 
   for (const [name, sql] of migrations) {
