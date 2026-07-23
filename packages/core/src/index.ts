@@ -52,3 +52,11 @@ export type {
   Achievement,
   UserAchievement,
 } from './types.js';
+export {
+  ROLES,
+  Role,
+  ROLE_NAMES,
+  ROLE_LEVEL,
+  hasPermission,
+  PERMISSIONS,
+} from './types.js';

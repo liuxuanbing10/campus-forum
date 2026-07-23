@@ -19,7 +19,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) { toastStore.warning('请先登录'); navigate('/login'); return; }
-    if (user.role !== 'admin') { toastStore.error('无权访问'); navigate('/'); }
+    if (user.role !== 'admin' && user.role !== 'superadmin') { toastStore.error('无权访问'); navigate('/'); }
   }, [user, authLoading]);
 
   if (authLoading) return (

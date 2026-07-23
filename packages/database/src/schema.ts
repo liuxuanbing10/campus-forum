@@ -536,6 +536,13 @@ export async function migrateSchema(db: DatabaseAdapter): Promise<void> {
         ('repeat_comments','评论先锋',   '每累计 200 条评论自动获得（可重复）', '📊', 'social',     40,  '每 200 评', 26, 200, 99),
         ('repeat_likes',   '人气超新星', '每累计 500 个赞自动获得（可重复）',   '💫', 'popularity', 100, '每 500 赞', 27, 500, 99);
     `],
+    ['setup_role_system', `
+      -- 设置现有 admin 为 superadmin，其余为 user
+      UPDATE users SET role='superadmin' WHERE is_admin=1 AND (role IS NULL OR role='user' OR role='admin');
+      UPDATE users SET role='user' WHERE role IS NULL OR role='';
+      -- 确保 is_banned=1 的用户角色为 banned
+      UPDATE users SET role='banned' WHERE is_banned=1 AND role!='superadmin';
+    `],
   ];
 
   for (const [name, sql] of migrations) {

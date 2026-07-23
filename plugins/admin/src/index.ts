@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, DatabaseAdapter, uid as getUid, isAdmin } from '@campus-forum/core';
+import { Plugin, PluginContext, DatabaseAdapter, uid as getUid, hasPermission, PERMISSIONS, ROLES } from '@campus-forum/core';
 import bcrypt from 'bcryptjs';
 
 interface AdminUser {
@@ -17,7 +17,18 @@ export const adminPlugin: Plugin = {
     const requireAdmin = async (req: any, rep: any) => {
       const userId = getUid(req);
       if (!userId) return rep.status(401).send({ error: '请先登录' });
-      if (!(await isAdmin(db, userId))) return rep.status(403).send({ error: '仅管理员可操作' });
+      const row = await db.get<{ role: string }>("SELECT role FROM users WHERE id=?", userId);
+      if (!row || !hasPermission(row.role, PERMISSIONS.viewAdminPanel))
+        return rep.status(403).send({ error: '仅管理员可操作' });
+    };
+
+    // ── 最高管理员 preHandler ───────────────────
+    const requireSuperAdmin = async (req: any, rep: any) => {
+      const userId = getUid(req);
+      if (!userId) return rep.status(401).send({ error: '请先登录' });
+      const row = await db.get<{ role: string }>("SELECT role FROM users WHERE id=?", userId);
+      if (!row || !hasPermission(row.role, PERMISSIONS.manageUsers))
+        return rep.status(403).send({ error: '仅最高管理员可操作' });
     };
 
     const adminOnly = {
@@ -77,15 +88,24 @@ export const adminPlugin: Plugin = {
       return { success: true, isBanned: true, bannedUntil, message: msg };
     });
 
-    app.put('/api/admin/users/:id/role', { ...adminOnly }, async (req, rep) => {
+    app.put('/api/admin/users/:id/role', { preHandler: requireSuperAdmin }, async (req, rep) => {
       const id = Number((req.params as { id: string }).id);
-      const target = await db.get<{ id: number; is_admin: number }>('SELECT id,is_admin FROM users WHERE id=?', id);
+      const selfId = getUid(req);
+      if (selfId === id) return rep.status(400).send({ error: '不能更改自己的角色' });
+      const target = await db.get<{ id: number; role: string }>('SELECT id,role FROM users WHERE id=?', id);
       if (!target) return rep.status(404).send({ error: '用户不存在' });
-      if (target.is_admin) return rep.status(400).send({ error: '不能修改管理员账号的角色' });
-      const { role, isAdmin: makeAdmin } = req.body as { role?: string; isAdmin?: boolean };
-      if (role !== undefined) await db.run('UPDATE users SET role=? WHERE id=?', role, id);
-      if (makeAdmin !== undefined) await db.run('UPDATE users SET is_admin=? WHERE id=?', makeAdmin ? 1 : 0, id);
-      return { success: true, message: '用户角色已更新' };
+      if (target.role === 'superadmin') return rep.status(400).send({ error: '不能修改最高管理员' });
+      const { role } = req.body as { role?: string };
+      if (!role || !['superadmin', 'admin', 'user', 'banned'].includes(role))
+        return rep.status(400).send({ error: '无效角色' });
+      await db.run('UPDATE users SET role=? WHERE id=?', role, id);
+      // 同步 is_admin 字段
+      const isAdmin = role === 'superadmin' || role === 'admin';
+      await db.run('UPDATE users SET is_admin=? WHERE id=?', isAdmin ? 1 : 0, id);
+      // 如果是封禁角色，同步 is_banned
+      if (role === 'banned') await db.run('UPDATE users SET is_banned=1 WHERE id=?', id);
+      else if (target.role === 'banned') await db.run('UPDATE users SET is_banned=0 WHERE id=?', id);
+      return { success: true, message: `用户已设为 ${role}` };
     });
 
     app.put('/api/admin/users/:id/points', { ...adminOnly }, async (req, rep) => {
