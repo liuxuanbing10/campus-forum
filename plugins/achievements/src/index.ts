@@ -40,11 +40,11 @@ async function checkAndAward(
   // ── 可重复成就 ──
   if (ach.repeat_interval > 0) {
     // 查询当前已获得的次数
-    const existingRows = await db.all<UserAchievementRow>(
-      'SELECT * FROM user_achievements WHERE user_id = ? AND achievement_id = ? ORDER BY repeat_count',
+    const existing = await db.get<{ id: number; repeat_count: number }>(
+      'SELECT id, COALESCE(repeat_count,0) as repeat_count FROM user_achievements WHERE user_id = ? AND achievement_id = ?',
       userId, ach.id,
     );
-    const totalAwarded = existingRows.reduce((s, r) => s + r.repeat_count, 0);
+    const totalAwarded = existing?.repeat_count || 0;
 
     // 计算总计数
     let totalCount = 0;
@@ -73,15 +73,14 @@ async function checkAndAward(
 
     if (expectedTimes > totalAwarded) {
       const timesToAward = expectedTimes - totalAwarded;
-      for (let i = 0; i < timesToAward; i++) {
-        const nextCount = totalAwarded + i + 1;
-        await db.run(
-          'INSERT INTO user_achievements (user_id, achievement_id, repeat_count) VALUES (?, ?, ?)',
-          userId, ach.id, nextCount,
-        );
-        await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', ach.points, userId);
+      const newTotal = expectedTimes;
+      if (existing) {
+        await db.run('UPDATE user_achievements SET repeat_count=? WHERE id=?', newTotal, existing.id);
+      } else {
+        await db.run('INSERT INTO user_achievements (user_id, achievement_id, repeat_count) VALUES (?,?,?)', userId, ach.id, newTotal);
       }
-      // 发送通知（合并次数）
+      await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', ach.points * timesToAward, userId);
+      // 发送通知
       try {
         await (ctx as any).createNotification?.(
           userId,
@@ -323,15 +322,21 @@ export function registerAchievementRoutes(ctx: PluginContext) {
     if (userRow?.is_admin) {
       for (const ach of all) {
         if (ach.repeat_interval > 0) {
-          // 管理员可重复成就：设满 max_repeats
-          const existingRows = await db.all<UserAchievementRow>(
-            'SELECT repeat_count FROM user_achievements WHERE user_id=? AND achievement_id=?',
+          // 管理员可重复成就：单行 max_repeats
+          const existing = await db.get<{ id: number }>(
+            'SELECT id FROM user_achievements WHERE user_id=? AND achievement_id=?',
             u, ach.id,
           );
-          const totalAwarded = existingRows.reduce((s, r) => s + r.repeat_count, 0);
-          for (let r = totalAwarded + 1; r <= ach.max_repeats; r++) {
-            await db.run('INSERT INTO user_achievements (user_id, achievement_id, repeat_count) VALUES (?,?,?)', u, ach.id, r);
-            await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', ach.points, u);
+          if (existing) {
+            const oldRow = await db.get<{ repeat_count: number }>('SELECT COALESCE(repeat_count,0) AS repeat_count FROM user_achievements WHERE id=?', existing.id);
+            const oldCount = oldRow?.repeat_count || 0;
+            if (oldCount < ach.max_repeats) {
+              await db.run('UPDATE user_achievements SET repeat_count=? WHERE id=?', ach.max_repeats, existing.id);
+              await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', ach.points * (ach.max_repeats - oldCount), u);
+            }
+          } else {
+            await db.run('INSERT INTO user_achievements (user_id, achievement_id, repeat_count) VALUES (?,?,?)', u, ach.id, ach.max_repeats);
+            await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', ach.points * ach.max_repeats, u);
           }
         } else {
           const existing = await db.get<UserAchievementRow>(
