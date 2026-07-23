@@ -49,4 +49,6 @@ export type {
   AdminStats,
   DeviceBlacklistEntry,
   UserDevice,
+  Achievement,
+  UserAchievement,
 } from './types.js';

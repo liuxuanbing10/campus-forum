@@ -5,7 +5,7 @@ module.exports = {
     env: {
       NODE_ENV: 'production',
       PORT: 3001,
-      OSS_REGION: 'oss-cn-shenzhen',
+      OSS_REGION: 'oss-cn-heyuan',
       OSS_BUCKET: 'campus-forum-files',
       OSS_ACCESS_KEY_ID: '',
       OSS_ACCESS_KEY_SECRET: '',

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, UpdateProfileData, ChangePasswordData, Post, SearchResult, Notification, AdminUser, ShareInfo, PostStats, TeamCategory, Team, TeamMember, TeamAnnouncement, TeamPost, TeamContentPost, TeamFile, TeamContentComment, MyTeamsResponse, CreateTeamData, UpdateTeamData, UserProfile, UserPost, UserComment, FollowStatus, Conversation, Message, ReportData, OAuthAccount, PendingPost, SensitiveWord, AdminReport, AuditLog, PostVersion, CaptchaData, AdminStats, DeviceBlacklistEntry, UserDevice } from '@campus-forum/core';
+import type { User, UpdateProfileData, ChangePasswordData, Post, SearchResult, Notification, AdminUser, ShareInfo, PostStats, TeamCategory, Team, TeamMember, TeamAnnouncement, TeamPost, TeamContentPost, TeamFile, TeamContentComment, MyTeamsResponse, CreateTeamData, UpdateTeamData, UserProfile, UserPost, UserComment, FollowStatus, Conversation, Message, ReportData, OAuthAccount, PendingPost, SensitiveWord, AdminReport, AuditLog, PostVersion, CaptchaData, AdminStats, DeviceBlacklistEntry, UserDevice, Achievement, UserAchievement } from '@campus-forum/core';
 import { getDeviceCode } from './device';
 
 const baseURL = import.meta.env.VITE_API_URL || '/api';
@@ -235,6 +235,14 @@ export const versionApi = {
 // ===== 评论 API =====
 export const commentApi = {
   update: (commentId: number, content: string) => api.put<{ success: boolean }>(`/comments/${commentId}`, { content }),
+};
+
+// ===== 成就系统 API =====
+export const achievementsApi = {
+  getAll: () => api.get<{ achievements: (Achievement & { unlocked: boolean; unlocked_at: string | null })[] }>('/achievements'),
+  getStats: () => api.get<{ total: number; unlocked: number; totalPoints: number; earnedPoints: number; userPoints: number }>('/achievements/stats'),
+  checkAll: () => api.post<{ unlocked: { achievement: Achievement }[] }>('/achievements/check'),
+  checkOne: (key: string) => api.post<{ newlyUnlocked: boolean; achievement?: Achievement }>(`/achievements/check/${key}`),
 };
 
 // ===== 我的设备 API =====

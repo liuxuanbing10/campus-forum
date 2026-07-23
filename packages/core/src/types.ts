@@ -495,6 +495,28 @@ export interface UserDevice {
   created_at: string;
 }
 
+// ── 成就系统类型 ──────────────────────────────
+
+export interface Achievement {
+  id: number;
+  key: string;
+  name: string;
+  description: string;
+  icon: string;                // emoji
+  category: string;
+  points: number;              // 成就积分奖励
+  condition_desc: string;      // 解锁条件说明
+  sort_order: number;
+}
+
+export interface UserAchievement {
+  id: number;
+  user_id: number;
+  achievement_id: number;
+  unlocked_at: string;
+  achievement?: Achievement;
+}
+
 // ── 插件共享类型 ──────────────────────────────
 
 export interface BoardRow {
