@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Shield, ArrowLeft, Search, Ban, UserCog, MoreVertical, UserX, UserCheck, FileText, Flag, History, AlertTriangle, Loader2, Trash2, Check, X, BarChart3, TrendingUp, Users, MessageSquare, Folder, Trophy, Smartphone } from 'lucide-react';
 import { adminApi, adminExtendedApi, adminDeviceApi } from '../lib/api';
 import type { AdminUser, PendingPost, SensitiveWord, AdminReport, AuditLog, AdminStats, DeviceBlacklistEntry, UserDevice } from '@campus-forum/core';
+import { ROLE_NAMES } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/button';
@@ -29,7 +30,7 @@ export default function AdminPage() {
     </div>
   );
 
-  if (!user || user.role !== 'admin') return null;
+  if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) return null;
 
   return (
     <div className="max-w-6xl mx-auto px-6 pt-8 pb-16">
@@ -49,7 +50,7 @@ export default function AdminPage() {
       </div>
 
       {activeTab === 'stats' && <StatsTab />}
-      {activeTab === 'users' && <UsersTab />}
+      {activeTab === 'users' && <UsersTab currentUser={user} />}
       {activeTab === 'pending' && <PendingTab />}
       {activeTab === 'words' && <WordsTab />}
       {activeTab === 'reports' && <ReportsTab />}
@@ -237,7 +238,7 @@ function StatsTab() {
   );
 }
 
-function UsersTab() {
+function UsersTab({ currentUser }: { currentUser: { role: string } | null }) {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -409,16 +410,33 @@ function UsersTab() {
                   {u.display_name} <span className="text-xs text-campus-text-tertiary">@{u.username}</span>
                   {u.is_banned ? <span className="ml-2 px-1.5 py-0.5 rounded bg-red-50 text-red-500 text-xs">已封禁</span> : null}
                 </p>
-                <p className="text-xs text-campus-text-tertiary font-body">{u.email || '无邮箱'} · {u.post_count} 帖子 · {u.role}</p>
+                <p className="text-xs text-campus-text-tertiary font-body">{u.email || '无邮箱'} · {u.post_count} 帖子 ·{' '}
+                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+                    u.role === 'superadmin' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400' :
+                    u.role === 'admin' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' :
+                    u.role === 'banned' ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400' :
+                    'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400'
+                  }`}>
+                    {ROLE_NAMES[u.role as keyof typeof ROLE_NAMES] || u.role}
+                  </span>
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {u.role !== 'admin' && (
-                <button onClick={() => handleRole(u.id, u.role === 'admin' ? 'user' : 'admin')} className="p-2 hover:bg-surface-hover rounded-lg transition-colors" title="切换角色"><UserCog className="w-4 h-4" /></button>
+              {(currentUser?.role === 'superadmin') && u.role !== 'superadmin' && (
+                <>
+                  {u.role === 'admin' ? (
+                    <button onClick={() => handleRole(u.id, 'user')} className="p-2 hover:bg-surface-hover rounded-lg transition-colors" title="降为一般用户"><UserX className="w-4 h-4 text-orange-500" /></button>
+                  ) : u.role === 'banned' ? (
+                    <button onClick={() => handleRole(u.id, 'user')} className="p-2 hover:bg-surface-hover rounded-lg transition-colors" title="解封"><UserCheck className="w-4 h-4 text-green-500" /></button>
+                  ) : (
+                    <>
+                      <button onClick={() => handleRole(u.id, 'admin')} className="p-2 hover:bg-surface-hover rounded-lg transition-colors" title="设为共创者"><UserCog className="w-4 h-4 text-blue-500" /></button>
+                      <button onClick={() => handleRole(u.id, 'banned')} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors" title="封禁"><Ban className="w-4 h-4 text-destructive" /></button>
+                    </>
+                  )}
+                </>
               )}
-              <button onClick={() => handleBan(u.id, !!u.is_banned)} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-destructive" title={u.is_banned ? '解封' : '封禁'}>
-                {u.is_banned ? <UserCheck className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
-              </button>
             </div>
           </div>
         ))}
