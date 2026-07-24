@@ -10,6 +10,7 @@ import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/dialog';
+import Skeleton from '../components/Skeleton';
 
 type AdminTab = 'stats' | 'users' | 'pending' | 'words' | 'reports' | 'logs' | 'devices';
 
@@ -25,9 +26,9 @@ export default function AdminPage() {
   }, [user, authLoading]);
 
   if (authLoading) return (
-    <div className="text-center py-12">
-      <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
-      <p className="text-campus-text-secondary">加载中...</p>
+    <div className="max-w-6xl mx-auto px-6 pt-8 space-y-4">
+      <Skeleton variant="text" count={1} className="h-8 w-1/4" />
+      <Skeleton variant="list" count={5} />
     </div>
   );
 
@@ -80,7 +81,11 @@ function StatsTab() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-center py-8 text-campus-text-tertiary font-body">加载中...</div>;
+  if (loading) return (
+    <div className="space-y-3">
+      <Skeleton variant="list" count={5} />
+    </div>
+  );
   if (!stats) return <div className="text-center py-8 text-campus-text-tertiary font-body">暂无数据</div>;
 
   const maxUserGrowth = Math.max(...stats.userGrowth.map(d => d.count), 1);
@@ -551,7 +556,11 @@ function PendingTab() {
     } catch { toastStore.error('操作失败'); }
   };
 
-  if (loading) return <div className="text-center py-8 text-campus-text-tertiary font-body">加载中...</div>;
+  if (loading) return (
+    <div className="space-y-3">
+      <Skeleton variant="list" count={5} />
+    </div>
+  );
   if (posts.length === 0) return <div className="text-center py-12 text-campus-text-tertiary font-body">暂无待审核内容</div>;
 
   return (
@@ -647,7 +656,11 @@ function ReportsTab() {
     } catch { toastStore.error('操作失败'); }
   };
 
-  if (loading) return <div className="text-center py-8 text-campus-text-tertiary font-body">加载中...</div>;
+  if (loading) return (
+    <div className="space-y-3">
+      <Skeleton variant="list" count={5} />
+    </div>
+  );
   if (reports.length === 0) return <div className="text-center py-12 text-campus-text-tertiary font-body">暂无举报</div>;
 
   return (
@@ -757,7 +770,11 @@ function DevicesTab() {
       })
     : devices;
 
-  if (loading) return <div className="text-center py-8 text-campus-text-tertiary font-body">加载中...</div>;
+  if (loading) return (
+    <div className="space-y-3">
+      <Skeleton variant="list" count={5} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -831,7 +848,11 @@ function LogsTab() {
       .catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-center py-8 text-campus-text-tertiary font-body">加载中...</div>;
+  if (loading) return (
+    <div className="space-y-3">
+      <Skeleton variant="list" count={5} />
+    </div>
+  );
   if (logs.length === 0) return <div className="text-center py-12 text-campus-text-tertiary font-body">暂无操作日志</div>;
 
   return (

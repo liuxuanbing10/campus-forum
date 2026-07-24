@@ -5,6 +5,7 @@ import { teamsApi } from '../lib/api';
 import type { Team } from '@campus-forum/core';
 import TeamCard from '../components/TeamCard';
 import { toastStore } from '../App';
+import Skeleton from '../components/Skeleton';
 
 type TabType = 'all' | 'owned' | 'admin' | 'member' | 'favorites';
 
@@ -121,7 +122,9 @@ export default function MyTeams() {
       </div>
 
       {loading ? (
-        <div className="text-center py-16 text-campus-text-secondary">加载中...</div>
+        <div className="space-y-3">
+          <Skeleton variant="list" count={5} />
+        </div>
       ) : getCurrentTeams().length === 0 ? (
         <div className="text-center py-16">
           <Users className="w-16 h-16 mx-auto text-campus-text-tertiary mb-4" />

@@ -5,6 +5,7 @@ import { teamsApi } from '../lib/api';
 import type { TeamContentPost, TeamContentComment } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
+import Skeleton from '../components/Skeleton';
 
 export default function TeamContentPostDetail() {
   const { id, postId } = useParams();
@@ -92,7 +93,12 @@ export default function TeamContentPostDetail() {
   };
 
   if (loading) {
-    return <div className="text-center py-16 text-campus-text-secondary">加载中...</div>;
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+        <Skeleton variant="text" count={1} className="h-8 w-3/4" />
+        <Skeleton variant="post" count={3} />
+      </div>
+    );
   }
 
   if (!post) {

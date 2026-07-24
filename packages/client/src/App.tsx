@@ -8,6 +8,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import { ToastContainer, ToastProps } from './components/Toast';
 import { wsService } from './lib/websocket';
+import Skeleton from './components/Skeleton';
 
 // ── Lazy-loaded pages ────────────────────────────
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
@@ -37,7 +38,12 @@ const Achievements = lazy(() => import('./pages/Achievements'));
 const AchievementRules = lazy(() => import('./pages/AchievementRules'));
 const CommunityGuidelines = lazy(() => import('./pages/CommunityGuidelines'));
 
-const SuspenseFallback = () => <div className="text-center py-12 text-campus-text-tertiary font-handwrite text-lg">加载中...</div>;
+const PageSkeleton = () => (
+  <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+    <Skeleton variant="text" count={1} className="h-8 w-1/3" />
+    <Skeleton variant="post" count={4} />
+  </div>
+);
 
 let toastList: ToastProps[] = [];
 const listeners = new Set<() => void>();
@@ -105,35 +111,35 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/forgot-password" element={<Suspense fallback={<SuspenseFallback />}><ForgotPassword /></Suspense>} />
-          <Route path="/settings" element={<Suspense fallback={<SuspenseFallback />}><Settings /></Suspense>} />
-          <Route path="/my-posts" element={<Suspense fallback={<SuspenseFallback />}><MyPosts /></Suspense>} />
-          <Route path="/favorites" element={<Suspense fallback={<SuspenseFallback />}><Favorites /></Suspense>} />
-          <Route path="/notifications" element={<Suspense fallback={<SuspenseFallback />}><Notifications /></Suspense>} />
-          <Route path="/search" element={<Suspense fallback={<SuspenseFallback />}><Search /></Suspense>} />
-          <Route path="/admin" element={<Suspense fallback={<SuspenseFallback />}><Admin /></Suspense>} />
-          <Route path="/board/:id" element={<Suspense fallback={<SuspenseFallback />}><Board /></Suspense>} />
-          <Route path="/post/:id" element={<Suspense fallback={<SuspenseFallback />}><PostDetail /></Suspense>} />
-          <Route path="/user/:id" element={<Suspense fallback={<SuspenseFallback />}><UserProfile /></Suspense>} />
-          <Route path="/messages" element={<Suspense fallback={<SuspenseFallback />}><Messages /></Suspense>} />
-          <Route path="/messages/:id" element={<Suspense fallback={<SuspenseFallback />}><Messages /></Suspense>} />
-          <Route path="/edit-post/:id" element={<Suspense fallback={<SuspenseFallback />}><EditPost /></Suspense>} />
-          <Route path="/new" element={<Suspense fallback={<SuspenseFallback />}><NewPost /></Suspense>} />
-          <Route path="/teams" element={<Suspense fallback={<SuspenseFallback />}><Teams /></Suspense>} />
-          <Route path="/teams/my" element={<Suspense fallback={<SuspenseFallback />}><MyTeams /></Suspense>} />
-          <Route path="/teams/new" element={<Suspense fallback={<SuspenseFallback />}><CreateTeam /></Suspense>} />
-          <Route path="/teams/:id" element={<Suspense fallback={<SuspenseFallback />}><TeamDetail /></Suspense>} />
-          <Route path="/teams/:id/post/:postId" element={<Suspense fallback={<SuspenseFallback />}><TeamContentPostDetail /></Suspense>} />
-          <Route path="/teams/:id/edit" element={<Suspense fallback={<SuspenseFallback />}><EditTeam /></Suspense>} />
-          <Route path="/download" element={<Suspense fallback={<SuspenseFallback />}><Download /></Suspense>} />
-          <Route path="/signature-demo" element={<Suspense fallback={<SuspenseFallback />}><SignatureDemo /></Suspense>} />
-          <Route path="/achievements" element={<Suspense fallback={<SuspenseFallback />}><Achievements /></Suspense>} />
-          <Route path="/achievements/rules" element={<Suspense fallback={<SuspenseFallback />}><AchievementRules /></Suspense>} />
-          <Route path="/rules" element={<Suspense fallback={<SuspenseFallback />}><CommunityGuidelines /></Suspense>} />
+          <Route path="/forgot-password" element={<Suspense fallback={<PageSkeleton />}><ForgotPassword /></Suspense>} />
+          <Route path="/settings" element={<Suspense fallback={<PageSkeleton />}><Settings /></Suspense>} />
+          <Route path="/my-posts" element={<Suspense fallback={<PageSkeleton />}><MyPosts /></Suspense>} />
+          <Route path="/favorites" element={<Suspense fallback={<PageSkeleton />}><Favorites /></Suspense>} />
+          <Route path="/notifications" element={<Suspense fallback={<PageSkeleton />}><Notifications /></Suspense>} />
+          <Route path="/search" element={<Suspense fallback={<PageSkeleton />}><Search /></Suspense>} />
+          <Route path="/admin" element={<Suspense fallback={<PageSkeleton />}><Admin /></Suspense>} />
+          <Route path="/board/:id" element={<Suspense fallback={<PageSkeleton />}><Board /></Suspense>} />
+          <Route path="/post/:id" element={<Suspense fallback={<PageSkeleton />}><PostDetail /></Suspense>} />
+          <Route path="/user/:id" element={<Suspense fallback={<PageSkeleton />}><UserProfile /></Suspense>} />
+          <Route path="/messages" element={<Suspense fallback={<PageSkeleton />}><Messages /></Suspense>} />
+          <Route path="/messages/:id" element={<Suspense fallback={<PageSkeleton />}><Messages /></Suspense>} />
+          <Route path="/edit-post/:id" element={<Suspense fallback={<PageSkeleton />}><EditPost /></Suspense>} />
+          <Route path="/new" element={<Suspense fallback={<PageSkeleton />}><NewPost /></Suspense>} />
+          <Route path="/teams" element={<Suspense fallback={<PageSkeleton />}><Teams /></Suspense>} />
+          <Route path="/teams/my" element={<Suspense fallback={<PageSkeleton />}><MyTeams /></Suspense>} />
+          <Route path="/teams/new" element={<Suspense fallback={<PageSkeleton />}><CreateTeam /></Suspense>} />
+          <Route path="/teams/:id" element={<Suspense fallback={<PageSkeleton />}><TeamDetail /></Suspense>} />
+          <Route path="/teams/:id/post/:postId" element={<Suspense fallback={<PageSkeleton />}><TeamContentPostDetail /></Suspense>} />
+          <Route path="/teams/:id/edit" element={<Suspense fallback={<PageSkeleton />}><EditTeam /></Suspense>} />
+          <Route path="/download" element={<Suspense fallback={<PageSkeleton />}><Download /></Suspense>} />
+          <Route path="/signature-demo" element={<Suspense fallback={<PageSkeleton />}><SignatureDemo /></Suspense>} />
+          <Route path="/achievements" element={<Suspense fallback={<PageSkeleton />}><Achievements /></Suspense>} />
+          <Route path="/achievements/rules" element={<Suspense fallback={<PageSkeleton />}><AchievementRules /></Suspense>} />
+          <Route path="/rules" element={<Suspense fallback={<PageSkeleton />}><CommunityGuidelines /></Suspense>} />
           <Route path="*" element={<Navigate to="/" />} />
         </Route>
-        <Route path="/ostracism" element={<Suspense fallback={<SuspenseFallback />}><Ostracism /></Suspense>} />
-        <Route path="/oauth/setup" element={<Suspense fallback={<SuspenseFallback />}><OAuthSetup /></Suspense>} />
+        <Route path="/ostracism" element={<Suspense fallback={<PageSkeleton />}><Ostracism /></Suspense>} />
+        <Route path="/oauth/setup" element={<Suspense fallback={<PageSkeleton />}><OAuthSetup /></Suspense>} />
       </Routes>
       <ToastContainer toasts={toastList} onClose={toastStore.remove} />
     </ErrorBoundary>

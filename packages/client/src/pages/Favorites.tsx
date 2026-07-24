@@ -5,6 +5,7 @@ import { favoritesApi } from '../lib/api';
 import type { Post } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
+import Skeleton from '../components/Skeleton';
 
 export default function FavoritesPage() {
   const navigate = useNavigate();
@@ -44,9 +45,9 @@ export default function FavoritesPage() {
   const loadMore = () => setPage(p => p + 1);
 
   if (authLoading) return (
-    <div className="text-center py-12">
-      <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
-      <p className="text-campus-text-secondary">加载中...</p>
+    <div className="space-y-6">
+      <Skeleton variant="text" count={1} className="h-8 w-1/4" />
+      <Skeleton variant="post" count={4} />
     </div>
   );
 
@@ -68,9 +69,8 @@ export default function FavoritesPage() {
       </div>
 
       {loading && page === 1 && (
-        <div className="text-center py-12">
-          <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-campus-text-secondary">加载中...</p>
+        <div className="space-y-4">
+          <Skeleton variant="post" count={4} />
         </div>
       )}
 

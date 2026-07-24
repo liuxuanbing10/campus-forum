@@ -5,6 +5,7 @@ import { notificationsApi } from '../lib/api';
 import type { Notification } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
+import Skeleton from '../components/Skeleton';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -103,9 +104,9 @@ export default function NotificationsPage() {
   const loadMore = () => setPage(p => p + 1);
 
   if (authLoading) return (
-    <div className="text-center py-12">
-      <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
-      <p className="text-campus-text-secondary">加载中...</p>
+    <div className="max-w-2xl mx-auto px-4 py-6 space-y-3">
+      <Skeleton variant="text" count={1} className="h-8 w-1/3" />
+      <Skeleton variant="list" count={5} />
     </div>
   );
 
@@ -143,9 +144,8 @@ export default function NotificationsPage() {
       </div>
 
       {loading && page === 1 && (
-        <div className="text-center py-12">
-          <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-campus-text-secondary">加载中...</p>
+        <div className="space-y-3">
+          <Skeleton variant="list" count={5} />
         </div>
       )}
 

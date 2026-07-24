@@ -719,3 +719,31 @@
     --sidebar-ring: var(--color-primary);
   }
 }
+
+/* ═══════════════════════════════════════════════
+   骨架屏 shimmer 动画
+   用线性渐变扫光替代死板的 pulse，更接近现代设计语言
+   ═══════════════════════════════════════════════ */
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-border-light) 25%,
+    var(--color-surface-hover) 37%,
+    var(--color-border-light) 63%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+    background: var(--color-border-light);
+  }
+}
+

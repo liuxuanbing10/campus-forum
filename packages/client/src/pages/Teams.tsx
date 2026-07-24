@@ -5,6 +5,7 @@ import { teamsApi } from '../lib/api';
 import type { Team, TeamCategory } from '@campus-forum/core';
 import TeamCard from '../components/TeamCard';
 import { toastStore } from '../App';
+import Skeleton from '../components/Skeleton';
 
 type SortType = 'popular' | 'newest' | 'name' | 'posts';
 
@@ -156,7 +157,9 @@ export default function Teams() {
       </div>
 
       {loading ? (
-        <div className="text-center py-16 text-campus-text-secondary">加载中...</div>
+        <div className="space-y-3">
+          <Skeleton variant="list" count={6} />
+        </div>
       ) : teams.length === 0 ? (
         <div className="text-center py-16">
           <Filter className="w-16 h-16 mx-auto text-campus-text-tertiary mb-4" />

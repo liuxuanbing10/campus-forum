@@ -5,6 +5,7 @@ import { toastStore } from '../App';
 import { ArrowLeft, Edit3, Lock, ImagePlus, X } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import MarkdownEditor from '../components/MarkdownEditor';
+import Skeleton from '../components/Skeleton';
 
 interface Board {
   id: number;
@@ -127,9 +128,9 @@ export default function EditPostPage() {
 
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-campus-text-secondary">加载中...</p>
+      <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+        <Skeleton variant="text" count={1} className="h-8 w-1/2" />
+        <Skeleton variant="post" count={1} />
       </div>
     );
   }

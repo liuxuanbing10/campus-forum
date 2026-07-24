@@ -12,6 +12,7 @@ import type { Team, TeamMember, TeamAnnouncement, TeamContentPost, TeamFile } fr
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 import MarkdownEditor from '../components/MarkdownEditor';
+import Skeleton from '../components/Skeleton';
 
 type TabType = 'announcements' | 'posts' | 'files' | 'members';
 
@@ -362,7 +363,12 @@ export default function TeamDetail() {
   ];
 
   if (loading) {
-    return <div className="text-center py-16 text-campus-text-secondary">加载中...</div>;
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+        <Skeleton variant="text" count={1} className="h-8 w-1/3" />
+        <Skeleton variant="list" count={5} />
+      </div>
+    );
   }
 
   if (!team) {

@@ -7,6 +7,7 @@ import { THEMES, useThemeStore } from '../stores/theme';
 import MetaManager from '../components/MetaManager';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import MeteorSignature from '../components/MeteorSignature';
+import Skeleton from '../components/Skeleton';
 
 interface Board {
   id: number;
@@ -209,7 +210,11 @@ export default function HomePage() {
   });
 
   if (loading) {
-    return <div className="text-center py-12 text-campus-text-tertiary font-handwrite text-lg">加载中...</div>;
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+        <Skeleton variant="post" count={5} />
+      </div>
+    );
   }
 
   return (
