@@ -8,6 +8,6 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@campus-forum/core": "workspace:*"
+    "@campus-forum/core": "*"
   }
 }
