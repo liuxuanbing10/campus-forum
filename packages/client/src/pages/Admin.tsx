@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, ArrowLeft, Search, Ban, UserCog, MoreVertical, UserX, UserCheck, FileText, Flag, History, AlertTriangle, Loader2, Trash2, Check, X, BarChart3, TrendingUp, Users, MessageSquare, Folder, Trophy, Smartphone } from 'lucide-react';
+import { Shield, ArrowLeft, Search, Ban, UserCog, MoreVertical, UserX, UserCheck, FileText, Flag, History, AlertTriangle, Loader2, Trash2, Check, X, BarChart3, TrendingUp, Users, MessageSquare, Folder, Trophy, Smartphone, Key } from 'lucide-react';
 import { adminApi, adminExtendedApi, adminDeviceApi } from '../lib/api';
+import api from '../lib/api';
 import type { AdminUser, PendingPost, SensitiveWord, AdminReport, AuditLog, AdminStats, DeviceBlacklistEntry, UserDevice } from '@campus-forum/core';
+import { ROLE_NAMES } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/dialog';
+import Skeleton from '../components/Skeleton';
 
 type AdminTab = 'stats' | 'users' | 'pending' | 'words' | 'reports' | 'logs' | 'devices';
 
@@ -19,17 +22,17 @@ export default function AdminPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) { toastStore.warning('请先登录'); navigate('/login'); return; }
-    if (user.role !== 'admin') { toastStore.error('无权访问'); navigate('/'); }
+    if (user.role !== 'admin' && user.role !== 'superadmin') { toastStore.error('无权访问'); navigate('/'); }
   }, [user, authLoading]);
 
   if (authLoading) return (
-    <div className="text-center py-12">
-      <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
-      <p className="text-campus-text-secondary">加载中...</p>
+    <div className="max-w-6xl mx-auto px-6 pt-8 space-y-4">
+      <Skeleton variant="text" count={1} className="h-8 w-1/4" />
+      <Skeleton variant="list" count={5} />
     </div>
   );
 
-  if (!user || user.role !== 'admin') return null;
+  if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) return null;
 
   return (
     <div className="max-w-6xl mx-auto px-6 pt-8 pb-16">
@@ -49,7 +52,7 @@ export default function AdminPage() {
       </div>
 
       {activeTab === 'stats' && <StatsTab />}
-      {activeTab === 'users' && <UsersTab />}
+      {activeTab === 'users' && <UsersTab currentUser={user} />}
       {activeTab === 'pending' && <PendingTab />}
       {activeTab === 'words' && <WordsTab />}
       {activeTab === 'reports' && <ReportsTab />}
@@ -78,7 +81,11 @@ function StatsTab() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-center py-8 text-campus-text-tertiary font-body">加载中...</div>;
+  if (loading) return (
+    <div className="space-y-3">
+      <Skeleton variant="list" count={5} />
+    </div>
+  );
   if (!stats) return <div className="text-center py-8 text-campus-text-tertiary font-body">暂无数据</div>;
 
   const maxUserGrowth = Math.max(...stats.userGrowth.map(d => d.count), 1);
@@ -237,7 +244,7 @@ function StatsTab() {
   );
 }
 
-function UsersTab() {
+function UsersTab({ currentUser }: { currentUser: { role: string } | null }) {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -247,7 +254,7 @@ function UsersTab() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [newUser, setNewUser] = useState({ username: '', password: '', display_name: '', email: '', role: 'user' });
+  const [newUser, setNewUser] = useState({ username: '', password: '', email: '', role: 'user' });
   const [banModal, setBanModal] = useState<{ open: boolean; userIds: number[]; action: 'ban' | 'unban' }>({ open: false, userIds: [], action: 'ban' });
   const [banDuration, setBanDuration] = useState(7);
   const [banReason, setBanReason] = useState('');
@@ -296,6 +303,38 @@ function UsersTab() {
     catch { toastStore.error('操作失败'); }
   };
 
+  const handleResetPassword = async (id: number) => {
+    requireVerify(async () => {
+      const pwd = prompt('请输入新的密码（至少 6 位）：');
+      if (!pwd || pwd.length < 6) { toastStore.warning('密码至少 6 位'); return; }
+      try { await api.post(`/admin/users/${id}/reset-password`, { password: pwd }); toastStore.success('密码已重置'); loadUsers(); }
+      catch { toastStore.error('操作失败'); }
+    });
+  };
+
+  const [verifyModal, setVerifyModal] = useState<{ open: boolean; pendingAction: (() => void) | null }>({ open: false, pendingAction: null });
+  const [verifyPassword, setVerifyPassword] = useState('');
+  const [verifyLoading, setVerifyLoading] = useState(false);
+
+  const requireVerify = (action: () => void) => {
+    setVerifyPassword('');
+    setVerifyModal({ open: true, pendingAction: () => { setVerifyModal(p => ({ ...p, open: false })); action(); } });
+  };
+
+  const handleVerify = async () => {
+    if (!verifyPassword) { toastStore.warning('请输入密码'); return; }
+    setVerifyLoading(true);
+    try {
+      const res = await api.post('/admin/verify-password', { password: verifyPassword });
+      if (res.data.verified) {
+        const action = verifyModal.pendingAction;
+        setVerifyModal({ open: false, pendingAction: null });
+        action?.();
+      }
+    } catch (e: any) { toastStore.error(e.response?.data?.error || '密码错误'); }
+    finally { setVerifyLoading(false); }
+  };
+
   const toggleSelect = (id: number) => {
     setSelected(prev => {
       const next = new Set(prev);
@@ -311,24 +350,33 @@ function UsersTab() {
 
   const handleBatchBan = () => {
     if (!selected.size) return;
-    setBanModal({ open: true, userIds: [...selected], action: 'ban' });
+    requireVerify(() => setBanModal({ open: true, userIds: [...selected], action: 'ban' }));
   };
 
   const handleBatchDelete = async () => {
-    if (!selected.size || !confirm(`确定删除 ${selected.size} 个用户？此操作不可撤销。`)) return;
-    try {
-      const res = await adminApi.batchDeleteUsers([...selected]);
-      toastStore.success(res.data.message); setSelected(new Set()); loadUsers();
-    } catch { toastStore.error('批量删除失败'); }
+    if (!selected.size) return;
+    requireVerify(async () => {
+      if (!confirm(`确定删除 ${selected.size} 个用户？此操作不可撤销。`)) return;
+      try {
+        const res = await adminApi.batchDeleteUsers([...selected]);
+        toastStore.success(res.data.message); setSelected(new Set()); loadUsers();
+      } catch { toastStore.error('批量删除失败'); }
+    });
   };
 
   const handleCreate = async () => {
     if (!newUser.username.trim() || !newUser.password) { toastStore.error('用户名和密码必填'); return; }
     setCreating(true);
     try {
-      await adminApi.createUser(newUser);
+      await adminApi.createUser({
+        username: newUser.username,
+        password: newUser.password,
+        display_name: newUser.username,
+        email: newUser.email || undefined,
+        role: newUser.role,
+      });
       toastStore.success('用户创建成功');
-      setShowCreate(false); setNewUser({ username: '', password: '', display_name: '', email: '', role: 'user' });
+      setShowCreate(false); setNewUser({ username: '', password: '', email: '', role: 'user' });
       setPage(1); loadUsers();
     } catch (e: any) { toastStore.error(e.response?.data?.error || '创建失败'); }
     finally { setCreating(false); }
@@ -353,17 +401,15 @@ function UsersTab() {
           <h3 className="text-sm font-semibold font-display mb-3">创建新用户</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             <input value={newUser.username} onChange={e => setNewUser(p => ({ ...p, username: e.target.value }))}
-              placeholder="用户名 *" className="px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
+              placeholder="用户名 *（同时作为显示名称）" className="px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
             <input type="password" value={newUser.password} onChange={e => setNewUser(p => ({ ...p, password: e.target.value }))}
               placeholder="密码 *（至少6位）" className="px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
-            <input value={newUser.display_name} onChange={e => setNewUser(p => ({ ...p, display_name: e.target.value }))}
-              placeholder="显示名称" className="px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
             <input type="email" value={newUser.email} onChange={e => setNewUser(p => ({ ...p, email: e.target.value }))}
               placeholder="邮箱" className="px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary" />
             <select value={newUser.role} onChange={e => setNewUser(p => ({ ...p, role: e.target.value }))}
               className="px-3 py-2 rounded-lg bg-surface-hover border border-border text-sm font-body focus:outline-none focus:border-primary">
-              <option value="user">普通用户</option>
-              <option value="moderator">版主</option>
+              <option value="user">一般用户</option>
+              <option value="admin">共创者</option>
             </select>
             <button onClick={handleCreate} disabled={creating || !newUser.username.trim() || !newUser.password}
               className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-body hover:bg-primary-hover disabled:opacity-50">
@@ -409,16 +455,34 @@ function UsersTab() {
                   {u.display_name} <span className="text-xs text-campus-text-tertiary">@{u.username}</span>
                   {u.is_banned ? <span className="ml-2 px-1.5 py-0.5 rounded bg-red-50 text-red-500 text-xs">已封禁</span> : null}
                 </p>
-                <p className="text-xs text-campus-text-tertiary font-body">{u.email || '无邮箱'} · {u.post_count} 帖子 · {u.role}</p>
+                <p className="text-xs text-campus-text-tertiary font-body">{u.email || '无邮箱'} · {u.post_count} 帖子 ·{' '}
+                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+                    u.role === 'superadmin' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400' :
+                    u.role === 'admin' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' :
+                    u.role === 'banned' ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400' :
+                    'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400'
+                  }`}>
+                    {ROLE_NAMES[u.role as keyof typeof ROLE_NAMES] || u.role}
+                  </span>
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {u.role !== 'admin' && (
-                <button onClick={() => handleRole(u.id, u.role === 'admin' ? 'user' : 'admin')} className="p-2 hover:bg-surface-hover rounded-lg transition-colors" title="切换角色"><UserCog className="w-4 h-4" /></button>
+              {(currentUser?.role === 'superadmin') && u.role !== 'superadmin' && (
+                <>
+                  {u.role === 'admin' ? (
+                    <button onClick={() => requireVerify(() => handleRole(u.id, 'user'))} className="p-2 hover:bg-surface-hover rounded-lg transition-colors" title="降为一般用户"><UserX className="w-4 h-4 text-orange-500" /></button>
+                  ) : u.role === 'banned' ? (
+                    <button onClick={() => requireVerify(() => handleRole(u.id, 'user'))} className="p-2 hover:bg-surface-hover rounded-lg transition-colors" title="解封"><UserCheck className="w-4 h-4 text-green-500" /></button>
+                  ) : (
+                    <>
+                      <button onClick={() => requireVerify(() => handleRole(u.id, 'admin'))} className="p-2 hover:bg-surface-hover rounded-lg transition-colors" title="设为共创者"><UserCog className="w-4 h-4 text-blue-500" /></button>
+                      <button onClick={() => requireVerify(() => handleRole(u.id, 'banned'))} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors" title="封禁"><Ban className="w-4 h-4 text-destructive" /></button>
+                    <button onClick={() => handleResetPassword(u.id)} className="p-2 hover:bg-surface-hover rounded-lg transition-colors" title="重置密码"><Key className="w-4 h-4 text-amber-500" /></button>
+                    </>
+                  )}
+                </>
               )}
-              <button onClick={() => handleBan(u.id, !!u.is_banned)} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-destructive" title={u.is_banned ? '解封' : '封禁'}>
-                {u.is_banned ? <UserCheck className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
-              </button>
             </div>
           </div>
         ))}
@@ -453,6 +517,24 @@ function UsersTab() {
           <Button variant="destructive" onClick={confirmBan}>确认封禁</Button>
         </DialogFooter>
       </Dialog>
+
+      {/* ── 二次验证弹窗 ── */}
+      <Dialog open={verifyModal.open} onOpenChange={o => setVerifyModal(p => ({ ...p, open: o }))}>
+        <DialogHeader>
+          <DialogTitle>安全验证</DialogTitle>
+          <DialogDescription>此操作需要验证你的管理员密码</DialogDescription>
+        </DialogHeader>
+        <div className="px-6 pb-4">
+          <input type="password" value={verifyPassword} onChange={e => setVerifyPassword(e.target.value)}
+            placeholder="请输入登录密码"
+            className="w-full px-4 py-3 rounded-lg bg-surface-hover border border-border text-sm focus:outline-none focus:border-primary"
+            onKeyDown={e => e.key === 'Enter' && handleVerify()} />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setVerifyModal(p => ({ ...p, open: false }))}>取消</Button>
+          <Button onClick={handleVerify} disabled={verifyLoading}>{verifyLoading ? '验证中...' : '确认'}</Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 }
@@ -474,7 +556,11 @@ function PendingTab() {
     } catch { toastStore.error('操作失败'); }
   };
 
-  if (loading) return <div className="text-center py-8 text-campus-text-tertiary font-body">加载中...</div>;
+  if (loading) return (
+    <div className="space-y-3">
+      <Skeleton variant="list" count={5} />
+    </div>
+  );
   if (posts.length === 0) return <div className="text-center py-12 text-campus-text-tertiary font-body">暂无待审核内容</div>;
 
   return (
@@ -570,7 +656,11 @@ function ReportsTab() {
     } catch { toastStore.error('操作失败'); }
   };
 
-  if (loading) return <div className="text-center py-8 text-campus-text-tertiary font-body">加载中...</div>;
+  if (loading) return (
+    <div className="space-y-3">
+      <Skeleton variant="list" count={5} />
+    </div>
+  );
   if (reports.length === 0) return <div className="text-center py-12 text-campus-text-tertiary font-body">暂无举报</div>;
 
   return (
@@ -680,7 +770,11 @@ function DevicesTab() {
       })
     : devices;
 
-  if (loading) return <div className="text-center py-8 text-campus-text-tertiary font-body">加载中...</div>;
+  if (loading) return (
+    <div className="space-y-3">
+      <Skeleton variant="list" count={5} />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -754,7 +848,11 @@ function LogsTab() {
       .catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-center py-8 text-campus-text-tertiary font-body">加载中...</div>;
+  if (loading) return (
+    <div className="space-y-3">
+      <Skeleton variant="list" count={5} />
+    </div>
+  );
   if (logs.length === 0) return <div className="text-center py-12 text-campus-text-tertiary font-body">暂无操作日志</div>;
 
   return (

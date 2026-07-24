@@ -168,11 +168,13 @@ export interface AdminUser {
   id: number;
   username: string;
   email: string;
-  display_name: string;
+  display_name: string | null;
   avatar_url: string | null;
-  role: string;
+  is_admin: number;
   is_banned: number;
+  role: string;
   created_at: string;
+  device_code: string | null;
   post_count: number;
   comment_count: number;
 }
@@ -257,6 +259,48 @@ export interface TeamPost {
   display_name?: string;
   avatar_url?: string;
   created_at: string;
+}
+
+export interface TeamContentPost {
+  id: number;
+  team_id: number;
+  title: string;
+  content: string;
+  author_id: number;
+  is_pinned: number;
+  images: string[];
+  username: string;
+  display_name?: string;
+  avatar_url?: string;
+  comment_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamFile {
+  id: number;
+  team_id: number;
+  author_id: number;
+  name: string;
+  original_name: string;
+  mime_type: string;
+  size: number;
+  username: string;
+  display_name?: string;
+  created_at: string;
+  storage?: string;
+  oss_key?: string;
+}
+
+export interface TeamContentComment {
+  id: number;
+  post_id: number;
+  author_id: number;
+  content: string;
+  created_at: string;
+  username: string;
+  display_name?: string;
+  avatar_url?: string;
 }
 
 export interface MyTeamsResponse {
@@ -449,4 +493,136 @@ export interface UserDevice {
   is_active: number;
   last_login_at: string;
   created_at: string;
+}
+
+// ── 成就系统类型 ──────────────────────────────
+
+export interface Achievement {
+  id: number;
+  key: string;
+  name: string;
+  description: string;
+  icon: string;                // emoji
+  category: string;
+  points: number;              // 成就积分奖励
+  condition_desc: string;      // 解锁条件说明
+  sort_order: number;
+}
+
+export interface UserAchievement {
+  id: number;
+  user_id: number;
+  achievement_id: number;
+  unlocked_at: string;
+  achievement?: Achievement;
+}
+
+// ── 角色权限系统 ──────────────────────────────
+
+export const ROLES = {
+  SUPER_ADMIN: 'superadmin',
+  ADMIN: 'admin',
+  USER: 'user',
+  BANNED: 'banned',
+} as const;
+
+export type Role = (typeof ROLES)[keyof typeof ROLES];
+
+/** 角色中文名 */
+export const ROLE_NAMES: Record<Role, string> = {
+  superadmin: '最高管理员',
+  admin: '共创者',
+  user: '一般用户',
+  banned: '黑名单用户',
+};
+
+/** 角色等级（数值越大权限越高） */
+export const ROLE_LEVEL: Record<Role, number> = {
+  superadmin: 100,
+  admin: 50,
+  user: 10,
+  banned: 0,
+};
+
+/**
+ * 权限检查：source 是否拥有不低于 target 的权限
+ */
+export function hasPermission(source: string, target: string): boolean {
+  const s = ROLE_LEVEL[source as Role] ?? 0;
+  const t = ROLE_LEVEL[target as Role] ?? 0;
+  return s >= t;
+}
+
+/**
+ * 权限标识符常量
+ * 调用: can(user.role, PERMISSIONS.manageUsers)
+ */
+export const PERMISSIONS = {
+  manageUsers: 'superadmin',
+  manageContent: 'admin',
+  viewAdminPanel: 'admin',
+  manageAllTeams: 'admin',
+  modifySite: 'superadmin',
+  appointAdmin: 'superadmin',
+} as const;
+
+// ── 插件共享类型 ──────────────────────────────
+
+export interface BoardRow {
+  id: number;
+  name: string;
+  description: string;
+  icon: string;
+  sort_order: number;
+  post_count?: number;
+}
+
+export interface PostRow {
+  id: number;
+  title: string;
+  content: string;
+  author_id: number;
+  board_id: number;
+  is_anonymous: number;
+  created_at: string;
+}
+
+export interface UserRow {
+  id: number;
+  username: string;
+  password_hash: string;
+  display_name: string;
+  device_code: string | null;
+  is_admin: number;
+  email: string | null;
+  avatar_url: string | null;
+  role: string;
+  is_banned: number;
+  banned_until: string | null;
+  ban_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommentRow {
+  id: number;
+  content: string;
+  author_id: number;
+  post_id: number;
+  parent_id: number | null;
+}
+
+export interface TeamRow {
+  id: number;
+  name: string;
+  description: string;
+  avatar: string | null;
+  is_public: number;
+  creator_id: number;
+  max_members: number;
+  category_id: number | null;
+  invite_code: string;
+  hide_members: number;
+  member_count?: number;
+  post_count?: number;
 }

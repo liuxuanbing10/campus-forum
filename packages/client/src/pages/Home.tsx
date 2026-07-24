@@ -2,10 +2,12 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 import api from '../lib/api';
-import { Pin, MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Heart, Star, ChevronLeft, ChevronRight, UserPlus, Eye, ThumbsUp, RefreshCw, Loader2 } from 'lucide-react';
+import { Pin, MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Heart, Star, ChevronLeft, ChevronRight, UserPlus, Eye, ThumbsUp, RefreshCw, Loader2, Download } from 'lucide-react';
 import { THEMES, useThemeStore } from '../stores/theme';
 import MetaManager from '../components/MetaManager';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import MeteorSignature from '../components/MeteorSignature';
+import Skeleton from '../components/Skeleton';
 
 interface Board {
   id: number;
@@ -50,7 +52,8 @@ export default function HomePage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [canScroll, setCanScroll] = useState(false);
-  const [sloganDone, setSloganDone] = useState(false);
+
+  const sloganLines = ['指尖流淌星辰海', '笔端绽放百花开'];
 
   // ── 最新帖子无限滚动状态 ──
   const [posts, setPosts] = useState<Post[]>([]);
@@ -65,12 +68,6 @@ export default function HomePage() {
       .then((res) => setBoards(res.data))
       .catch(() => {})
       .finally(() => setBoardsLoading(false));
-  }, []);
-
-  // 标语手写动画完成后隐藏光标
-  useEffect(() => {
-    const timer = setTimeout(() => setSloganDone(true), 2800);
-    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -213,7 +210,11 @@ export default function HomePage() {
   });
 
   if (loading) {
-    return <div className="text-center py-12 text-campus-text-tertiary font-handwrite text-lg">加载中...</div>;
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+        <Skeleton variant="post" count={5} />
+      </div>
+    );
   }
 
   return (
@@ -245,15 +246,32 @@ export default function HomePage() {
           <div className="ink-blob ink-blob-3" />
           <div className="ink-blob ink-blob-4" />
         </div>
-        {/* 标语：手写动画 */}
-        <h1 className="relative z-10 font-slogan text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-campus-text-primary leading-tight">
-          <span className={`slogan-write ${sloganDone ? 'slogan-write-done' : ''}`}>
-            代码改变世界
-          </span>
-        </h1>
-        {/* 副标语：手写字体 + 延迟渐入 */}
+        {/* 标语：流星手写签名动画 */}
+        <MeteorSignature
+          lines={sloganLines}
+          className="relative z-10 w-full max-w-lg mx-auto"
+        />
+        {/* 横批：手写字体 + 延迟渐入 */}
         <p className="relative z-10 text-lg sm:text-xl text-campus-text-secondary font-handwrite max-w-2xl mx-auto mt-4 sm:mt-6 text-fade-in text-fade-in-delay-1">
-          从此刻起，与优秀的你同行
+          —— 文采飞扬 ——
+        </p>
+        {/* APP 下载入口 */}
+        <Link to="/download" className="relative z-10 inline-flex items-center gap-2 mt-6 px-6 py-3 bg-gradient-to-r from-primary to-primary-hover text-white rounded-xl font-medium hover:opacity-90 transition-opacity shadow-lg">
+          <Download className="w-5 h-5" />
+          下载 APP
+        </Link>
+      </div>
+
+      {/* 第二副对联：知识分享理念 */}
+      <div className="max-w-2xl mx-auto px-4 py-8 sm:py-10 text-center">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-campus-text-secondary">
+          <span className="font-slogan text-2xl sm:text-3xl text-campus-text-primary text-fade-in tracking-wider">分享让知识增值</span>
+          <span className="hidden sm:inline text-campus-text-tertiary text-2xl font-light">·</span>
+          <span className="sm:hidden text-campus-text-tertiary text-lg font-light">·</span>
+          <span className="font-slogan text-2xl sm:text-3xl text-campus-text-primary text-fade-in text-fade-in-delay-1 tracking-wider">讨论让思维升级</span>
+        </div>
+        <p className="mt-4 text-base sm:text-lg text-campus-text-tertiary font-handwrite text-fade-in text-fade-in-delay-2">
+          —— 共同成长 ——
         </p>
       </div>
 
@@ -501,6 +519,34 @@ export default function HomePage() {
               </div>
             </Link>
           </div>
+
+          {/* ═══════════════════════════════════════════
+              社区公约 — 置顶公告
+              ═══════════════════════════════════════════ */}
+          <Link
+            to="/rules"
+            className="group relative mt-4 block rounded-2xl overflow-hidden border-2 border-primary/20 bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 hover:border-primary/40 transition-all hover:scale-[1.01] active:scale-[0.99]"
+          >
+            <div className="absolute inset-0 pointer-events-none opacity-10">
+              <div className="absolute w-40 h-40 -top-10 -left-10 rounded-full bg-primary blur-3xl" />
+              <div className="absolute w-40 h-40 -bottom-10 -right-10 rounded-full bg-accent blur-3xl" />
+            </div>
+            <div className="relative z-10 flex items-center gap-4 p-5 sm:p-6">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                <BookOpen className="w-6 h-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm sm:text-base font-semibold font-display text-campus-text-primary mb-1 flex items-center gap-2">
+                  社区公约
+                  <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-normal">置顶</span>
+                </h3>
+                <p className="text-xs sm:text-sm text-campus-text-tertiary font-body leading-relaxed">
+                  互相尊重 · 友善交流 · 理性讨论 · 保护隐私 — 查看完整社区公约
+                </p>
+              </div>
+              <span className="text-xs text-primary font-medium group-hover:underline shrink-0 hidden sm:inline">查看 →</span>
+            </div>
+          </Link>
         </div>
       ) : (
         <div className="text-center py-12 text-campus-text-secondary">

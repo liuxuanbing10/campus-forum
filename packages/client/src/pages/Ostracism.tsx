@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 import api from '../lib/api';
+import Skeleton from '../components/Skeleton';
 
 interface OstracismInfo {
   banned: boolean;
@@ -67,7 +68,10 @@ export default function Ostracism() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-gray-500">加载中...</div>
+        <div className="w-full max-w-md px-4 space-y-3">
+          <Skeleton variant="text" count={1} className="h-8 w-1/2" />
+          <Skeleton variant="list" count={3} />
+        </div>
       </div>
     );
   }

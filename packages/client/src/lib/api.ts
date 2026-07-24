@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, UpdateProfileData, ChangePasswordData, Post, SearchResult, Notification, AdminUser, ShareInfo, PostStats, TeamCategory, Team, TeamMember, TeamAnnouncement, TeamPost, MyTeamsResponse, CreateTeamData, UpdateTeamData, UserProfile, UserPost, UserComment, FollowStatus, Conversation, Message, ReportData, OAuthAccount, PendingPost, SensitiveWord, AdminReport, AuditLog, PostVersion, CaptchaData, AdminStats, DeviceBlacklistEntry, UserDevice } from '@campus-forum/core';
+import type { User, UpdateProfileData, ChangePasswordData, Post, SearchResult, Notification, AdminUser, ShareInfo, PostStats, TeamCategory, Team, TeamMember, TeamAnnouncement, TeamPost, TeamContentPost, TeamFile, TeamContentComment, MyTeamsResponse, CreateTeamData, UpdateTeamData, UserProfile, UserPost, UserComment, FollowStatus, Conversation, Message, ReportData, OAuthAccount, PendingPost, SensitiveWord, AdminReport, AuditLog, PostVersion, CaptchaData, AdminStats, DeviceBlacklistEntry, UserDevice, Achievement, UserAchievement } from '@campus-forum/core';
 import { getDeviceCode } from './device';
 
 const baseURL = import.meta.env.VITE_API_URL || '/api';
@@ -127,6 +127,28 @@ export const teamsApi = {
   transferOwnership: (teamId: number, newOwnerId: number) => api.post<{ success: boolean; message: string }>(`/teams/${teamId}/transfer`, { newOwnerId }),
   toggleFavorite: (teamId: number) => api.post<{ success: boolean; favorited: boolean }>(`/teams/${teamId}/favorite`),
   resetInviteCode: (teamId: number) => api.post<{ success: boolean; inviteCode: string }>(`/teams/${teamId}/reset-invite`),
+
+  // ── 团队独立帖子（team_content_posts）────
+  getTeamContentPosts: (id: number, page?: number) => api.get<{ posts: TeamContentPost[]; page: number; limit: number }>(`/teams/${id}/content-posts`, { params: { page } }),
+  createTeamContentPost: (id: number, data: { title: string; content: string; images?: string[] }) => api.post<{ success: boolean; post: TeamContentPost }>(`/teams/${id}/content-posts`, data),
+  getTeamContentPost: (teamId: number, postId: number) => api.get<TeamContentPost>(`/teams/${teamId}/content-posts/${postId}`),
+  updateTeamContentPost: (teamId: number, postId: number, data: { title?: string; content?: string; images?: string[]; isPinned?: boolean }) => api.put<{ success: boolean; message: string }>(`/teams/${teamId}/content-posts/${postId}`, data),
+  deleteTeamContentPost: (teamId: number, postId: number) => api.delete<{ success: boolean; message: string }>(`/teams/${teamId}/content-posts/${postId}`),
+
+  // ── 团队文件 ──────────────────────────
+  getTeamFiles: (id: number) => api.get<{ files: TeamFile[] }>(`/teams/${id}/files`),
+  uploadTeamFile: (id: number, data: { name: string; mimeType: string; data?: string; ossKey?: string; size?: number }) => api.post<{ success: boolean; file: TeamFile }>(`/teams/${id}/files`, data),
+  deleteTeamFile: (teamId: number, fileId: number) => api.delete<{ success: boolean; message: string }>(`/teams/${teamId}/files/${fileId}`),
+  getTeamFileDownloadUrl: (teamId: number, fileId: number) => `/api/teams/${teamId}/files/${fileId}/download`,
+
+  // ── 团队评论 ──────────────────────────
+  getComments: (teamId: number, postId: number) => api.get<{ comments: TeamContentComment[] }>(`/teams/${teamId}/content-posts/${postId}/comments`),
+  createComment: (teamId: number, postId: number, content: string) => api.post<{ success: boolean; comment: TeamContentComment }>(`/teams/${teamId}/content-posts/${postId}/comments`, { content }),
+  deleteComment: (teamId: number, postId: number, commentId: number) => api.delete<{ success: boolean; message: string }>(`/teams/${teamId}/content-posts/${postId}/comments/${commentId}`),
+
+  // ── OSS 直传 ──────────────────────────
+  getOssUploadUrl: (teamId: number, name: string) => api.post<{ uploadUrl: string; ossKey: string }>('/oss/upload-url', { teamId, name }),
+  getOssSignUrl: (key: string) => api.get<{ downloadUrl: string }>('/oss/sign-url', { params: { key } }),
 };
 
 export default api;
@@ -213,6 +235,14 @@ export const versionApi = {
 // ===== 评论 API =====
 export const commentApi = {
   update: (commentId: number, content: string) => api.put<{ success: boolean }>(`/comments/${commentId}`, { content }),
+};
+
+// ===== 成就系统 API =====
+export const achievementsApi = {
+  getAll: () => api.get<{ achievements: (Achievement & { unlocked: boolean; unlocked_at: string | null })[] }>('/achievements'),
+  getStats: () => api.get<{ total: number; unlocked: number; totalPoints: number; earnedPoints: number; userPoints: number }>('/achievements/stats'),
+  checkAll: () => api.post<{ unlocked: { achievement: Achievement }[] }>('/achievements/check'),
+  checkOne: (key: string) => api.post<{ newlyUnlocked: boolean; achievement?: Achievement }>(`/achievements/check/${key}`),
 };
 
 // ===== 我的设备 API =====

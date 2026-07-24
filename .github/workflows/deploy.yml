@@ -19,14 +19,34 @@ jobs:
       - run: npm run build:server
       - run: npm run build:client
 
-      - name: Deploy to server
+      - name: Package dist
+        run: |
+          tar -czf deploy.tar.gz \
+            packages/client/dist \
+            packages/server/dist \
+            packages/core/dist \
+            packages/database/dist \
+            plugins/teams/dist \
+            plugins/admin/dist \
+            plugins/auth/dist \
+            plugins/boards/dist \
+            plugins/export/dist \
+            plugins/messages/dist \
+            plugins/notifications/dist \
+            plugins/posts/dist \
+            plugins/rss/dist \
+            plugins/search/dist \
+            plugins/social/dist \
+            plugins/theme-default/dist
+
+      - name: Upload & extract
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "packages/client/dist/*,packages/server/dist/*,packages/core/dist/*,packages/database/dist/*,plugins/*/dist/*"
-          target: /opt/campus-forum
+          source: "deploy.tar.gz"
+          target: /opt/campus-forum/
           strip_components: 0
 
       - name: Restart service
@@ -37,8 +57,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /opt/campus-forum
-            git pull origin main
-            npm install
-            npm run build:server
-            npm run build:client
+            tar -xzf deploy.tar.gz
+            rm -f deploy.tar.gz
             npx pm2 restart campus-forum || npx pm2 start packages/server/dist/index.js --name campus-forum

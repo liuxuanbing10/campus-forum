@@ -1,9 +1,6 @@
-import { PluginContext, uid, isAdmin } from '@campus-forum/core';
+import { PluginContext, uid, isAdmin, notify } from '@campus-forum/core';
 import { createTeamSchema, updateTeamSchema, announcementSchema, TeamRow, MemberRow, AnnouncementRow, genInviteCode } from './schemas.js';
-
-async function notify(ctx: PluginContext, userId: number, type: string, msg: string, teamId?: number, fromUserId?: number) {
-  try { await (ctx as any).createNotification?.(userId, type, msg, null, null, fromUserId, teamId); } catch {}
-}
+import { generateOssKey, getUploadUrl, getDownloadUrl, deleteObject } from './oss.js';
 
 export function registerTeamRoutes(ctx: PluginContext) {
   const { app, db } = ctx;
@@ -22,7 +19,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
 
   async function withMemberCount(team: any): Promise<any> {
     const mc = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM team_members WHERE team_id=? AND status=\'approved\'', team.id))?.c || 0;
-    const pc = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM team_posts WHERE team_id=?', team.id))?.c || 0;
+    const pc = (await db.get<{ c: number }>('SELECT COUNT(*) as c FROM team_content_posts WHERE team_id=?', team.id))?.c || 0;
     return { ...team, member_count: mc, post_count: pc };
   }
 
@@ -95,7 +92,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     else if (sort === 'posts') orderBy = 'post_count DESC';
 
     params.push(limit, (page - 1) * limit);
-    const teams = await db.all<any>(`SELECT t.*, (SELECT COUNT(*) FROM team_members WHERE team_id=t.id AND status='approved') as member_count, (SELECT COUNT(*) FROM team_posts WHERE team_id=t.id) as post_count FROM teams t ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`, ...params);
+    const teams = await db.all<any>(`SELECT t.*, (SELECT COUNT(*) FROM team_members WHERE team_id=t.id AND status='approved') as member_count, (SELECT COUNT(*) FROM team_content_posts WHERE team_id=t.id) as post_count FROM teams t ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`, ...params);
     return { teams, page, limit, sort, category };
   });
 
@@ -112,7 +109,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const params: unknown[] = [`%${q}%`];
     if (category) { where += ' AND t.category_id=?'; params.push(category); }
 
-    const teams = await db.all<any>(`SELECT t.*, (SELECT COUNT(*) FROM team_members WHERE team_id=t.id AND status='approved') as member_count, (SELECT COUNT(*) FROM team_posts WHERE team_id=t.id) as post_count FROM teams t ${where} ORDER BY member_count DESC LIMIT 30`, ...params);
+    const teams = await db.all<any>(`SELECT t.*, (SELECT COUNT(*) FROM team_members WHERE team_id=t.id AND status='approved') as member_count, (SELECT COUNT(*) FROM team_content_posts WHERE team_id=t.id) as post_count FROM teams t ${where} ORDER BY member_count DESC LIMIT 30`, ...params);
     return { teams };
   });
 
@@ -161,7 +158,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
 
   app.get('/api/teams/:id', async (req, rep) => {
     const id = Number((req.params as { id: string }).id);
-    const team = await db.get<any>(`SELECT t.*, (SELECT COUNT(*) FROM team_members WHERE team_id=t.id AND status='approved') as member_count, (SELECT COUNT(*) FROM team_posts WHERE team_id=t.id) as post_count FROM teams t WHERE t.id=?`, id);
+    const team = await db.get<any>(`SELECT t.*, (SELECT COUNT(*) FROM team_members WHERE team_id=t.id AND status='approved') as member_count, (SELECT COUNT(*) FROM team_content_posts WHERE team_id=t.id) as post_count FROM teams t WHERE t.id=?`, id);
     if (!team) return rep.status(404).send({ error: '团队不存在' });
     const u = uid(req);
     if (!team.is_public && !(await memberRole(id, u || 0))) return rep.status(403).send({ error: '这是私密团队' });
@@ -377,6 +374,276 @@ export function registerTeamRoutes(ctx: PluginContext) {
     if (!(await isTeamAdmin(id, userId)) && post.author_id !== userId) return rep.status(403).send({ error: '无权移除' });
     await db.run('DELETE FROM team_posts WHERE team_id=? AND post_id=?', id, postId);
     return { success: true, message: '已移除' };
+  });
+
+  // ══════════════════════════════════════════
+  // 团队独立帖子（team_content_posts）
+  // ══════════════════════════════════════════
+
+  app.get('/api/teams/:id/content-posts', async (req, rep) => {
+    const id = Number((req.params as { id: string }).id);
+    const page = Math.max(1, Number((req.query as any).page) || 1);
+    const limit = 20;
+    const team = await db.get<TeamRow>('SELECT id, is_public FROM teams WHERE id=?', id);
+    if (!team) return rep.status(404).send({ error: '团队不存在' });
+    const u = uid(req);
+    const role = u ? await memberRole(id, u) : null;
+    if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
+    const posts = await db.all<any>(`
+      SELECT p.*, u.username, u.display_name, u.avatar_url,
+        (SELECT COUNT(*) FROM team_content_comments WHERE post_id=p.id) as comment_count
+      FROM team_content_posts p JOIN users u ON p.author_id=u.id
+      WHERE p.team_id=?
+      ORDER BY p.is_pinned DESC, p.created_at DESC
+      LIMIT ? OFFSET ?
+    `, id, limit, (page - 1) * limit);
+    return { posts, page, limit };
+  });
+
+  app.post('/api/teams/:id/content-posts', async (req, rep) => {
+    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    const id = Number((req.params as { id: string }).id);
+    const role = await memberRole(id, userId);
+    if (!role) return rep.status(403).send({ error: '仅成员可发帖' });
+    const { title, content, images } = req.body as { title?: string; content?: string; images?: string[] };
+    if (!title?.trim()) return rep.status(400).send({ error: '请输入标题' });
+    if (!content?.trim()) return rep.status(400).send({ error: '请输入内容' });
+    const result = await db.run(
+      'INSERT INTO team_content_posts (team_id, title, content, author_id, images) VALUES (?,?,?,?,?)',
+      id, title.trim(), content.trim(), userId, images && images.length > 0 ? JSON.stringify(images) : null
+    );
+    const post = await db.get<any>(`
+      SELECT p.*, u.username, u.display_name, u.avatar_url,
+        (SELECT COUNT(*) FROM team_content_comments WHERE post_id=p.id) as comment_count
+      FROM team_content_posts p JOIN users u ON p.author_id=u.id WHERE p.id=?
+    `, result.lastInsertRowid);
+    return { success: true, post };
+  });
+
+  app.get('/api/teams/:id/content-posts/:postId', async (req, rep) => {
+    const id = Number((req.params as { id: string }).id);
+    const postId = Number((req.params as { postId: string }).postId);
+    const team = await db.get<TeamRow>('SELECT id, is_public FROM teams WHERE id=?', id);
+    if (!team) return rep.status(404).send({ error: '团队不存在' });
+    const u = uid(req);
+    const role = u ? await memberRole(id, u) : null;
+    if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
+    const post = await db.get<any>(`
+      SELECT p.*, u.username, u.display_name, u.avatar_url,
+        (SELECT COUNT(*) FROM team_content_comments WHERE post_id=p.id) as comment_count
+      FROM team_content_posts p JOIN users u ON p.author_id=u.id WHERE p.id=? AND p.team_id=?
+    `, postId, id);
+    if (!post) return rep.status(404).send({ error: '帖子不存在' });
+    return post;
+  });
+
+  app.put('/api/teams/:id/content-posts/:postId', async (req, rep) => {
+    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    const id = Number((req.params as { id: string }).id);
+    const postId = Number((req.params as { postId: string }).postId);
+    const post = await db.get<{ author_id: number }>('SELECT author_id FROM team_content_posts WHERE id=? AND team_id=?', postId, id);
+    if (!post) return rep.status(404).send({ error: '帖子不存在' });
+    if (post.author_id !== userId && !(await isTeamAdmin(id, userId))) return rep.status(403).send({ error: '无权编辑' });
+    const { title, content, images, isPinned } = req.body as any;
+    const updates: string[] = [];
+    const params: unknown[] = [];
+    if (title !== undefined) { updates.push('title=?'); params.push(title.trim()); }
+    if (content !== undefined) { updates.push('content=?'); params.push(content.trim()); }
+    if (images !== undefined) { updates.push('images=?'); params.push(images.length > 0 ? JSON.stringify(images) : null); }
+    if (isPinned !== undefined && (await isTeamAdmin(id, userId))) { updates.push('is_pinned=?'); params.push(isPinned ? 1 : 0); }
+    if (updates.length === 0) return rep.status(400).send({ error: '没有需要更新的字段' });
+    updates.push("updated_at=datetime('now')");
+    params.push(postId, id);
+    await db.run(`UPDATE team_content_posts SET ${updates.join(',')} WHERE id=? AND team_id=?`, ...params);
+    return { success: true, message: '已更新' };
+  });
+
+  app.delete('/api/teams/:id/content-posts/:postId', async (req, rep) => {
+    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    const id = Number((req.params as { id: string }).id);
+    const postId = Number((req.params as { postId: string }).postId);
+    const post = await db.get<{ author_id: number }>('SELECT author_id FROM team_content_posts WHERE id=? AND team_id=?', postId, id);
+    if (!post) return rep.status(404).send({ error: '帖子不存在' });
+    if (post.author_id !== userId && !(await isTeamAdmin(id, userId))) return rep.status(403).send({ error: '无权删除' });
+    await db.run('DELETE FROM team_content_posts WHERE id=?', postId);
+    return { success: true, message: '已删除' };
+  });
+
+  // ══════════════════════════════════════════
+  // 团队内容评论
+  // ══════════════════════════════════════════
+
+  app.get('/api/teams/:id/content-posts/:postId/comments', async (req, rep) => {
+    const id = Number((req.params as { id: string }).id);
+    const postId = Number((req.params as { postId: string }).postId);
+    const team = await db.get<TeamRow>('SELECT id, is_public FROM teams WHERE id=?', id);
+    if (!team) return rep.status(404).send({ error: '团队不存在' });
+    const u = uid(req);
+    const role = u ? await memberRole(id, u) : null;
+    if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
+    const comments = await db.all<any>(`
+      SELECT c.id, c.post_id, c.author_id, c.content, c.created_at,
+        u.username, u.display_name, u.avatar_url
+      FROM team_content_comments c JOIN users u ON c.author_id=u.id
+      WHERE c.post_id=? ORDER BY c.created_at ASC
+    `, postId);
+    return { comments };
+  });
+
+  app.post('/api/teams/:id/content-posts/:postId/comments', async (req, rep) => {
+    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    const id = Number((req.params as { id: string }).id);
+    const postId = Number((req.params as { postId: string }).postId);
+    const role = await memberRole(id, userId);
+    if (!role) return rep.status(403).send({ error: '仅成员可评论' });
+    const { content } = req.body as { content?: string };
+    if (!content?.trim()) return rep.status(400).send({ error: '内容不能为空' });
+    const result = await db.run(
+      'INSERT INTO team_content_comments (post_id, author_id, content) VALUES (?,?,?)',
+      postId, userId, content.trim()
+    );
+    const comment = await db.get<any>(`
+      SELECT c.id, c.post_id, c.author_id, c.content, c.created_at,
+        u.username, u.display_name, u.avatar_url
+      FROM team_content_comments c JOIN users u ON c.author_id=u.id WHERE c.id=?
+    `, result.lastInsertRowid);
+    return { success: true, comment };
+  });
+
+  app.delete('/api/teams/:id/content-posts/:postId/comments/:commentId', async (req, rep) => {
+    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    const id = Number((req.params as { id: string }).id);
+    const commentId = Number((req.params as { commentId: string }).commentId);
+    const comment = await db.get<{ author_id: number }>('SELECT author_id FROM team_content_comments WHERE id=?', commentId);
+    if (!comment) return rep.status(404).send({ error: '评论不存在' });
+    if (comment.author_id !== userId && !(await isTeamAdmin(id, userId))) return rep.status(403).send({ error: '无权删除' });
+    await db.run('DELETE FROM team_content_comments WHERE id=?', commentId);
+    return { success: true, message: '已删除' };
+  });
+
+  // ══════════════════════════════════════════
+  // OSS 签名 URL（前端直传用）
+  // ══════════════════════════════════════════
+
+  app.post('/api/oss/upload-url', async (req, rep) => {
+    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    const { teamId, name } = req.body as { teamId?: number; name?: string };
+    if (!teamId || !name) return rep.status(400).send({ error: '参数不足' });
+    const role = await memberRole(teamId, userId);
+    if (!role) return rep.status(403).send({ error: '仅成员可上传' });
+    const ossKey = generateOssKey(teamId, name);
+    const uploadUrl = await getUploadUrl(ossKey);
+    return { uploadUrl, ossKey };
+  });
+
+  app.get('/api/oss/sign-url', async (req, rep) => {
+    const key = (req.query as any).key as string;
+    if (!key) return rep.status(400).send({ error: '缺少 key' });
+    try {
+      const downloadUrl = await getDownloadUrl(key);
+      return { downloadUrl };
+    } catch (err: any) {
+      return rep.status(500).send({ error: err.message || '获取签名 URL 失败' });
+    }
+  });
+
+  // ══════════════════════════════════════════
+  // 团队文件
+  // ══════════════════════════════════════════
+
+  app.get('/api/teams/:id/files', async (req, rep) => {
+    const id = Number((req.params as { id: string }).id);
+    const team = await db.get<TeamRow>('SELECT id, is_public FROM teams WHERE id=?', id);
+    if (!team) return rep.status(404).send({ error: '团队不存在' });
+    const u = uid(req);
+    const role = u ? await memberRole(id, u) : null;
+    if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
+    const files = await db.all<any>(`
+      SELECT f.id, f.team_id, f.author_id, f.name, f.original_name, f.mime_type, f.size, f.created_at, f.storage, f.oss_key,
+        u.username, u.display_name
+      FROM team_files f JOIN users u ON f.author_id=u.id
+      WHERE f.team_id=? ORDER BY f.created_at DESC
+    `, id);
+    return { files };
+  });
+
+  app.post('/api/teams/:id/files', async (req, rep) => {
+    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    const id = Number((req.params as { id: string }).id);
+    const role = await memberRole(id, userId);
+    if (!role) return rep.status(403).send({ error: '仅成员可上传文件' });
+    const { name, mimeType, size, ossKey } = req.body as { name?: string; mimeType?: string; size?: number; ossKey?: string; data?: string };
+    if (!name?.trim()) return rep.status(400).send({ error: '文件名不能为空' });
+
+    let storage = 'oss';
+    let finalData: string | null = null;
+    let finalOssKey: string | null = ossKey || null;
+    let finalSize = size || 0;
+
+    if (ossKey) {
+      storage = 'oss';
+      finalOssKey = ossKey;
+    } else {
+      const body = req.body as any;
+      if (body.data) {
+        storage = 'db';
+        finalData = body.data;
+        finalSize = Math.round((finalData!.length * 3) / 4);
+        if (finalSize > 50 * 1024 * 1024) return rep.status(400).send({ error: '文件不能超过 50MB' });
+      } else {
+        return rep.status(400).send({ error: '请提供文件数据或 OSS key' });
+      }
+    }
+
+    const result = await db.run(
+      'INSERT INTO team_files (team_id, author_id, name, original_name, mime_type, size, data, storage, oss_key) VALUES (?,?,?,?,?,?,?,?,?)',
+      id, userId, name.trim(), name.trim(), mimeType || 'application/octet-stream', finalSize, finalData || '', storage, finalOssKey
+    );
+    const file = await db.get<any>(`
+      SELECT f.id, f.team_id, f.author_id, f.name, f.original_name, f.mime_type, f.size, f.created_at, f.storage, f.oss_key,
+        u.username, u.display_name
+      FROM team_files f JOIN users u ON f.author_id=u.id WHERE f.id=?
+    `, result.lastInsertRowid);
+    return { success: true, file };
+  });
+
+  app.delete('/api/teams/:id/files/:fileId', async (req, rep) => {
+    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    const id = Number((req.params as { id: string }).id);
+    const fileId = Number((req.params as { fileId: string }).fileId);
+    const file = await db.get<{ author_id: number; storage?: string; oss_key?: string }>('SELECT author_id, storage, oss_key FROM team_files WHERE id=? AND team_id=?', fileId, id);
+    if (!file) return rep.status(404).send({ error: '文件不存在' });
+    if (file.author_id !== userId && !(await isTeamAdmin(id, userId))) return rep.status(403).send({ error: '无权删除' });
+    if (file.storage === 'oss' && file.oss_key) {
+      try { await deleteObject(file.oss_key); } catch { /* ignore OSS errors */ }
+    }
+    await db.run('DELETE FROM team_files WHERE id=?', fileId);
+    return { success: true, message: '已删除' };
+  });
+
+  app.get('/api/teams/:id/files/:fileId/download', async (req, rep) => {
+    const id = Number((req.params as { id: string }).id);
+    const fileId = Number((req.params as { fileId: string }).fileId);
+    const team = await db.get<TeamRow>('SELECT id, is_public FROM teams WHERE id=?', id);
+    if (!team) return rep.status(404).send({ error: '团队不存在' });
+    const u = uid(req);
+    const role = u ? await memberRole(id, u) : null;
+    if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
+    const file = await db.get<any>('SELECT * FROM team_files WHERE id=? AND team_id=?', fileId, id);
+    if (!file) return rep.status(404).send({ error: '文件不存在' });
+
+    if (file.storage === 'oss' && file.oss_key) {
+      // OSS 文件：跳转到签名 URL
+      const url = await getDownloadUrl(file.oss_key, 3600);
+      return rep.redirect(url);
+    }
+
+    // 旧模式：base64 走服务器
+    const buf = Buffer.from(file.data, 'base64');
+    rep.header('Content-Type', file.mime_type);
+    rep.header('Content-Disposition', `attachment; filename="${encodeURIComponent(file.original_name)}"`);
+    rep.header('Content-Length', buf.length);
+    return rep.send(buf);
   });
 
   // ══════════════════════════════════════════

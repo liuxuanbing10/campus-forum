@@ -446,8 +446,11 @@
   font-family: var(--font-slogan);
   position: relative;
   padding-right: 4px;
-  animation: slogan-typewriter 2.5s steps(6, end) forwards;
+  animation: slogan-typewriter 2.8s steps(7, end) forwards;
   width: 0;
+}
+.slogan-write-delay {
+  animation-delay: 0.8s;
 }
 /* 光标作为伪元素，独立于文字宽度动画 */
 .slogan-write::after {
@@ -714,5 +717,32 @@
     --sidebar-accent-foreground: var(--color-text-primary);
     --sidebar-border: var(--color-border);
     --sidebar-ring: var(--color-primary);
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   骨架屏 shimmer 动画
+   用线性渐变扫光替代死板的 pulse，更接近现代设计语言
+   ═══════════════════════════════════════════════ */
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-border-light) 25%,
+    var(--color-surface-hover) 37%,
+    var(--color-border-light) 63%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+    background: var(--color-border-light);
   }
 }

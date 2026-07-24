@@ -1,6 +1,6 @@
+export * from './utils.js';
 export { PluginManager } from './plugin-manager.js';
 export { SimpleEventBus } from './event-bus.js';
-export { uid, isAdmin, paginate, signJwt, verifyJwt, getTokenFromRequest } from './utils.js';
 export type {
   Plugin,
   PluginManifest,
@@ -26,6 +26,9 @@ export type {
   TeamMember,
   TeamAnnouncement,
   TeamPost,
+  TeamContentPost,
+  TeamFile,
+  TeamContentComment,
   MyTeamsResponse,
   CreateTeamData,
   UpdateTeamData,
@@ -46,4 +49,14 @@ export type {
   AdminStats,
   DeviceBlacklistEntry,
   UserDevice,
+  Achievement,
+  UserAchievement,
+} from './types.js';
+export {
+  ROLES,
+  Role,
+  ROLE_NAMES,
+  ROLE_LEVEL,
+  hasPermission,
+  PERMISSIONS,
 } from './types.js';

@@ -8,6 +8,7 @@ import { ArrowLeft, Calendar, Edit3, MessageCircle, Eye, ThumbsUp, Users, Award,
 import FollowButton from '../components/FollowButton';
 import LevelBadge from '../components/LevelBadge';
 import MetaManager from '../components/MetaManager';
+import Skeleton from '../components/Skeleton';
 
 export default function UserProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -36,7 +37,18 @@ export default function UserProfilePage() {
     .finally(() => setLoading(false));
   }, [userId]);
 
-  if (loading) return <div className="text-center py-12 text-campus-text-tertiary font-body">加载中...</div>;
+  if (loading) return (
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+      <div className="flex items-center gap-4">
+        <Skeleton variant="text" count={1} className="h-20 w-20 rounded-full" />
+        <div className="flex-1 space-y-2">
+          <Skeleton variant="text" count={1} className="h-6 w-1/3" />
+          <Skeleton variant="text" count={1} className="h-4 w-1/4" />
+        </div>
+      </div>
+      <Skeleton variant="post" count={3} />
+    </div>
+  );
   if (!profile) return <div className="text-center py-12 text-campus-text-tertiary font-body">用户不存在</div>;
 
   const isOwn = currentUser?.id === userId;

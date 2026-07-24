@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, uid, isAdmin, paginate } from '@campus-forum/core';
+import { Plugin, PluginContext, uid, isAdmin, paginate, addPoints, checkSensitive, logAction, notify } from '@campus-forum/core';
 import { z } from 'zod';
 
 // ── 类型定义 ──────────────────────────────────
@@ -49,27 +49,9 @@ const boardSchema = z.object({ name: z.string().min(1, '版块名称不能为空
 const uploadSchema = z.object({ image: z.string().min(1, '请提供图片数据'), filename: z.string().optional() });
 const paginationSchema = z.object({ page: z.coerce.number().int().positive().max(100).optional().default(1), boardId: z.coerce.number().int().positive().optional(), sort: z.enum(['latest', 'hot', 'replied']).optional().default('latest') });
 
-// ── 工具函数 ──────────────────────────────────
-async function addPoints(db: any, userId: number, delta: number) {
-  try { await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', delta, userId); } catch {}
-}
-
-async function checkSensitive(db: any, text: string): Promise<string | null> {
-  const rows = await db.all('SELECT word FROM sensitive_words');
-  for (const w of (rows as { word: string }[])) if (text.includes(w.word)) return w.word;
-  return null;
-}
-
-async function logAction(db: any, adminId: number, action: string, targetType?: string, targetId?: number, detail?: string) {
-  try { await db.run('INSERT INTO audit_logs (admin_id,action,target_type,target_id,detail) VALUES (?,?,?,?,?)', adminId, action, targetType || null, targetId || null, detail || null); } catch {}
-}
-
+// ── 工具函数（使用 core 包的公共函数） ──────────────────
 function parseMentions(text: string): string[] {
   return [...text.matchAll(/@(\w{2,20})/g)].map(m => m[1]);
-}
-
-async function notify(ctx: PluginContext, userId: number, type: string, message: string, postId?: number, commentId?: number, fromUserId?: number) {
-  try { await (ctx as any).createNotification?.(userId, type, message, postId, commentId, fromUserId); } catch {}
 }
 
 // ── SQL 构建 ──────────────────────────────────
@@ -88,6 +70,7 @@ function buildPostListSql(opts: {
     opts.withContent ? 'p.content' : '',
     'p.view_count',
     `CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name`,
+    'u.role as author_role',
     'b.name as board_name',
     'COALESCE(v.like_count,0) as like_count',
     'COALESCE(c.comment_count,0) as comment_count',
@@ -225,7 +208,7 @@ export const postsPlugin: Plugin = {
       const page = Math.min(100, Math.max(1, Number((req.query as any).page) || 1));
       const limit = 20; const offset = (page - 1) * limit;
       const posts = await db.all<any>(
-        buildPostListSql({ where: 'WHERE p.author_id=?', orderBy: 'ORDER BY p.created_at DESC', limit: true }),
+        buildPostListSql({ where: 'WHERE p.author_id=? AND p.is_pending=0', orderBy: 'ORDER BY p.created_at DESC', limit: true }),
         userId, limit, offset
       );
       return { posts, page, limit };
@@ -238,8 +221,8 @@ export const postsPlugin: Plugin = {
       const limit = 20; const offset = (page - 1) * limit;
       const userIdVal = userId || 0;
 
-      // 私密帖子仅作者可见（管理员也不可见）
-      const privateFilter = `AND (p.is_private = 0 OR p.author_id = ?)`;
+      // 私密帖子仅作者可见（管理员也不可见），过滤待审核帖子
+      const privateFilter = `AND (p.is_private = 0 OR p.author_id = ?) AND p.is_pending = 0`;
       const params: unknown[] = [userIdVal];
       if (boardId) { params.push(boardId); }
       const where = boardId ? `WHERE p.board_id = ? ${privateFilter}` : `WHERE 1=1 ${privateFilter}`;
@@ -256,14 +239,12 @@ export const postsPlugin: Plugin = {
     app.get('/api/posts/:id', async (req, rep) => {
       const id = Number((req.params as { id: string }).id);
       const userId = uid(req);
-      const post = await db.get<PostDetail>(`SELECT p.id,p.title,p.content,p.board_id,p.is_anonymous,p.is_private,p.is_pinned,p.images,p.created_at,p.updated_at,
+      const post = await db.get<PostDetail>(`SELECT p.id,p.title,p.content,p.board_id,p.is_anonymous,p.is_private,p.is_pinned,p.images,p.created_at,p.updated_at,p.view_count,
         CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,
-        u.id as author_id, b.name as board_name,
+        u.role as author_role, u.id as author_id, b.name as board_name,
         COALESCE(v.like_count,0) as like_count, COALESCE(c.comment_count,0) as comment_count,
         CASE WHEN f.id IS NOT NULL THEN 1 ELSE 0 END as is_favorited,
-        CASE WHEN pv.id IS NOT NULL THEN pv.value ELSE 0 END as my_vote,
-        (SELECT COUNT(*) FROM votes WHERE post_id=p.id AND value=1) as upvotes,
-        (SELECT COUNT(*) FROM votes WHERE post_id=p.id AND value=-1) as downvotes
+        CASE WHEN pv.id IS NOT NULL THEN pv.value ELSE 0 END as my_vote
         FROM posts p JOIN users u ON p.author_id=u.id JOIN boards b ON p.board_id=b.id
         LEFT JOIN (SELECT post_id,COUNT(*) as like_count FROM votes WHERE value=1 GROUP BY post_id) v ON v.post_id=p.id
         LEFT JOIN (SELECT post_id,COUNT(*) as comment_count FROM comments GROUP BY post_id) c ON c.post_id=p.id
@@ -321,6 +302,7 @@ export const postsPlugin: Plugin = {
       return await db.all<any>(
         `SELECT c.id,c.content,c.post_id,c.parent_id,c.is_anonymous,c.created_at,c.edited_at,
           CASE WHEN c.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,
+          u.role as author_role,
           COALESCE(l.like_count,0) as like_count,
           COALESCE(v.value,0) as my_vote
          FROM comments c JOIN users u ON c.author_id=u.id
@@ -442,8 +424,8 @@ export const postsPlugin: Plugin = {
     // ─── 分享 ───
     app.get('/api/posts/:id/share', async (req, rep) => {
       const id = Number((req.params as { id: string }).id);
-      const post = await db.get<{ id: number; title: string; author_name: string }>(
-        `SELECT p.id,p.title,CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name
+      const post = await db.get<{ id: number; title: string; author_name: string; author_role: string }>(
+        `SELECT p.id,p.title,CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name, u.role as author_role
          FROM posts p JOIN users u ON p.author_id=u.id WHERE p.id=?`, id);
       if (!post) return rep.status(404).send({ error: '帖子不存在' });
       const url = `${process.env.CLIENT_URL || 'http://localhost:5173'}/post/${id}`;
@@ -502,7 +484,7 @@ export const postsPlugin: Plugin = {
     // ─── 审核队列（管理员）───
     app.get('/api/admin/pending-posts', async (req, rep) => {
       const u = uid(req); if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可查看' });
-      return { posts: await db.all<any>('SELECT p.id,p.title,p.content,p.created_at,u.username as author_name FROM posts p JOIN users u ON p.author_id=u.id WHERE p.is_pending=1 ORDER BY p.created_at DESC') };
+      return { posts: await db.all<any>('SELECT p.id,p.title,p.content,p.created_at,u.username as author_name, u.role as author_role FROM posts p JOIN users u ON p.author_id=u.id WHERE p.is_pending=1 ORDER BY p.created_at DESC') };
     });
 
     app.put('/api/admin/posts/:id/review', async (req, rep) => {

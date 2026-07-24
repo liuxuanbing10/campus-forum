@@ -20,7 +20,7 @@
     "start:server": "node packages/server/dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint .",
     "format": "prettier --write \"packages/**/*.{ts,tsx}\""
   },
   "devDependencies": {
@@ -29,6 +29,7 @@
     "concurrently": "^9.1.0",
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^10.1.8",
+    "playwright": "^1.61.1",
     "prettier": "^3.4.0",
     "typescript": "^5.7.0",
     "vitest": "^4.1.10"

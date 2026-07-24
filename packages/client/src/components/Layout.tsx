@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/auth';
 import NotificationBell from './NotificationBell';
 import ThemeSwitcher from './ThemeSwitcher';
 import BottomNav from './BottomNav';
-import { Home, Users, Heart, Search, Shield, MessageCircle, Bell, X, Menu, Download, Plus, User, LogOut, Settings, FileText, ChevronDown } from 'lucide-react';
+import { Home, Users, Heart, Search, Shield, MessageCircle, Bell, X, Menu, Download, Plus, User, LogOut, Settings, FileText, ChevronDown, UserCheck, Trophy } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from './ui/dropdown-menu';
@@ -120,8 +120,14 @@ export default function Layout() {
                 <Link to="/favorites" className="hidden sm:block p-2 hover:bg-background rounded-lg transition-colors">
                   <Heart className="w-5 h-5 text-campus-text-secondary" />
                 </Link>
-                <Link to="/teams" className="hidden sm:flex items-center gap-1 p-2 hover:bg-background rounded-lg transition-colors">
+                <Link to="/teams" className="hidden sm:flex items-center gap-1 p-2 hover:bg-background rounded-lg transition-colors" title="发现团队">
                   <Users className="w-5 h-5 text-campus-text-secondary" />
+                </Link>
+                <Link to="/teams/my" className="hidden sm:flex items-center gap-1 p-2 hover:bg-background rounded-lg transition-colors" title="我的团队">
+                  <UserCheck className="w-5 h-5 text-campus-text-secondary" />
+                </Link>
+                <Link to="/achievements" className="hidden sm:flex items-center gap-1 p-2 hover:bg-background rounded-lg transition-colors" title="成就">
+                  <Trophy className="w-5 h-5 text-campus-text-secondary" />
                 </Link>
                 <div className="hidden sm:flex items-center gap-2">
                   <DropdownMenu>
@@ -137,14 +143,20 @@ export default function Layout() {
                       <DropdownMenuItem onClick={() => navigate('/favorites')}>
                         <Heart className="w-4 h-4" /> 我的收藏
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/teams/my')}>
+                        <UserCheck className="w-4 h-4" /> 我的团队
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/achievements')}>
+                        <Trophy className="w-4 h-4" /> 成就
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate('/settings')}>
                         <Settings className="w-4 h-4" /> 设置
                       </DropdownMenuItem>
-                      {user.role === 'admin' && (
+                      {user.role === 'admin' || user.role === 'superadmin' ? (
                         <DropdownMenuItem onClick={() => navigate('/admin')}>
                           <Shield className="w-4 h-4" /> 管理后台
                         </DropdownMenuItem>
-                      )}
+                      ) : null}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem variant="destructive" onClick={handleLogout}>
                         <LogOut className="w-4 h-4" /> 退出登录
@@ -179,8 +191,11 @@ export default function Layout() {
                 <Link to="/favorites" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
                   <Heart className="w-4 h-4" /> 我的收藏
                 </Link>
-                <Link to="/teams" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
-                  <Users className="w-4 h-4" /> 我的团队
+                <Link to="/teams/my" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
+                  <UserCheck className="w-4 h-4" /> 我的团队
+                </Link>
+                <Link to="/achievements" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
+                  <Trophy className="w-4 h-4" /> 成就
                 </Link>
                 <Link to="/my-posts" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
                   <Home className="w-4 h-4" /> 我的帖子
@@ -188,7 +203,7 @@ export default function Layout() {
                 <Link to="/settings" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
                   设置
                 </Link>
-                {user.role === 'admin' && (
+                {(user.role === 'admin' || user.role === 'superadmin') && (
                   <Link to="/admin" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
                     <Shield className="w-4 h-4" /> 管理后台
                   </Link>

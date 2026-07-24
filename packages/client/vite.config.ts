@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.ico', 'robots.txt'],
       manifest: {
         name: '校园论坛',
@@ -87,8 +87,25 @@ export default defineConfig(({ mode }) => ({
     }),
   ],
   build: {
-    target: 'es2018', // ponytail: 转译 ?. 和 ?? 兼容微信/QQ/UC 内置浏览器
-    cssTarget: 'chrome61', // CSS 兼容目标
+    target: 'es2015',
+    cssTarget: 'chrome49',
+    rollupOptions: {
+      output: {
+        // 将大型 vendor 库分割为独立 chunk，优化首屏加载和长期缓存
+        manualChunks: {
+          // React 核心（react / react-dom / react-router-dom）
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // 图标库（lucide-react 体积较大，单独分包）
+          'icons': ['lucide-react'],
+          // 状态管理 + HTTP 客户端
+          'utils-vendor': ['zustand', 'axios'],
+          // 语法高亮（lowlight 体积较大，仅在 MarkdownEditor 中使用）
+          'highlight-vendor': ['lowlight'],
+        },
+      },
+    },
+    // MarkdownEditor（tiptap 套件）本身较大，调整警告阈值避免噪音
+    chunkSizeWarningLimit: 600,
   },
   resolve: {
     alias: {

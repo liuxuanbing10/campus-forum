@@ -20,6 +20,7 @@ export default defineConfig({
       '@campus-forum/database': path.resolve(__dirname, 'packages/database/src/index.ts'),
       '@campus-forum/server': path.resolve(__dirname, 'packages/server/src/index.ts'),
       '@campus-forum/plugin-auth': path.resolve(__dirname, 'plugins/auth/src/index.ts'),
+      '@campus-forum/plugin-teams': path.resolve(__dirname, 'plugins/teams/src/index.ts'),
     },
   },
 });

@@ -8,9 +8,11 @@ import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import { PluginManager, SimpleEventBus, PluginContext, Logger } from '@campus-forum/core';
+import { ZodError } from 'zod';
 import 'dotenv/config';
 import { createDatabase, initializeSchema, migrateSchema, seedData } from '@campus-forum/database';
 import { TursoSessionStore } from './session-store.js';
+import { WsManager } from './websocket.js';
 
 let __dirname: string;
 try {
@@ -27,7 +29,7 @@ const PUBLIC_ASSET_PATHS = ['/uploads/', '/health'];
 export async function buildApp(options?: { plugins?: any[] }) {
   const app = Fastify({
     logger: true,
-    bodyLimit: 1024 * 1024, // 请求体最大 1MB
+    bodyLimit: 50 * 1024 * 1024, // 请求体最大 50MB（团队文件上传需要）
     maxParamLength: 200,    // URL 参数最大长度
   });
   const port = Number(process.env.PORT) || 3001;
@@ -86,8 +88,11 @@ export async function buildApp(options?: { plugins?: any[] }) {
   const sessionSecret = process.env.SESSION_SECRET || process.env.JWT_SECRET || 'dev-session-secret-fallback-32chars!!';
   const sessionMaxAge = 7 * 24 * 60 * 60 * 1000;
   if (sessionSecret.length < 32) {
-    console.warn('⚠️ SESSION_SECRET 长度不足 32 字符，使用默认值');
+  console.warn('⚠️ SESSION_SECRET 长度不足 32 字符，使用默认值');
   }
+
+  // ── Cookie 安全配置 ─────────────────────────
+  const isProduction = process.env.NODE_ENV === 'production';
 
   // ── 限流 ─────────────────────────────────────
   await app.register(rateLimit, {
@@ -100,6 +105,30 @@ export async function buildApp(options?: { plugins?: any[] }) {
       error: 'Too Many Requests',
       message: `请求过于频繁，请在 ${Math.ceil(Number(context.after || 0) / 1000)} 秒后重试`,
     }),
+  });
+
+  // ── 全局错误处理 ──────────────────────────────
+  app.setErrorHandler(async (error, request, reply) => {
+    // Zod 校验错误 → 400
+    if (error instanceof ZodError) {
+      return reply.status(400).send({
+        error: 'Validation Error',
+        message: error.issues?.[0]?.message || '请求参数校验失败',
+        issues: error.issues,
+      });
+    }
+    const err = error as any;
+    const statusCode = err.statusCode || 500;
+    const message = statusCode === 500 && process.env.NODE_ENV === 'production'
+      ? '服务器内部错误'
+      : err.message || String(error);
+    if (statusCode === 500) {
+      console.error(`[ERROR] ${request.method} ${request.url}:`, error);
+    }
+    return reply.status(statusCode).send({
+      error: statusCode >= 500 ? 'Internal Server Error' : err.code || 'Error',
+      message,
+    });
   });
 
   // ── POST/PUT/DELETE 写入接口额外限流（路由级）─
@@ -125,7 +154,12 @@ export async function buildApp(options?: { plugins?: any[] }) {
   }
   await app.register(sessionPlugin, {
     secret: sessionSecret,
-    cookie: { secure: false, maxAge: sessionMaxAge },
+    cookie: {
+      secure: isProduction,
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: sessionMaxAge,
+    },
     saveUninitialized: false,
     store: new TursoSessionStore(db, sessionMaxAge),
   });
@@ -149,6 +183,12 @@ export async function buildApp(options?: { plugins?: any[] }) {
   };
 
   const pluginManager = new PluginManager(pluginCtx);
+
+  // ── WebSocket ───────────────────────────────
+  const wsManager = new WsManager(app.server);
+  (pluginCtx as any).sendToUser = (userId: number, type: string, data: Record<string, unknown>) => {
+    wsManager.sendToUser(userId, type, data);
+  };
 
   if (options?.plugins && options.plugins.length > 0) {
     for (const plugin of options.plugins) {
@@ -200,6 +240,28 @@ export async function buildApp(options?: { plugins?: any[] }) {
   // Health check
   app.get('/api/health', async () => {
     return { status: 'ok', plugins: pluginManager.listPlugins() };
+  });
+
+  // Download APK
+  app.get('/api/download/apk', async (request, reply) => {
+    const apkPath = path.join(__dirname, '../../data/campus-forum-debug.apk');
+    if (!fs.existsSync(apkPath)) {
+      return reply.status(404).send({ error: 'APK file not found' });
+    }
+    return reply
+      .header('Content-Type', 'application/vnd.android.package-archive')
+      .header('Content-Disposition', 'attachment; filename="campus-forum.apk"')
+      .send(fs.createReadStream(apkPath));
+  });
+
+  // Download info
+  app.get('/api/download/info', async () => {
+    return {
+      android: { downloadUrl: '/api/download/apk', version: '1.0.0', size: '4MB' },
+      ios: { status: '需要 Mac + Xcode 构建', note: 'iOS 版本需要 Apple 开发者账号' },
+      harmony: { status: '需要 DevEco Studio 构建', note: '鸿蒙版本需要华为开发者账号' },
+      web: { url: '/', note: '网页版直接访问' },
+    };
   });
 
   // robots.txt — 禁止爬虫爬 API

@@ -4,23 +4,25 @@ import { useAuthStore } from '../stores/auth';
 import api, { postsApi, commentApi, versionApi, reportApi } from '../lib/api';
 import type { PostStats } from '@campus-forum/core';
 import { toastStore } from '../App';
+import RoleBadge from '../components/RoleBadge';
 import { ArrowLeft, Eye, ThumbsUp, Heart, MessageCircle, Edit3, Trash2, X, Share2, Lock, Unlock, Pin, PinOff, Flag, History, Check, Copy } from 'lucide-react';
 import FollowButton from '../components/FollowButton';
 import ReportDialog from '../components/ReportDialog';
+import Skeleton from '../components/Skeleton';
 import ShareModal from '../components/ShareModal';
 import MetaManager from '../components/MetaManager';
 
 interface PostDetail {
   id: number; title: string; content: string; board_id: number; board_name: string;
   is_anonymous: number; is_pinned: number; is_private: number; images: string[];
-  author_name: string; author_id: number; created_at: string; updated_at: string;
+  author_name: string; author_role?: string; author_id: number; created_at: string; updated_at: string;
   like_count: number; comment_count: number; is_favorited: number; my_vote: number;
   view_count: number;
 }
 
 interface Comment {
   id: number; content: string; post_id: number; parent_id: number | null;
-  is_anonymous: number; created_at: string; author_name: string; author_id?: number;
+  is_anonymous: number; created_at: string; author_name: string; author_role?: string; author_id?: number;
   like_count: number;
 }
 
@@ -59,6 +61,7 @@ function CommentItem({ comment, allComments, user, onReply, onDelete, onReport, 
     <div className={`card ${depth > 0 ? 'ml-4 mt-3 pl-4 border-l-2 border-border' : ''}`}>
       <div className="flex items-center justify-between text-sm text-campus-text-tertiary mb-2 font-body">
         <span className="font-medium text-campus-text-secondary">{comment.author_name}</span>
+        {comment.author_role && <RoleBadge role={comment.author_role} />}
         <span className="text-xs">{new Date(comment.created_at).toLocaleString()}</span>
       </div>
       {editing ? (
@@ -190,7 +193,16 @@ export default function PostDetailPage() {
     catch { toastStore.error('删除失败'); }
   };
 
-  if (loading) return <div className="text-center py-12 text-campus-text-tertiary font-body">加载中...</div>;
+  if (loading) return (
+    <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+      <Skeleton variant="text" count={1} className="h-8 w-3/4" />
+      <div className="flex items-center gap-3">
+        <Skeleton variant="text" count={1} className="h-10 w-10 rounded-full" />
+        <Skeleton variant="text" count={1} className="h-4 w-1/4" />
+      </div>
+      <Skeleton variant="post" count={3} />
+    </div>
+  );
   if (!post) return <div className="text-center py-12 text-campus-text-tertiary font-body">帖子不存在</div>;
 
   const images: string[] = Array.isArray(post.images) ? post.images : [];
@@ -218,6 +230,7 @@ export default function PostDetailPage() {
             {post.is_anonymous ? '匿' : post.author_name[0]}
           </div>
           <span className="text-sm font-medium font-body">{post.is_anonymous ? '匿名用户' : post.author_name}</span>
+          {!post.is_anonymous && post.author_role && <RoleBadge role={post.author_role} />}
         </Link>
         {!post.is_anonymous && user && user.id !== post.author_id && <FollowButton userId={post.author_id} />}
       </div>

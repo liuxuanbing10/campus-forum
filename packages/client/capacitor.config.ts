@@ -5,8 +5,8 @@ const config: CapacitorConfig = {
   appName: '校园论坛',
   webDir: 'dist',
   server: {
-    hostname: '47.121.137.231',
     androidScheme: 'http',
+    hostname: '47.121.137.231',
     cleartext: true,
   },
   plugins: {
@@ -20,9 +20,13 @@ const config: CapacitorConfig = {
       style: 'DARK',
       backgroundColor: '#ffffff',
     },
-    App: {
-      // 应用深度链接
+  },
+  android: {
+    buildOptions: {
+      keystorePath: undefined,
+      keystoreAlias: undefined,
     },
+    allowMixedContent: true,
   },
 };
 

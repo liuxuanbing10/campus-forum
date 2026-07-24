@@ -5,6 +5,7 @@ import type { User, OAuthAccount, UserDevice } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { Eye, EyeOff, User as UserIcon, Mail, Edit3, Check, X, Lock, RefreshCw, Upload, Download, Link2, Unlink, Loader2, Palette, Smartphone } from 'lucide-react';
 import { THEMES, useThemeStore } from '../stores/theme';
+import Skeleton from '../components/Skeleton';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'oauth' | 'export' | 'appearance' | 'devices'>(() => {
@@ -295,7 +296,12 @@ function DevicesTab() {
     } catch { toastStore.error('操作失败'); }
   };
 
-  if (loading) return <div className="text-center py-8 text-campus-text-tertiary font-body">加载中...</div>;
+  if (loading) return (
+    <div className="max-w-4xl mx-auto p-4 space-y-4">
+      <Skeleton variant="text" count={1} className="h-8 w-1/4" />
+      <Skeleton variant="list" count={4} />
+    </div>
+  );
 
   return (
     <div className="card p-6">

@@ -4,6 +4,7 @@ import api from '../lib/api';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ArrowLeft, Eye, ThumbsUp, MessageSquare, Rss, Loader2, RefreshCw } from 'lucide-react';
 import MetaManager from '../components/MetaManager';
+import Skeleton from '../components/Skeleton';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -97,7 +98,12 @@ export default function BoardPage() {
     },
   });
 
-  if (loading) return <div className="text-center py-12 text-campus-text-tertiary font-body">加载中...</div>;
+  if (loading) return (
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+      <Skeleton variant="text" count={1} className="h-8 w-1/3" />
+      <Skeleton variant="post" count={5} />
+    </div>
+  );
 
   return (
     <>

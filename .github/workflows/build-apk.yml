@@ -25,7 +25,7 @@ jobs:
       - run: npm run build:server
       - run: npm run build:client
 
-      - name: Build APK
+      - name: Setup Capacitor
         working-directory: packages/client
         run: |
           npx cap sync android

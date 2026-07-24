@@ -7,6 +7,7 @@ import { toastStore } from '../App';
 import { ArrowLeft, Send, MessageCircle, Loader2, Search, Plus, X } from 'lucide-react';
 import api from '../lib/api';
 import { wsService } from '../lib/websocket';
+import Skeleton from '../components/Skeleton';
 
 export default function MessagesPage() {
   const { id } = useParams<{ id: string }>();
@@ -104,13 +105,18 @@ export default function MessagesPage() {
   };
 
   if (authLoading) return (
-    <div className="text-center py-12">
-      <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
-      <p className="text-campus-text-secondary">加载中...</p>
+    <div className="max-w-2xl mx-auto px-4 pt-6 space-y-3">
+      <Skeleton variant="text" count={1} className="h-8 w-1/4" />
+      <Skeleton variant="list" count={4} />
     </div>
   );
 
-  if (loading) return <div className="text-center py-12 text-campus-text-tertiary font-body">加载中...</div>;
+  if (loading) return (
+    <div className="max-w-2xl mx-auto px-4 pt-6 space-y-3">
+      <Skeleton variant="text" count={1} className="h-8 w-1/4" />
+      <Skeleton variant="list" count={4} />
+    </div>
+  );
 
   // If no conversation selected, show list
   if (!id) {

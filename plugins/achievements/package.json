@@ -1,0 +1,13 @@
+{
+  "name": "campus-forum-achievements",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@campus-forum/core": "*"
+  }
+}

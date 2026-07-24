@@ -1,0 +1,71 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/client/**'
+      - '.github/workflows/apk-build.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build workspace packages
+        run: npm run build:server
+
+      - name: Build frontend
+        run: npm run build:client
+
+      - name: Add & Sync Capacitor
+        run: |
+          npx cap add android --force || true
+          npx cap sync android
+        working-directory: packages/client
+
+      - name: Build APK
+        run: |
+          chmod +x packages/client/android/gradlew
+          cd packages/client/android
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: campus-forum-apk
+          path: packages/client/android/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+
+      - name: Deploy APK to server
+        env:
+          SSH_HOST: ${{ secrets.SERVER_HOST }}
+          SSH_USER: ${{ secrets.SERVER_USER }}
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+          APK=$(ls packages/client/android/app/build/outputs/apk/debug/*.apk | head -1)
+          scp -o StrictHostKeyChecking=no "$APK" \
+            $SSH_USER@$SSH_HOST:/opt/campus-forum/data/campus-forum-debug.apk
+          echo "Deployed: $APK"
