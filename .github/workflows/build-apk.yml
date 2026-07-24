@@ -29,6 +29,7 @@ jobs:
         working-directory: packages/client
         run: |
           npx cap sync android
+          chmod +x android/gradlew
           cd android && ./gradlew assembleDebug
 
       - uses: actions/upload-artifact@v4
