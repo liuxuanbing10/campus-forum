@@ -5,9 +5,8 @@ const config: CapacitorConfig = {
   appName: '校园论坛',
   webDir: 'dist',
   server: {
-    androidScheme: 'https',
-    // 开发时指向本地服务器
-    url: 'http://192.168.1.100:5173',
+    hostname: '47.121.137.231',
+    androidScheme: 'http',
     cleartext: true,
   },
   plugins: {
