@@ -17,6 +17,17 @@ export default function TimelineFeed({ posts }: Props) {
         className="absolute left-2.5 top-2 bottom-2 w-px bg-gradient-to-b from-[var(--acc)] via-[var(--acc2)] to-transparent"
         aria-hidden
       />
+      {/* 四年光脊标尺：大一到大四 */}
+      <div className="absolute left-2.5 top-2 bottom-2 -ml-1 flex flex-col justify-between py-1" aria-hidden>
+        {['大一', '大二', '大三', '大四'].map((label, i) => (
+          <div key={i} className="flex items-center gap-1">
+            <span className="w-2 h-px bg-[var(--acc)]/40" />
+            <span className="text-[8px] text-[var(--acc)]/30 tracking-[0.2em]" style={{ fontFamily: 'var(--disp)' }}>
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
       <div className="space-y-4">
         {posts.map((p, i) => {
           const shichen = EARTHLY_BRANCHES[i % 12];

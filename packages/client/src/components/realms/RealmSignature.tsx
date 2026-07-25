@@ -45,8 +45,11 @@ export default function RealmSignature() {
           {realm.id === 'r8' && <WhiteDewReeds />}
           {realm.id === 'r9' && <PavilionSilhouette />}
           {realm.id === 'r10' && <GuqinStrings />}
+          {realm.id === 'r11' && <FlyingRibbon />}
           {realm.id === 'r12' && <LightSpotGrid />}
           {realm.id === 'r13' && <LanternRiver />}
+          {/* 墙头的猫 - 独立层，所有境之上 */}
+          {realm.id === 'r13' && <SleepingCat />}
         </motion.div>
       </AnimatePresence>
     </div>
@@ -67,18 +70,18 @@ function ScatterDreams() {
       {dreams.map((d, i) => (
         <motion.div
           key={i}
-          className="absolute text-[13px] tracking-[0.3em]"
+          className="absolute text-[15px] tracking-[0.3em]"
           style={{
             left: `${d.x}%`,
             top: `${d.y}%`,
             color: 'var(--acc)',
-            opacity: 0.18,
+            opacity: 0.3,
             fontFamily: 'var(--disp)',
             transform: `rotate(${d.r}deg)`,
             textShadow: '0 0 12px var(--glow)',
           }}
-          animate={{ opacity: [0.1, 0.22, 0.1] }}
-          transition={{ duration: 8 + i, repeat: Infinity, delay: i * 0.7 }}
+          animate={{ opacity: [0.18, 0.4, 0.18] }}
+          transition={{ duration: 6 + i, repeat: Infinity, delay: i * 0.7 }}
         >
           {d.t}
         </motion.div>
@@ -334,20 +337,20 @@ function PavilionSilhouette() {
         <line x1="12%" y1="75%" x2="12%" y2="85%" stroke="var(--ink)" strokeWidth="0.5" />
         <line x1="18%" y1="75%" x2="18%" y2="85%" stroke="var(--ink)" strokeWidth="0.5" />
       </g>
-      {/* 飘渺的雨丝 */}
-      {Array.from({ length: 15 }).map((_, i) => (
+      {/* 飘渺的雨丝 — 更密更明显 */}
+      {Array.from({ length: 28 }).map((_, i) => (
         <motion.line
           key={i}
-          x1={`${5 + i * 6}%`} y1="0"
-          x2={`${3 + i * 6}%`} y2="100%"
+          x1={`${2 + i * 3.4}%`} y1="0"
+          x2={`${1 + i * 3.4}%`} y2="100%"
           stroke="var(--soft)"
-          strokeWidth="0.3"
+          strokeWidth="0.4"
           initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 0.3, 0] }}
-          transition={{ duration: 2.5, repeat: Infinity, delay: i * 0.15 }}
+          animate={{ opacity: [0, 0.5, 0] }}
+          transition={{ duration: 2, repeat: Infinity, delay: i * 0.08 }}
         />
       ))}
-    </svg>
+      </svg>
   );
 }
 
@@ -390,6 +393,72 @@ function GuqinStrings() {
         ))}
       </g>
     </svg>
+  );
+}
+
+// ── r11 藻井星河 · 飞天飘带 ─────────────────────
+// (原有 zaojing 由 CaissonDecoration 处理，这里补飞天飘带)
+function FlyingRibbon() {
+  return (
+    <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+      {/* 飞天飘带 — 土红/石绿/赭石三色 */}
+      <defs>
+        <linearGradient id="ribbon1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#c45a3c" stopOpacity="0.5" />
+          <stop offset="50%" stopColor="#4a9a6a" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="#8a6a3a" stopOpacity="0.5" />
+        </linearGradient>
+      </defs>
+      {[0, 1, 2].map(i => (
+        <motion.path
+          key={i}
+          d={`M ${-10 + i * 5}% 20% Q ${20 + i * 8}% ${10 + i * 6}%, ${40 + i * 5}% 25% T ${80 + i * 4}% 30% T 110% ${15 + i * 5}%`}
+          stroke={`url(#ribbon1)`}
+          strokeWidth={1.5 + i * 0.4}
+          fill="none"
+          strokeLinecap="round"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0.15, 0.35, 0.15] }}
+          transition={{ duration: 8 + i * 2, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      ))}
+    </svg>
+  );
+}
+
+// ── r13 · 墙头的猫（夜航船） ────────────────────
+function SleepingCat() {
+  return (
+    <motion.div
+      className="absolute"
+      style={{
+        left: '95%',
+        top: '72%',
+        transform: 'translateX(-50%)',
+      }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: [0, 0.7, 0] }}
+      transition={{ duration: 8, repeat: Infinity, delay: 2 }}
+    >
+      <svg width="40" height="24" viewBox="0 0 40 24" fill="none">
+        {/* 猫的身体——团成球 */}
+        <ellipse cx="20" cy="16" rx="14" ry="10" fill="var(--ink)" opacity="0.5" />
+        {/* 猫尾巴——从身体弯出来 */}
+        <path
+          d="M 33 14 Q 38 8 36 4"
+          stroke="var(--ink)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          fill="none"
+          opacity="0.45"
+        />
+        {/* 猫头——顶着身子 */}
+        <circle cx="14" cy="8" r="6" fill="var(--ink)" opacity="0.5" />
+        {/* 耳朵 */}
+        <path d="M 10 4 L 9 0 L 14 3 Z" fill="var(--ink)" opacity="0.5" />
+        <path d="M 16 3 L 18 0 L 19 4 Z" fill="var(--ink)" opacity="0.5" />
+      </svg>
+    </motion.div>
   );
 }
 

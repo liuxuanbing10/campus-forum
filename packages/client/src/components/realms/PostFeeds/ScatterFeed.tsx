@@ -14,14 +14,15 @@ export default function ScatterFeed({ posts }: Props) {
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {posts.map((p, i) => {
           const rot = ((i * 17) % 11) - 5;  // -5° ~ 5°
+          const ageFade = Math.max(0.5, 1 - i * 0.07); // 越往下越淡
           return (
             <motion.a
               key={p.id}
               href={`/post/${p.id}`}
               initial={{ opacity: 0, scale: 0.85, rotate: rot * 3 }}
-              animate={{ opacity: 1, scale: 1, rotate: rot }}
+              animate={{ opacity: ageFade, scale: 1, rotate: rot }}
               transition={{ delay: i * 0.05, type: 'spring', stiffness: 100 }}
-              whileHover={{ scale: 1.05, rotate: 0, zIndex: 10 }}
+              whileHover={{ scale: 1.05, rotate: 0, zIndex: 10, opacity: 1 }}
               className="block p-4 rounded-lg border border-[var(--line)] bg-[var(--card)] backdrop-blur-sm shadow-card hover:shadow-card-hover transition-shadow"
               style={{ transformOrigin: 'center' }}
             >

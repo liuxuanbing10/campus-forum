@@ -20,9 +20,14 @@ export default function PavilionFeed({ posts }: Props) {
           <motion.div
             key={name}
             initial={{ opacity: 0, x: -8 }}
-            animate={{ opacity: 1 - gi * 0.12, x: gi * 12 }}
-            transition={{ delay: gi * 0.1 }}
+            animate={{
+              opacity: 1 - gi * 0.18,
+              x: gi * 20,
+              scale: 1 - gi * 0.08,
+            }}
+            transition={{ delay: gi * 0.15 }}
             className="relative pl-6"
+            style={{ filter: gi > 2 ? 'blur(0.5px)' : 'none' }}
           >
             {/* 长亭标 */}
             <div className="absolute left-0 top-0">
@@ -40,10 +45,10 @@ export default function PavilionFeed({ posts }: Props) {
                   href={`/post/${p.id}`}
                   className="block py-1.5 group"
                 >
-                  <div className="text-[13px] font-bold text-[var(--ink)] group-hover:text-[var(--acc)] transition-colors">
+                  <div className="text-[14px] font-bold text-[var(--ink)] group-hover:text-[var(--acc)] transition-colors">
                     {p.title}
                   </div>
-                  <div className="text-[10px] text-[var(--soft)] mt-0.5">
+                  <div className="text-[11px] text-[var(--soft)] mt-0.5">
                     {p.author_name} · 赞 {p.like_count}
                   </div>
                 </a>
