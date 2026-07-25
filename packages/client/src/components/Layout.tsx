@@ -96,7 +96,7 @@ function LayoutInner() {
   return (
     <div className="relative min-h-screen flex flex-col realm-bg">
       {/* 背景层 */}
-      <ParticleField type={realm.amb} count={20} />
+      <ParticleField type={realm.amb} count={30} />
       <RealmSignature />
       <div className="grain" aria-hidden />
       <div className="mist ma" aria-hidden />

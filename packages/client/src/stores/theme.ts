@@ -57,7 +57,7 @@ export const REALMS: RealmInfo[] = [
     id: 'r5', idx: 5, name: '潇湘', cat: '水·八景', seal: '潇湘',
     sub: '夜雨、落雁、晚钟、晴岚、暮雪、归帆、秋月、夕照——八景轮转，皆是人间。',
     sl: ['斑竹一枝千滴泪。', '潇湘夜雨，平沙落雁。', '洞庭秋月，江天暮雪。', '远浦归帆，渔村夕照。', '湘水悠悠，楚云深深。', '八景轮转，皆是人间。'],
-    amb: 'mist', feed: 'windows', mh: 'mhA',
+    amb: 'ripple', feed: 'windows', mh: 'mhA',
     emoji: '∽', desc: '苍青·雾气·站酷小薇',
   },
   {
@@ -92,8 +92,8 @@ export const REALMS: RealmInfo[] = [
     id: 'r10', idx: 10, name: '高山流水', cat: '琴·音', seal: '知音',
     sub: '伯牙鼓琴，子期听之——巍巍乎志在高山，洋洋乎志在流水。',
     sl: ['巍巍乎，志在高山。', '洋洋乎，志在流水。', '高山流水，知音难觅。', '伯牙鼓琴，子期听之。', '七弦一拨，山河入耳。', '曲有误，周郎顾。'],
-    amb: 'none', feed: 'strings', mh: 'mhB',
-    emoji: '♪', desc: '古琴褐·无·志莽行',
+    amb: 'harmonics', feed: 'strings', mh: 'mhB',
+    emoji: '♪', desc: '古琴褐·泛音·志莽行',
   },
   {
     id: 'r11', idx: 11, name: '藻井星河', cat: '壁画·窟', seal: '敦煌',
