@@ -59,5 +59,7 @@ jobs:
             cd /opt/campus-forum
             tar -xzf deploy.tar.gz
             rm -f deploy.tar.gz
-            npm install --omit=dev 2>&1 || true
-            npx pm2 restart campus-forum --update-env || npx pm2 start packages/server/dist/index.js --name campus-forum
+            npx pm2 restart campus-forum --update-env 2>&1 || npx pm2 start packages/server/dist/index.js --name campus-forum 2>&1
+            sleep 3
+            npx pm2 logs campus-forum --nostream --lines 10 2>&1 || true
+            curl -s -A 'Mozilla/5.0' http://localhost:3001/api/health 2>&1 | head -c 200 || echo "health check failed"
