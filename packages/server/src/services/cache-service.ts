@@ -1,4 +1,3 @@
-import { LRUCache } from 'lru-cache';
 import type { Redis as RedisType } from 'ioredis';
 
 /**
@@ -7,11 +6,14 @@ import type { Redis as RedisType } from 'ioredis';
  * - 否则降级为进程内 LRU 缓存
  * - 提供 get/set/del/invalidate 等 API
  * - 支持 JSON 序列化、TTL、批量删除
+ * 
+ * 注：lru-cache 以动态 import 方式加载，兼容 v10/v11
  */
 export class CacheService {
   private redis: RedisType | null = null;
-  private lru: LRUCache<string, string>;
+  private _lru: any = null;  // 懒加载 LRUCache 实例
   private prefix: string;
+  private lruReady = false;
 
   constructor(opts?: {
     redisUrl?: string;
@@ -20,18 +22,12 @@ export class CacheService {
     ttlDefault?: number;
   }) {
     this.prefix = opts?.prefix || 'cf:';
-    // 进程内 LRU 作为降级方案
-    this.lru = new LRUCache<string, string>({
-      max: opts?.maxKeys ?? 500,
-      ttl: (opts?.ttlDefault ?? 300) * 1000,
-    });
+    this.initLru(opts);
 
     // 尝试连接 Redis
     const url = opts?.redisUrl || process.env.REDIS_URL;
     if (url) {
       try {
-        // 动态导入避免 ioredis 未安装时报错
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const RedisCtor = require('ioredis') as typeof import('ioredis');
         this.redis = new RedisCtor.default(url, {
           maxRetriesPerRequest: 2,
@@ -51,6 +47,27 @@ export class CacheService {
         this.redis = null;
       }
     }
+  }
+
+  private initLru(opts?: { maxKeys?: number; ttlDefault?: number }): void {
+    try {
+      // 动态导入 lru-cache，兼容 v10/v11
+      const LRUMod = require('lru-cache');
+      const LRUCacheClass = LRUMod.LRUCache || LRUMod.default || LRUMod;
+      this._lru = new LRUCacheClass({
+        max: opts?.maxKeys ?? 500,
+        ttl: (opts?.ttlDefault ?? 300) * 1000,
+      });
+      this.lruReady = true;
+    } catch (err) {
+      console.warn('⚠️  lru-cache 不可用，缓存降级为空实现:', (err as Error).message);
+      this._lru = null;
+      this.lruReady = false;
+    }
+  }
+
+  private get lru(): any {
+    return this._lru;
   }
 
   private key(k: string): string {
