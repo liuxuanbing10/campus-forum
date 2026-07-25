@@ -347,19 +347,19 @@ function NotLoggedIn() {
         <div className="flex items-center justify-center gap-4">
           <Link
             to="/login"
-            className="px-7 py-3 rounded-md bg-[var(--acc)] text-[var(--g1)] font-bold text-[15px] hover:opacity-90 transition-opacity"
+            className="px-7 py-3 rounded-md bg-[var(--acc)] text-[var(--g1)] font-bold text-[15px] hover:-translate-y-0.5 hover:shadow-lg transition-all"
           >
             登录
           </Link>
           <Link
             to="/register"
-            className="px-7 py-3 rounded-md border border-[var(--line)] text-[var(--ink)] text-[15px] hover:border-[var(--acc)] transition-colors"
+            className="px-7 py-3 rounded-md border border-[var(--line)] text-[var(--ink)] text-[15px] hover:-translate-y-0.5 hover:shadow-lg hover:border-[var(--acc)] transition-all"
           >
             注册
           </Link>
           <Link
             to="/download"
-            className="px-7 py-3 rounded-md border border-[var(--line)] text-[var(--soft)] text-[15px] hover:text-[var(--acc)] hover:border-[var(--acc)] transition-colors flex items-center gap-1.5"
+            className="px-7 py-3 rounded-md border border-[var(--line)] text-[var(--soft)] text-[15px] hover:-translate-y-0.5 hover:shadow-lg hover:text-[var(--acc)] hover:border-[var(--acc)] transition-all flex items-center gap-1.5"
           >
             <Download className="w-5 h-5" />
             下载 APP

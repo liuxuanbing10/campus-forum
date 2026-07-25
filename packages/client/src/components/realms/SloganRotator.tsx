@@ -74,7 +74,7 @@ export default function SloganRotator() {
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.94 }}
           onClick={copy}
-          className="flex items-center gap-1.5 text-[12px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
+          className="flex items-center gap-1.5 text-[12px] text-[var(--soft)] hover:text-[var(--acc)] hover:-translate-y-0.5 transition-all"
           title="抄录到剪贴板"
         >
           <Copy className="w-4 h-4" />
@@ -85,7 +85,7 @@ export default function SloganRotator() {
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.94 }}
           onClick={next}
-          className="flex items-center gap-1.5 text-[12px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
+          className="flex items-center gap-1.5 text-[12px] text-[var(--soft)] hover:text-[var(--acc)] hover:-translate-y-0.5 transition-all"
           title="换一句"
         >
           <RefreshCw className="w-4 h-4" />

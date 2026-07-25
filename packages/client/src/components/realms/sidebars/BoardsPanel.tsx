@@ -58,7 +58,7 @@ export default function BoardsPanel({ boards, loading }: Props) {
             >
               <Link
                 to={`/board/${b.id}`}
-                className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-[var(--line)] transition-colors group"
+                className="flex items-center gap-3 px-3 py-3 rounded-lg hover:-translate-y-0.5 hover:shadow-lg hover:bg-[var(--line)] transition-all group"
               >
                 <span className="text-[var(--acc)] group-hover:scale-110 transition-transform">
                   {iconMap[b.icon] ?? defaultIcon}

@@ -32,7 +32,7 @@ export default function RiverFeed({ posts }: Props) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
               whileHover={{ scale: 1.02 }}
-              className="relative block p-4 rounded-lg border border-[var(--line)] bg-[var(--card)] hover:border-[var(--acc)] transition-colors group"
+              className="relative block p-4 rounded-lg border border-[var(--line)] bg-[var(--card)] hover:-translate-y-1 hover:shadow-lg hover:border-[var(--acc)] transition-all group"
               style={{ marginLeft: alt ? 0 : 16 }}
             >
               {/* 灯笼圆点 */}

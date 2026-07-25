@@ -179,7 +179,7 @@ export default function LoginPage() {
               <div className="flex justify-end -mt-2">
                 <Link
                   to="/forgot-password"
-                  className="text-[11px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
+                  className="text-[12px] text-[var(--soft)] hover:text-[var(--acc)] hover:-translate-y-0.5 transition-all"
                 >
                   忘记密码？
                 </Link>
@@ -340,7 +340,7 @@ function OAuthButton({
       onClick={onClick}
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.97 }}
-      className="flex items-center justify-center gap-1.5 h-10 rounded-xl border border-[var(--line)] text-[12px] text-[var(--ink)] hover:border-[var(--acc)] transition-colors"
+      className="flex items-center justify-center gap-1.5 h-11 rounded-xl border border-[var(--line)] text-[12px] text-[var(--ink)] hover:-translate-y-0.5 hover:shadow-lg hover:border-[var(--acc)] transition-all"
       style={{ backgroundColor: `${color}10` }}
     >
       <span

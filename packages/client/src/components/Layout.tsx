@@ -112,7 +112,7 @@ function LayoutInner() {
           <div className="flex items-center gap-3 min-w-0">
             <Link
               to="/"
-              className="flex items-center gap-1.5 text-[13px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
+              className="flex items-center gap-1.5 text-[13px] text-[var(--soft)] hover:-translate-y-0.5 hover:text-[var(--acc)] transition-all"
             >
               <Home className="w-4 h-4" />
               <span className="hidden sm:inline">首页</span>
@@ -120,7 +120,7 @@ function LayoutInner() {
             <span className="text-[var(--line)]">·</span>
             <Link
               to="/teams"
-              className="hidden sm:flex items-center gap-1.5 text-[13px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
+              className="hidden sm:flex items-center gap-1.5 text-[13px] text-[var(--soft)] hover:-translate-y-0.5 hover:text-[var(--acc)] transition-all"
               title="发现团队"
             >
               <Users className="w-4 h-4" />
@@ -128,7 +128,7 @@ function LayoutInner() {
             </Link>
             <Link
               to="/achievements"
-              className="hidden sm:flex items-center gap-1.5 text-[13px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
+              className="hidden sm:flex items-center gap-1.5 text-[13px] text-[var(--soft)] hover:-translate-y-0.5 hover:text-[var(--acc)] transition-all"
               title="成就"
             >
               <Trophy className="w-4 h-4" />
@@ -156,7 +156,7 @@ function LayoutInner() {
               <button
                 onClick={handleInstall}
                 title="安装应用"
-                className="p-2 hover:bg-[var(--card)] rounded-lg transition-colors text-[var(--soft)] hover:text-[var(--acc)]"
+                className="p-2 hover:-translate-y-0.5 hover:bg-[var(--card)] rounded-lg transition-all text-[var(--soft)] hover:text-[var(--acc)]"
               >
                 <Download className="w-5 h-5" />
               </button>
@@ -226,7 +226,7 @@ function LayoutInner() {
             ) : (
               <Link
                 to="/login"
-                className="text-[13px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors px-3 py-2"
+                className="text-[13px] text-[var(--soft)] hover:-translate-y-0.5 hover:text-[var(--acc)] transition-all px-3 py-2"
               >
                 登录
               </Link>

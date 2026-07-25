@@ -47,7 +47,7 @@ export default function RealmSwitcher() {
             onClick={() => setOpen(!open)}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-[var(--line)] hover:border-[var(--acc)] transition-colors bg-[var(--card)]/80"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-[var(--line)] hover:-translate-y-0.5 hover:shadow-lg hover:border-[var(--acc)] transition-all bg-[var(--card)]/80"
           >
             <span
               className="block w-3.5 h-3.5 rounded-full shrink-0"
@@ -98,10 +98,10 @@ export default function RealmSwitcher() {
                         onClick={() => { setRealm(r.id); setOpen(false); }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className={`relative flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
+                        className={`relative flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
                           active
                             ? 'bg-[var(--acc)]/15 border border-[var(--acc)]/40'
-                            : 'hover:bg-[var(--line)] border border-transparent'
+                            : 'hover:-translate-y-0.5 hover:shadow-lg hover:bg-[var(--line)] border border-transparent'
                         }`}
                       >
                         <span

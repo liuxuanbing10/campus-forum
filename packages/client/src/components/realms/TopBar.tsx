@@ -44,7 +44,7 @@ export default function TopBar({ onlineCount = 0 }: { onlineCount?: number }) {
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={prevRealm}
-            className="text-[var(--soft)] hover:text-[var(--acc)] transition-colors px-2 text-lg"
+            className="text-[var(--soft)] hover:text-[var(--acc)] hover:-translate-y-0.5 transition-all px-2 text-lg"
             aria-label="上一境"
             title="上一境 (Ctrl + ←)"
           >
@@ -72,7 +72,7 @@ export default function TopBar({ onlineCount = 0 }: { onlineCount?: number }) {
           </AnimatePresence>
           <button
             onClick={nextRealm}
-            className="text-[var(--soft)] hover:text-[var(--acc)] transition-colors px-1.5"
+            className="text-[var(--soft)] hover:text-[var(--acc)] hover:-translate-y-0.5 transition-all px-1.5"
             aria-label="下一境"
             title="下一境 (Ctrl + →)"
           >
