@@ -37,9 +37,7 @@ jobs:
             plugins/rss/dist \
             plugins/search/dist \
             plugins/social/dist \
-            plugins/theme-default/dist \
-            node_modules/sharp \
-            node_modules/@img
+            plugins/theme-default/dist
 
       - name: Upload & extract
         uses: appleboy/scp-action@v0.1.7
@@ -61,7 +59,9 @@ jobs:
             cd /opt/campus-forum
             tar -xzf deploy.tar.gz
             rm -f deploy.tar.gz
+            # 升级 npm 并安装缺失的 native 模块
+            npm install -g npm@latest 2>&1 || true
+            npm install sharp@0.35.3 lru-cache@11.5.2 2>&1 || true
             npx pm2 restart campus-forum --update-env 2>&1 || npx pm2 start packages/server/dist/index.js --name campus-forum 2>&1
             sleep 3
-            cat /root/.pm2/logs/campus-forum-error.log 2>&1 | tail -20 || true
             curl -s -A 'Mozilla/5.0' http://localhost:3001/api/health 2>&1 | head -c 200 || echo "health check failed"

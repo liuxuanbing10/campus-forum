@@ -1,15 +1,28 @@
-import sharp from 'sharp';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import type { DatabaseAdapter, RunResult } from '@campus-forum/core';
 
 /**
- * 图片服务 · 基于 sharp
+ * 图片服务 · 基于 sharp（懒加载）
+ * - sharp 以动态 import 方式加载，缺失时所有操作回退 base64+DB
  * - 上传时自动优化：压缩、转 webp、生成缩略图
  * - 文件系统存储，DB 只存元数据（避免 DB 膨胀）
- * - 优雅降级：若文件系统不可写，回退到 DB base64
+ * - 优雅降级：sharp 不可用或文件系统不可写时回退到 DB base64
  */
+
+declare module 'sharp' {
+  interface Sharp {
+    rotate(): Sharp;
+    resize(opts: { width?: number; height?: number; fit?: string; withoutEnlargement?: boolean }): Sharp;
+    webp(opts?: { quality?: number }): Sharp;
+    toBuffer(): Promise<Buffer>;
+    toBuffer(opts: { resolveWithObject: true }): Promise<{ data: Buffer; info: { width: number; height: number } }>;
+  }
+  function sharp(buf: Buffer, opts?: { failOn?: string }): Sharp;
+  export default sharp;
+}
+
 export interface ProcessedImage {
   id: number;
   url: string;
@@ -23,12 +36,12 @@ export interface ProcessedImage {
 export interface ImageUploadOptions {
   userId: number;
   filename?: string;
-  maxSize?: number;       // 字节，默认 5MB
-  maxWidth?: number;      // 默认 1920
-  maxHeight?: number;     // 默认 1080
-  quality?: number;       // 1-100，默认 80
-  generateThumb?: boolean;// 默认 true
-  thumbWidth?: number;    // 默认 400
+  maxSize?: number;
+  maxWidth?: number;
+  maxHeight?: number;
+  quality?: number;
+  generateThumb?: boolean;
+  thumbWidth?: number;
 }
 
 const DEFAULT_OPTS: Required<Omit<ImageUploadOptions, 'userId' | 'filename'>> = {
@@ -47,24 +60,35 @@ try {
   __dirname = process.cwd();
 }
 
-// 图片存储根目录（生产环境 data/images/，可由 IMAGES_DIR 环境变量覆盖）
 const IMAGES_DIR = process.env.IMAGES_DIR
   || path.resolve(__dirname, '../../../data/images');
 
 export class ImageService {
-  constructor(private db: DatabaseAdapter) {}
+  private sharpModule: any = null;
+  private sharpAvailable = false;
 
-  /**
-   * 处理 base64 图片上传
-   * @returns ProcessedImage 包含原图和缩略图 URL
-   */
+  constructor(private db: DatabaseAdapter) {
+    // 懒加载 sharp —— 缺失时降级不影响服务启动
+    this.initSharp();
+  }
+
+  private async initSharp(): Promise<void> {
+    try {
+      const mod = await import('sharp');
+      this.sharpModule = mod.default || mod;
+      this.sharpAvailable = true;
+    } catch {
+      console.warn('[ImageService] sharp 不可用，将使用 base64+DB 降级模式');
+      this.sharpAvailable = false;
+    }
+  }
+
   async uploadFromBase64(
     base64Data: string,
     opts: ImageUploadOptions,
   ): Promise<ProcessedImage> {
     const options = { ...DEFAULT_OPTS, ...opts };
 
-    // 解析 data URL
     const m = base64Data.match(/^data:(image\/\w+);base64,(.+)$/);
     if (!m) throw new Error('图片格式错误：需要 data:image/...;base64,... 格式');
     const srcMime = m[1];
@@ -74,9 +98,29 @@ export class ImageService {
       throw new Error(`图片不能超过 ${Math.floor(options.maxSize / 1024 / 1024)}MB`);
     }
 
-    // 用 sharp 优化：resize + 转 webp + 压缩
-    const optimizer = sharp(buf, { failOn: 'truncated' })
-      .rotate() // 自动根据 EXIF 旋转
+    // sharp 可用 → 优化 + 文件系统存储
+    if (this.sharpAvailable && this.sharpModule) {
+      try {
+        return await this.uploadWithSharp(buf, srcMime, options);
+      } catch (err) {
+        console.warn('[ImageService] sharp 处理失败，降级到 DB:', (err as Error).message);
+        // 降级到 DB base64
+      }
+    }
+
+    // 降级路径：原样存 DB base64
+    return this.uploadToDb(buf, srcMime, options);
+  }
+
+  private async uploadWithSharp(
+    buf: Buffer,
+    _srcMime: string,
+    options: Required<Omit<ImageUploadOptions, 'userId' | 'filename'>> & ImageUploadOptions,
+  ): Promise<ProcessedImage> {
+    const sh = this.sharpModule;
+
+    const optimizer = sh(buf, { failOn: 'truncated' })
+      .rotate()
       .resize({
         width: options.maxWidth,
         height: options.maxHeight,
@@ -89,19 +133,16 @@ export class ImageService {
     const optimizedBuf = optimized.data;
     const { width, height } = optimized.info;
 
-    // 生成缩略图
     let thumbBuf: Buffer | null = null;
     if (options.generateThumb) {
-      thumbBuf = await sharp(optimizedBuf)
+      thumbBuf = await sh(optimizedBuf)
         .resize({ width: options.thumbWidth, height: options.thumbWidth, fit: 'cover' })
         .webp({ quality: 70 })
         .toBuffer();
     }
 
-    // 确保目录存在
     await this.ensureDir(IMAGES_DIR);
 
-    // 生成唯一文件名
     const stamp = Date.now();
     const rand = Math.floor(Math.random() * 1e6).toString(36);
     const baseName = `${stamp}-${rand}`;
@@ -111,20 +152,18 @@ export class ImageService {
     const mainPath = path.join(IMAGES_DIR, mainFile);
     const thumbPath = path.join(IMAGES_DIR, thumbFile);
 
-    // 写文件系统
     await fs.promises.writeFile(mainPath, optimizedBuf);
     if (thumbBuf) {
       await fs.promises.writeFile(thumbPath, thumbBuf);
     }
 
-    // 元数据写 DB（filename 列复用为文件系统文件名，data 留空串兼容 NOT NULL）
     const result = await this.db.run(
       `INSERT INTO uploaded_images (user_id, filename, mime_type, data, size, storage, width, height, thumb_filename)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       options.userId,
-      mainFile, // 文件系统文件名（如 1737900000-abc123.webp）
+      mainFile,
       'image/webp',
-      '', // 文件系统模式下不存 base64
+      '',
       optimizedBuf.length,
       'filesystem',
       width,
@@ -145,10 +184,32 @@ export class ImageService {
     };
   }
 
-  /**
-   * 读取图片（按 ID）
-   * @returns 文件 Buffer + mimetype；若文件丢失，回退到 DB base64
-   */
+  private async uploadToDb(
+    buf: Buffer,
+    mimeType: string,
+    options: Required<Omit<ImageUploadOptions, 'userId' | 'filename'>> & ImageUploadOptions,
+  ): Promise<ProcessedImage> {
+    const base64Data = buf.toString('base64');
+    const result = await this.db.run(
+      'INSERT INTO uploaded_images (user_id, filename, mime_type, data, size) VALUES (?, ?, ?, ?, ?)',
+      options.userId,
+      options.filename || null,
+      mimeType,
+      base64Data,
+      buf.length,
+    );
+    const id = (result as RunResult).lastInsertRowid as number;
+    return {
+      id,
+      url: `/api/images/${id}`,
+      thumbUrl: `/api/images/${id}`,
+      width: 0,
+      height: 0,
+      size: buf.length,
+      mimeType,
+    };
+  }
+
   async readById(id: number): Promise<{ buf: Buffer; mimeType: string } | null> {
     const row = await this.db.get<{
       mime_type: string;
@@ -159,16 +220,14 @@ export class ImageService {
 
     if (!row) return null;
 
-    // 优先从文件系统读（storage=filesystem 或 db 模式但 data 为空）
     if ((row.storage === 'filesystem' || !row.data) && row.filename) {
       const mainPath = path.join(IMAGES_DIR, row.filename);
       if (fs.existsSync(mainPath)) {
-        const buf = await fs.promises.readFile(mainPath);
-        return { buf, mimeType: 'image/webp' };
+        const fileBuf = await fs.promises.readFile(mainPath);
+        return { buf: fileBuf, mimeType: 'image/webp' };
       }
     }
 
-    // 回退：从 DB 读 base64
     if (row.data) {
       return {
         buf: Buffer.from(row.data, 'base64'),
@@ -179,9 +238,6 @@ export class ImageService {
     return null;
   }
 
-  /**
-   * 读取缩略图
-   */
   async readThumb(id: number): Promise<{ buf: Buffer; mimeType: string } | null> {
     const row = await this.db.get<{ thumb_filename: string | null; data: string | null; mime_type: string }>(
       'SELECT thumb_filename, data, mime_type FROM uploaded_images WHERE id = ?', id,
@@ -196,13 +252,9 @@ export class ImageService {
       }
     }
 
-    // 回退：返回原图
     return this.readById(id);
   }
 
-  /**
-   * 优雅降级：仅返回 Buffer 的 base64 字符串（用于直接嵌入）
-   */
   async getBase64ById(id: number): Promise<string | null> {
     const img = await this.readById(id);
     if (!img) return null;
