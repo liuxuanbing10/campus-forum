@@ -13,6 +13,7 @@ import 'dotenv/config';
 import { createDatabase, initializeSchema, migrateSchema, seedData } from '@campus-forum/database';
 import { TursoSessionStore } from './session-store.js';
 import { WsManager } from './websocket.js';
+import { ImageService, CacheService, EmailService } from './services/index.js';
 
 let __dirname: string;
 try {
@@ -144,6 +145,19 @@ export async function buildApp(options?: { plugins?: any[] }) {
   await initializeSchema(db);
   await migrateSchema(db);
   await seedData(db);
+
+  // ── 第三方服务注册 ───────────────────────────────
+  // ImageService（基于 sharp）：图片上传优化
+  const imageService = new ImageService(db);
+  // CacheService（基于 ioredis + lru-cache）：双层缓存
+  const cacheService = new CacheService({
+    redisUrl: process.env.REDIS_URL,
+    prefix: 'cf:',
+    maxKeys: 500,
+    ttlDefault: 300,
+  });
+  // EmailService（基于 nodemailer）：邮件发送
+  const emailService = new EmailService();
 
   // ── Session with Turso-backed store ─────────────
   let sessionPlugin: any;
