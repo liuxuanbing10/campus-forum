@@ -803,8 +803,8 @@ a {
   .masthead {
     grid-template-columns: 1fr !important;
     grid-template-areas: "brand" "slogan" !important;
-    gap: 34px;
-    padding-top: 42px;
+    gap: 28px;
+    padding-top: 32px;
   }
   .brand {
     border: none !important;
@@ -812,13 +812,50 @@ a {
     flex-direction: row !important;
     align-items: center !important;
   }
-  .brand-chars {
-    writing-mode: horizontal-tb !important;
-    font-size: clamp(42px, 10vw, 60px) !important;
-  }
   .deco { display: none !important; }
   .content {
     grid-template-columns: 1fr !important;
+  }
+  .brand-chars {
+    writing-mode: horizontal-tb !important;
+    font-size: clamp(36px, 10vw, 52px) !important;
+  }
+  /* 移动端侧栏统计/木鱼用更紧凑的布局 */
+  .masonry-feed {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .pavilion-feed .stop {
+    margin-left: 0 !important;
+  }
+  .pavilion-feed .post {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .scatter-feed {
+    height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .scatter-feed .post {
+    position: static !important;
+    width: 100% !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .niche-feed, .windows-feed {
+    grid-template-columns: 1fr !important;
+  }
+  .niche-feed .post.feat, .windows-feed .post.feat {
+    grid-column: span 1 !important;
+  }
+}
+
+/* iPad 竖屏微调 */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .content {
+    grid-template-columns: 1fr 280px !important;
+    gap: 20px;
   }
 }
 

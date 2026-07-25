@@ -57,7 +57,10 @@ function LayoutB() {
       <div className="order-2 md:order-1">
         <MountainScene />
       </div>
-      <div className="order-1 md:order-2">
+      <div className="hidden md:block order-1 md:order-2">
+        <BrandPlaque />
+      </div>
+      <div className="block md:hidden order-1 w-full">
         <BrandPlaque />
       </div>
       <div className="order-3 md:border-l md:border-[var(--line)] md:pl-8">

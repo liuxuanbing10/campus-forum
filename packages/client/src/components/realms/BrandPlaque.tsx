@@ -11,23 +11,37 @@ export default function BrandPlaque() {
 
   return (
     <div className="flex items-start gap-3 select-none">
-      {/* 竖排品牌字（马善政/志莽行等书法字） */}
+      {/* 竖排品牌字（马善政/志莽行等书法字） — 移动端横排，桌面竖排 */}
       <div
-        className="relative pl-3 pr-2 py-2 border-l-2 border-[var(--acc)]"
-        style={{ writingMode: 'vertical-rl' }}
+        className="relative pb-2 pt-1 md:pl-3 md:pr-2 md:py-2 md:border-l-2 border-b-2 md:border-b-0 border-[var(--acc)]"
+        style={{ writingMode: 'horizontal-tb' }}
       >
-        <motion.h1
-          key={realm.id}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, ease: [0.22, 0.8, 0.28, 1] }}
-          className="text-3xl sm:text-4xl font-bold text-[var(--ink)] tracking-wider leading-tight"
-          style={{ fontFamily: 'var(--disp)' }}
-        >
-          {realm.name}
-        </motion.h1>
+        <div className="md:hidden" style={{ writingMode: 'horizontal-tb' }}>
+          <motion.h1
+            key={realm.id}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, ease: [0.22, 0.8, 0.28, 1] }}
+            className="text-4xl sm:text-5xl font-bold text-[var(--ink)] tracking-wider leading-tight"
+            style={{ fontFamily: 'var(--disp)' }}
+          >
+            {realm.name}
+          </motion.h1>
+        </div>
+        <div className="hidden md:block" style={{ writingMode: 'vertical-rl' }}>
+          <motion.h1
+            key={realm.id}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, ease: [0.22, 0.8, 0.28, 1] }}
+            className="text-3xl sm:text-4xl font-bold text-[var(--ink)] tracking-wider leading-tight"
+            style={{ fontFamily: 'var(--disp)' }}
+          >
+            {realm.name}
+          </motion.h1>
+        </div>
         <div
-          className="absolute -left-0.5 top-0 bottom-0 w-0.5 bg-gradient-to-b from-[var(--acc)] via-[var(--acc2)] to-transparent"
+          className="absolute -left-0.5 top-0 bottom-0 w-0.5 bg-gradient-to-b from-[var(--acc)] via-[var(--acc2)] to-transparent hidden md:block"
           aria-hidden
         />
       </div>
