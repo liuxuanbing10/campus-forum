@@ -148,13 +148,13 @@ export default function Home() {
       <Masthead />
 
       {/* 主体内容 */}
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {user ? (
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
             {/* 左：tabs + feeds */}
             <div>
               <Tabs.Root value={tab} onValueChange={setTab}>
-                <Tabs.List className="flex items-center gap-1 p-1 rounded-lg bg-[var(--card)] border border-[var(--line)] mb-4 w-fit">
+                <Tabs.List className="flex items-center gap-1 p-1.5 rounded-lg bg-[var(--card)] border border-[var(--line)] mb-4 w-fit">
                   {[
                     { v: 'latest', label: '最新' },
                     { v: 'hot', label: '热门' },
@@ -163,7 +163,7 @@ export default function Home() {
                     <Tabs.Trigger
                       key={t.v}
                       value={t.v}
-                      className="relative px-4 py-1.5 text-[12px] rounded-md transition-colors data-[state=active]:text-[var(--acc)] data-[state=active]:bg-[var(--g1)]/60 text-[var(--soft)] hover:text-[var(--ink)]"
+                      className="relative px-5 py-2 text-[13px] rounded-md transition-colors data-[state=active]:text-[var(--acc)] data-[state=active]:bg-[var(--g1)]/60 text-[var(--soft)] hover:text-[var(--ink)]"
                     >
                       {t.label}
                     </Tabs.Trigger>
@@ -250,24 +250,24 @@ export default function Home() {
               {/* 社区公约 */}
               <Link
                 to="/rules"
-                className="group relative mt-3 block rounded-xl overflow-hidden border border-[var(--line)] bg-[var(--card)] hover:border-[var(--acc)] transition-colors"
+                className="group relative mt-4 block rounded-xl overflow-hidden border border-[var(--line)] bg-[var(--card)] hover:border-[var(--acc)] transition-colors"
               >
-                <div className="flex items-center gap-4 p-4">
-                  <div className="w-10 h-10 rounded-lg bg-[var(--acc)]/15 text-[var(--acc)] flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                <div className="flex items-center gap-4 p-5">
+                  <div className="w-12 h-12 rounded-lg bg-[var(--acc)]/15 text-[var(--acc)] flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                     <BookOpen className="w-5 h-5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-bold text-[var(--ink)] flex items-center gap-2">
+                    <h3 className="text-base font-bold text-[var(--ink)] flex items-center gap-2">
                       社区公约
-                      <span className="text-[10px] bg-[var(--acc)]/20 text-[var(--acc)] px-2 py-0.5 rounded-full">
+                      <span className="text-[11px] bg-[var(--acc)]/20 text-[var(--acc)] px-2 py-0.5 rounded-full">
                         置顶
                       </span>
                     </h3>
-                    <p className="text-[11px] text-[var(--soft)] mt-1">
+                    <p className="text-[12px] text-[var(--soft)] mt-1">
                       互相尊重 · 友善交流 · 理性讨论 · 保护隐私
                     </p>
                   </div>
-                  <span className="text-[11px] text-[var(--acc)] group-hover:underline shrink-0 hidden sm:inline">
+                  <span className="text-[12px] text-[var(--acc)] group-hover:underline shrink-0 hidden sm:inline">
                     查看 →
                   </span>
                 </div>
@@ -313,13 +313,13 @@ function QuickAction({
       to={to}
       className="group relative rounded-xl overflow-hidden border border-[var(--line)] bg-[var(--card)] hover:border-[var(--acc)] transition-all hover:-translate-y-0.5"
     >
-      <div className="flex items-start gap-3 p-4">
-        <div className="w-10 h-10 rounded-lg bg-[var(--acc)]/15 text-[var(--acc)] flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+      <div className="flex items-start gap-4 p-5">
+        <div className="w-12 h-12 rounded-lg bg-[var(--acc)]/15 text-[var(--acc)] flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
           {icon}
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-bold text-[var(--ink)] mb-0.5">{title}</h3>
-          <p className="text-[11px] text-[var(--soft)] leading-relaxed">{desc}</p>
+          <h3 className="text-base font-bold text-[var(--ink)] mb-0.5">{title}</h3>
+          <p className="text-[12px] text-[var(--soft)] leading-relaxed">{desc}</p>
         </div>
       </div>
     </Link>
@@ -328,7 +328,7 @@ function QuickAction({
 
 function NotLoggedIn() {
   return (
-    <div className="text-center py-16">
+    <div className="text-center py-20">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -336,32 +336,32 @@ function NotLoggedIn() {
         className="inline-block"
       >
         <div
-          className="text-4xl mb-4 text-[var(--acc)]"
+          className="text-5xl mb-6 text-[var(--acc)]"
           style={{ fontFamily: 'var(--disp)' }}
         >
           拾光入境
         </div>
-        <p className="text-sm text-[var(--soft)] mb-6 italic">
+        <p className="text-base text-[var(--soft)] mb-8 italic">
           请登录或注册，以参与讨论
         </p>
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center justify-center gap-4">
           <Link
             to="/login"
-            className="px-5 py-2.5 rounded-md bg-[var(--acc)] text-[var(--g1)] font-bold hover:opacity-90 transition-opacity"
+            className="px-7 py-3 rounded-md bg-[var(--acc)] text-[var(--g1)] font-bold text-[15px] hover:opacity-90 transition-opacity"
           >
             登录
           </Link>
           <Link
             to="/register"
-            className="px-5 py-2.5 rounded-md border border-[var(--line)] text-[var(--ink)] hover:border-[var(--acc)] transition-colors"
+            className="px-7 py-3 rounded-md border border-[var(--line)] text-[var(--ink)] text-[15px] hover:border-[var(--acc)] transition-colors"
           >
             注册
           </Link>
           <Link
             to="/download"
-            className="px-5 py-2.5 rounded-md border border-[var(--line)] text-[var(--soft)] hover:text-[var(--acc)] hover:border-[var(--acc)] transition-colors flex items-center gap-1.5"
+            className="px-7 py-3 rounded-md border border-[var(--line)] text-[var(--soft)] text-[15px] hover:text-[var(--acc)] hover:border-[var(--acc)] transition-colors flex items-center gap-1.5"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-5 h-5" />
             下载 APP
           </Link>
         </div>
@@ -373,19 +373,19 @@ function NotLoggedIn() {
 function Footer() {
   const { realm, config } = useRealm();
   return (
-    <footer className="relative z-10 mt-12 border-t border-[var(--line)] bg-[var(--g2)]/40 backdrop-blur-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 text-center">
+    <footer className="relative z-10 mt-16 border-t border-[var(--line)] bg-[var(--g2)]/40 backdrop-blur-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 text-center">
         <motion.p
           key={realm.id}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-[12px] text-[var(--soft)] italic leading-relaxed"
+          className="text-[13px] text-[var(--soft)] italic leading-relaxed"
           style={{ fontFamily: 'var(--disp)' }}
         >
           {config.ft ?? `—— ${realm.name} ——`}
         </motion.p>
-        <div className="mt-3 flex items-center justify-center gap-3 text-[10px] text-[var(--soft)]">
+        <div className="mt-4 flex items-center justify-center gap-3 text-[11px] text-[var(--soft)]">
           <Link to="/rules" className="hover:text-[var(--acc)] transition-colors">
             社区公约
           </Link>

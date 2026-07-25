@@ -41,7 +41,7 @@ export default function Broadcast() {
       />
 
       <motion.div
-        className="flex whitespace-nowrap py-1.5 text-[12px]"
+        className="flex whitespace-nowrap py-2.5 text-[13px]"
         animate={{ x: ['100%', '-100%'] }}
         transition={{
           duration: 60, // 略慢一点，让标语可读

@@ -35,14 +35,14 @@ export default function WoodenFish() {
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--card)] backdrop-blur-md p-4">
       <h3
-        className="text-sm font-bold text-[var(--ink)] mb-3 flex items-center justify-between"
+        className="text-base font-bold text-[var(--ink)] mb-3 flex items-center justify-between"
         style={{ fontFamily: 'var(--disp)' }}
       >
         <span className="flex items-center gap-2">
-          <span className="w-1 h-4 bg-[var(--hot)] rounded-full" />
+          <span className="w-1 h-5 bg-[var(--hot)] rounded-full" />
           电子木鱼
         </span>
-        <span className="text-[11px] text-[var(--soft)] tabular-nums font-sans">
+        <span className="text-[12px] text-[var(--soft)] tabular-nums font-sans">
           功德 {count}
         </span>
       </h3>
@@ -90,7 +90,7 @@ export default function WoodenFish() {
           key={count}
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-[11px] text-[var(--soft)]"
+          className="text-[12px] text-[var(--soft)]"
         >
           {count === 0 ? '点击敲击，静心修禅' : `功德 +${count}`}
         </motion.p>

@@ -69,15 +69,15 @@ export default function SloganRotator() {
       </div>
 
       {/* 操作区 */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         <motion.button
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.94 }}
           onClick={copy}
-          className="flex items-center gap-1.5 text-[11px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
+          className="flex items-center gap-1.5 text-[12px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
           title="抄录到剪贴板"
         >
-          <Copy className="w-3.5 h-3.5" />
+          <Copy className="w-4 h-4" />
           <span>抄录</span>
         </motion.button>
 
@@ -85,20 +85,20 @@ export default function SloganRotator() {
           whileHover={{ scale: 1.08, rotate: 90 }}
           whileTap={{ scale: 0.94 }}
           onClick={next}
-          className="flex items-center gap-1.5 text-[11px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
+          className="flex items-center gap-1.5 text-[12px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
           title="换一句"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <RefreshCw className="w-4 h-4" />
           <span>换一句</span>
         </motion.button>
 
         {/* 圆点指示器 */}
-        <div className="flex items-center gap-1.5 ml-2">
+        <div className="flex items-center gap-2 ml-2">
           {slogans.map((_, i) => (
             <button
               key={i}
               onClick={() => setIdx(i)}
-              className="w-1.5 h-1.5 rounded-full transition-all"
+              className="w-2 h-2 rounded-full transition-all"
               style={{
                 background: i === idx ? 'var(--acc)' : 'var(--line)',
                 transform: i === idx ? 'scale(1.4)' : 'scale(1)',

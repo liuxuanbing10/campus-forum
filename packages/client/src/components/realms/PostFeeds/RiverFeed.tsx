@@ -21,7 +21,7 @@ export default function RiverFeed({ posts }: Props) {
         aria-hidden
       />
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {posts.map((p, i) => {
           const alt = i % 2 === 0;
           return (
@@ -32,12 +32,12 @@ export default function RiverFeed({ posts }: Props) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
               whileHover={{ scale: 1.02 }}
-              className="relative block p-3 rounded-lg border border-[var(--line)] bg-[var(--card)] hover:border-[var(--acc)] transition-colors group"
+              className="relative block p-4 rounded-lg border border-[var(--line)] bg-[var(--card)] hover:border-[var(--acc)] transition-colors group"
               style={{ marginLeft: alt ? 0 : 16 }}
             >
               {/* 灯笼圆点 */}
               <motion.span
-                className="absolute -left-[22px] top-4 w-3 h-3 rounded-full bg-[var(--acc)]"
+                className="absolute -left-[22px] top-5 w-3 h-3 rounded-full bg-[var(--acc)]"
                 style={{
                   boxShadow: '0 0 10px var(--glow), 0 0 4px var(--acc)',
                 }}
@@ -53,10 +53,10 @@ export default function RiverFeed({ posts }: Props) {
                 }}
                 aria-hidden
               />
-              <div className="font-bold text-[13px] text-[var(--ink)] group-hover:text-[var(--acc)] transition-colors leading-snug">
+              <div className="font-bold text-base text-[var(--ink)] group-hover:text-[var(--acc)] transition-colors leading-relaxed">
                 {p.title}
               </div>
-              <div className="text-[11px] text-[var(--soft)] mt-1 flex items-center gap-2">
+              <div className="text-[12px] text-[var(--soft)] mt-1.5 flex items-center gap-2">
                 <span>{p.author_name}</span>
                 <span>·</span>
                 <span>{p.board_name}</span>

@@ -26,10 +26,10 @@ export default function StatsPanel({ stats = defaultStats }: Props) {
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--card)] backdrop-blur-md p-4">
       <h3
-        className="text-sm font-bold text-[var(--ink)] mb-3 flex items-center gap-2"
+        className="text-base font-bold text-[var(--ink)] mb-3 flex items-center gap-2"
         style={{ fontFamily: 'var(--disp)' }}
       >
-        <span className="w-1 h-4 bg-[var(--acc2)] rounded-full" />
+        <span className="w-1 h-5 bg-[var(--acc2)] rounded-full" />
         山河共记
       </h3>
       <div className="grid grid-cols-2 gap-3">
@@ -66,18 +66,18 @@ function StatItem({ stat, delay }: { stat: Stat; delay: number }) {
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className="rounded-lg border border-[var(--line)] p-3 bg-[var(--g1)]/40"
+      className="rounded-lg border border-[var(--line)] p-3.5 bg-[var(--g1)]/40"
     >
       <div
         className="text-2xl font-bold tabular-nums text-[var(--acc)]"
         style={{ fontFamily: 'var(--disp)' }}
       >
         {display}
-        <span className="text-[11px] text-[var(--soft)] ml-1 font-sans">
+        <span className="text-[12px] text-[var(--soft)] ml-1 font-sans">
           {stat.unit}
         </span>
       </div>
-      <div className="text-[11px] text-[var(--soft)] mt-0.5">
+      <div className="text-[12px] text-[var(--soft)] mt-0.5">
         {stat.label}
       </div>
     </motion.div>

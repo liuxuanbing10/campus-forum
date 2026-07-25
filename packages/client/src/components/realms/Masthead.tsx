@@ -26,7 +26,7 @@ export default function Masthead() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.22, 0.8, 0.28, 1] }}
-      className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-2"
+      className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-4"
     >
       {layout === 'mhA' && <LayoutA />}
       {layout === 'mhB' && <LayoutB />}
@@ -38,9 +38,9 @@ export default function Masthead() {
 function LayoutA() {
   // 左品牌 + 中标语 + 右时钟
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] gap-6 items-center">
+    <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] gap-8 items-center">
       <BrandPlaque />
-      <div className="md:border-l md:border-[var(--line)] md:pl-6">
+      <div className="md:border-l md:border-[var(--line)] md:pl-8">
         <SloganRotator />
       </div>
       <div className="hidden md:flex justify-end">
@@ -53,14 +53,14 @@ function LayoutA() {
 function LayoutB() {
   // 左山景 + 中品牌 + 右标语 + 时钟嵌入
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto] gap-6 items-center">
+    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto] gap-8 items-center">
       <div className="order-2 md:order-1">
         <MountainScene />
       </div>
       <div className="order-1 md:order-2">
         <BrandPlaque />
       </div>
-      <div className="order-3 md:border-l md:border-[var(--line)] md:pl-6">
+      <div className="order-3 md:border-l md:border-[var(--line)] md:pl-8">
         <SloganRotator />
       </div>
       <div className="order-4 hidden md:flex justify-end">
@@ -77,14 +77,14 @@ function LayoutC() {
   // 其他境在中间放山景，时钟放右侧
   const { realm } = useRealm();
   return (
-    <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] gap-6 items-center">
+    <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] gap-8 items-center">
       <BrandPlaque />
       <div className="flex justify-center">
         {realm.deco === 'dial' && <CompassDial size={136} />}
         {realm.deco === 'zaojing' && <CaissonDecoration />}
         {!realm.deco && <MountainScene />}
       </div>
-      <div className="md:border-l md:border-[var(--line)] md:pl-6 flex flex-col gap-4 items-start">
+      <div className="md:border-l md:border-[var(--line)] md:pl-8 flex flex-col gap-4 items-start">
         <SloganRotator />
         {(realm.deco === 'zaojing' || !realm.deco) && (
           <div className="hidden md:block">

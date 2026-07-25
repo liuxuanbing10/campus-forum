@@ -106,59 +106,59 @@ function LayoutInner() {
       <TopBar />
 
       {/* 二级工具栏：搜索 + 用户菜单（境信息下方） */}
-      <header className="sticky top-12 z-20 backdrop-blur-md bg-[var(--g2)]/60 border-b border-[var(--line)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-12 flex items-center justify-between gap-3">
+      <header className="sticky top-14 z-20 backdrop-blur-md bg-[var(--g2)]/60 border-b border-[var(--line)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           {/* 左：返回首页 + 板块入口 */}
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
             <Link
               to="/"
-              className="flex items-center gap-1.5 text-[12px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
+              className="flex items-center gap-1.5 text-[13px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
             >
-              <Home className="w-3.5 h-3.5" />
+              <Home className="w-4 h-4" />
               <span className="hidden sm:inline">首页</span>
             </Link>
             <span className="text-[var(--line)]">·</span>
             <Link
               to="/teams"
-              className="hidden sm:flex items-center gap-1.5 text-[12px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
+              className="hidden sm:flex items-center gap-1.5 text-[13px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
               title="发现团队"
             >
-              <Users className="w-3.5 h-3.5" />
+              <Users className="w-4 h-4" />
               <span>团队</span>
             </Link>
             <Link
               to="/achievements"
-              className="hidden sm:flex items-center gap-1.5 text-[12px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
+              className="hidden sm:flex items-center gap-1.5 text-[13px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
               title="成就"
             >
-              <Trophy className="w-3.5 h-3.5" />
+              <Trophy className="w-4 h-4" />
               <span>成就</span>
             </Link>
           </div>
 
           {/* 中：搜索框（桌面端） */}
-          <form onSubmit={handleSearch} className="flex-1 max-w-xs hidden md:block">
+          <form onSubmit={handleSearch} className="flex-1 max-w-sm hidden md:block">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--soft)]" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--soft)]" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="搜索帖子..."
-                className="w-full pl-9 pr-4 py-1.5 bg-[var(--card)] border border-[var(--line)] rounded-full text-[12px] text-[var(--ink)] placeholder:text-[var(--soft)] focus:outline-none focus:border-[var(--acc)] transition-colors"
+                className="w-full pl-10 pr-4 py-2 bg-[var(--card)] border border-[var(--line)] rounded-full text-[13px] text-[var(--ink)] placeholder:text-[var(--soft)] focus:outline-none focus:border-[var(--acc)] transition-colors"
               />
             </div>
           </form>
 
           {/* 右：通知 + 收藏 + 用户菜单 */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             {canInstall && (
               <button
                 onClick={handleInstall}
                 title="安装应用"
                 className="p-2 hover:bg-[var(--card)] rounded-lg transition-colors text-[var(--soft)] hover:text-[var(--acc)]"
               >
-                <Download className="w-4 h-4" />
+                <Download className="w-5 h-5" />
               </button>
             )}
 
@@ -168,7 +168,7 @@ function LayoutInner() {
                   to="/search"
                   className="md:hidden p-2 hover:bg-[var(--card)] rounded-lg transition-colors text-[var(--soft)]"
                 >
-                  <Search className="w-4 h-4" />
+                  <Search className="w-5 h-5" />
                 </Link>
                 <NotificationBell />
                 <Link
@@ -176,23 +176,23 @@ function LayoutInner() {
                   className="hidden sm:block p-2 hover:bg-[var(--card)] rounded-lg transition-colors text-[var(--soft)] hover:text-[var(--acc)]"
                   title="我的收藏"
                 >
-                  <Heart className="w-4 h-4" />
+                  <Heart className="w-5 h-5" />
                 </Link>
 
                 {/* 用户菜单 */}
-                <div className="hidden md:flex items-center gap-2 ml-1">
+                <div className="hidden md:flex items-center gap-2 ml-2">
                   <DropdownMenu>
-                    <DropdownMenuTrigger className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[var(--card)] transition-colors text-[12px] text-[var(--ink)]">
+                    <DropdownMenuTrigger className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg hover:bg-[var(--card)] transition-colors text-[13px] text-[var(--ink)]">
                       <span
                         className="font-bold"
                         style={{ fontFamily: 'var(--disp)' }}
                       >
                         {user.displayName}
                       </span>
-                      <ChevronDown className="w-3.5 h-3.5 text-[var(--soft)]" />
+                      <ChevronDown className="w-4 h-4 text-[var(--soft)]" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <div className="px-2 py-1.5 text-[11px] text-[var(--soft)] border-b border-[var(--line)] mb-1">
+                      <div className="px-2 py-1.5 text-[12px] text-[var(--soft)] border-b border-[var(--line)] mb-1">
                         @{user.displayName}
                       </div>
                       <DropdownMenuItem onClick={() => navigate('/my-posts')}>
@@ -226,7 +226,7 @@ function LayoutInner() {
             ) : (
               <Link
                 to="/login"
-                className="text-[12px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
+                className="text-[13px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors px-3 py-2"
               >
                 登录
               </Link>
@@ -238,7 +238,7 @@ function LayoutInner() {
               className="md:hidden p-2 hover:bg-[var(--card)] rounded-lg transition-colors text-[var(--soft)]"
               aria-label="菜单"
             >
-              {mobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
@@ -286,7 +286,7 @@ function LayoutInner() {
       </header>
 
       {/* 主体内容 - 路由切换淡入上浮动画 */}
-      <main className="relative z-10 flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 md:pt-6 pt-4 pb-28 md:pb-12">
+      <main className="relative z-10 flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 md:pt-8 pt-4 pb-28 md:pb-12">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}

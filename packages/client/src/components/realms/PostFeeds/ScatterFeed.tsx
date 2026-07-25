@@ -22,13 +22,13 @@ export default function ScatterFeed({ posts }: Props) {
               animate={{ opacity: 1, scale: 1, rotate: rot }}
               transition={{ delay: i * 0.05, type: 'spring', stiffness: 100 }}
               whileHover={{ scale: 1.05, rotate: 0, zIndex: 10 }}
-              className="block p-3 rounded-lg border border-[var(--line)] bg-[var(--card)] backdrop-blur-sm shadow-card hover:shadow-card-hover transition-shadow"
+              className="block p-4 rounded-lg border border-[var(--line)] bg-[var(--card)] backdrop-blur-sm shadow-card hover:shadow-card-hover transition-shadow"
               style={{ transformOrigin: 'center' }}
             >
-              <div className="font-bold text-[13px] text-[var(--ink)] line-clamp-2 leading-snug">
+              <div className="font-bold text-[14px] text-[var(--ink)] line-clamp-2 leading-snug">
                 {p.title}
               </div>
-              <div className="text-[10px] text-[var(--soft)] mt-2 flex items-center justify-between">
+              <div className="text-[11px] text-[var(--soft)] mt-2 flex items-center justify-between">
                 <span className="truncate">{p.author_name}</span>
                 <span className="tabular-nums">✦ {p.like_count}</span>
               </div>

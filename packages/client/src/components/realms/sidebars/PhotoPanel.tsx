@@ -85,7 +85,7 @@ export default function PhotoPanel() {
       </div>
 
       {/* 底部信息 */}
-      <div className="px-3 py-2.5 flex items-center justify-between text-[11px] text-[var(--soft)]">
+      <div className="px-4 py-3 flex items-center justify-between text-[12px] text-[var(--soft)]">
         <span>—— {realm.sub}</span>
         <span className="tabular-nums">No.{String(realm.idx).padStart(2, '0')}</span>
       </div>

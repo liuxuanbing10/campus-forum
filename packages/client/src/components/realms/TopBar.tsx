@@ -39,12 +39,12 @@ export default function TopBar({ onlineCount = 0 }: { onlineCount?: number }) {
 
   return (
     <div className="sticky top-0 z-30 backdrop-blur-md bg-[var(--g1)]/70 border-b border-[var(--line)]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-12 flex items-center justify-between gap-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
         {/* 左：境名 + 副标 */}
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={prevRealm}
-            className="text-[var(--soft)] hover:text-[var(--acc)] transition-colors px-1.5"
+            className="text-[var(--soft)] hover:text-[var(--acc)] transition-colors px-2 text-lg"
             aria-label="上一境"
             title="上一境 (Ctrl + ←)"
           >
@@ -60,12 +60,12 @@ export default function TopBar({ onlineCount = 0 }: { onlineCount?: number }) {
               className="flex items-baseline gap-2 min-w-0"
             >
               <span
-                className="text-lg font-bold text-[var(--ink)] font-display truncate"
+                className="text-xl font-bold text-[var(--ink)] font-display truncate"
                 style={{ fontFamily: 'var(--disp)' }}
               >
                 {realm.name}
               </span>
-              <span className="text-[10px] tracking-[0.2em] text-[var(--soft)] uppercase hidden sm:inline">
+              <span className="text-[11px] tracking-[0.2em] text-[var(--soft)] uppercase hidden sm:inline">
                 {en}
               </span>
             </motion.div>
@@ -81,22 +81,22 @@ export default function TopBar({ onlineCount = 0 }: { onlineCount?: number }) {
         </div>
 
         {/* 右：时辰 + 在线 + 时间 */}
-        <div className="flex items-center gap-3 sm:gap-5 text-[11px] text-[var(--soft)]">
+        <div className="flex items-center gap-4 sm:gap-6 text-[12px] text-[var(--soft)]">
           <div className="hidden md:flex items-center gap-1.5">
-            <span className="text-[var(--acc)]" title="当前时辰">{branch}</span>
+            <span className="text-[var(--acc)] font-medium" title="当前时辰">{branch}</span>
             <span>时</span>
           </div>
           <div className="hidden sm:flex items-center gap-1.5">
             <span
-              className="w-1.5 h-1.5 rounded-full bg-[var(--acc)] animate-pulse"
+              className="w-2 h-2 rounded-full bg-[var(--acc)] animate-pulse"
               aria-hidden
             />
-            <span className="text-[var(--ink)] font-medium tabular-nums">
+            <span className="text-[var(--ink)] font-semibold tabular-nums">
               {count}
             </span>
             <span>在线</span>
           </div>
-          <div className="tabular-nums font-mono text-[var(--ink)]/80" title={shichen}>
+          <div className="tabular-nums font-mono text-[var(--ink)]/80 text-[13px]" title={shichen}>
             {timeStr}
           </div>
         </div>

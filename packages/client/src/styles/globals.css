@@ -472,11 +472,11 @@ a {
 /* 圆点指示器 */
 .dots {
   display: flex;
-  gap: 10px;
+  gap: 12px;
 }
 .dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: color-mix(in srgb, var(--ink) 25%, transparent);
   cursor: pointer;
