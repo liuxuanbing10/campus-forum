@@ -57,12 +57,8 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /opt/campus-forum
-            tar -xzf deploy.tar.gz --skip-old-files 2>&1 || tar -xzf deploy.tar.gz
+            tar -xzf deploy.tar.gz
             rm -f deploy.tar.gz
-            # 安装缺失的依赖（绕过 workspace:* 协议）
-            npm install sharp@0.35.3 --no-package-lock --no-audit --no-fund --ignore-workspaces 2>&1 || \
-            npm install sharp@0.35.3 --prefix /opt/campus-forum --no-save 2>&1 || true
-            node -e "require('sharp')" 2>&1 || echo "sharp still missing"
             npx pm2 restart campus-forum --update-env 2>&1 || npx pm2 start packages/server/dist/index.js --name campus-forum 2>&1
-            sleep 3
-            curl -s -A 'Mozilla/5.0' http://localhost:3001/api/health 2>&1 | head -c 200 || echo "health check failed"
+            sleep 5
+            curl -sm 5 http://localhost:3001/api/health 2>&1 | head -c 200 || echo "HEALTH_CHECK_FAILED"
