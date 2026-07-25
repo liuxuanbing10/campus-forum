@@ -1,5 +1,6 @@
 import { useEffect, lazy, Suspense, useState, useCallback } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { useAuthStore } from './stores/auth';
 import { useThemeStore } from './stores/theme';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -37,6 +38,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 const Achievements = lazy(() => import('./pages/Achievements'));
 const AchievementRules = lazy(() => import('./pages/AchievementRules'));
 const CommunityGuidelines = lazy(() => import('./pages/CommunityGuidelines'));
+const Register = lazy(() => import('./pages/Register'));
 
 const PageSkeleton = () => (
   <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
@@ -111,6 +113,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Suspense fallback={<PageSkeleton />}><Register /></Suspense>} />
           <Route path="/forgot-password" element={<Suspense fallback={<PageSkeleton />}><ForgotPassword /></Suspense>} />
           <Route path="/settings" element={<Suspense fallback={<PageSkeleton />}><Settings /></Suspense>} />
           <Route path="/my-posts" element={<Suspense fallback={<PageSkeleton />}><MyPosts /></Suspense>} />
@@ -142,6 +145,20 @@ export default function App() {
         <Route path="/oauth/setup" element={<Suspense fallback={<PageSkeleton />}><OAuthSetup /></Suspense>} />
       </Routes>
       <ToastContainer toasts={toastList} onClose={toastStore.remove} />
+      <Toaster
+        position="top-center"
+        richColors
+        closeButton
+        toastOptions={{
+          style: {
+            fontFamily: 'var(--body, inherit)',
+            borderRadius: '10px',
+            border: '1px solid var(--line, rgba(0,0,0,0.08))',
+            background: 'var(--card, #fff)',
+            color: 'var(--ink, #1a1a1a)',
+          },
+        }}
+      />
     </ErrorBoundary>
   );
 }

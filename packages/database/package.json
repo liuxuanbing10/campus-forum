@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",
-    "bcryptjs": "^2.4.3"
+    "bcryptjs": "^2.4.3",
+    "kysely": "^0.29.4"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

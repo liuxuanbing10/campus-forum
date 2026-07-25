@@ -1,16 +1,41 @@
 import { Outlet, Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
-import NotificationBell from './NotificationBell';
-import ThemeSwitcher from './ThemeSwitcher';
+import { useThemeStore } from '../stores/theme';
+import { RealmProvider, useRealm } from './realms/RealmProvider';
+import ParticleField from './realms/ParticleField';
+import RealmSignature from './realms/RealmSignature';
+import TopBar from './realms/TopBar';
+import RealmSwitcher from './realms/RealmSwitcher';
 import BottomNav from './BottomNav';
-import { Home, Users, Heart, Search, Shield, MessageCircle, Bell, X, Menu, Download, Plus, User, LogOut, Settings, FileText, ChevronDown, UserCheck, Trophy } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import NotificationBell from './NotificationBell';
 import { Button } from './ui/button';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from './ui/dropdown-menu';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from './ui/dropdown-menu';
+import {
+  Home, Users, Heart, Search, Shield, MessageCircle, Bell, X, Menu,
+  Plus, User, LogOut, Settings, FileText, ChevronDown, UserCheck, Trophy, Download,
+} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// ponytail: inline PWA install — no separate hook/component for one event listener + one button
-
+/**
+ * 应用 Layout - 全局背景 + TopBar + Outlet + 渡船导航
+ * 所有路由共享十三境主题
+ */
 export default function Layout() {
+  return (
+    <RealmProvider>
+      <LayoutInner />
+    </RealmProvider>
+  );
+}
+
+function LayoutInner() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -19,6 +44,12 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [canInstall, setCanInstall] = useState(false);
+  const { realm } = useRealm();
+  const { initTheme } = useThemeStore();
+
+  useEffect(() => {
+    initTheme();
+  }, [initTheme]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -55,88 +86,115 @@ export default function Layout() {
     setDeferredPrompt(null);
   };
 
-  // Bottom tab bar active detection
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
   };
 
+  const isHome = location.pathname === '/';
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="bg-surface border-b border-border shadow-card sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Link to="/" className="text-lg font-bold text-primary hover:text-primary-hover font-display whitespace-nowrap">
-              校园论坛
-            </Link>
-            <Button
-              variant="ghost"
-              size="sm"
-              asChild
-              className="flex items-center gap-1.5 rounded-full"
+    <div className="relative min-h-screen flex flex-col realm-bg">
+      {/* 背景层 */}
+      <ParticleField type={realm.amb} count={20} />
+      <RealmSignature />
+      <div className="grain" aria-hidden />
+      <div className="mist ma" aria-hidden />
+      <div className="mist mb" aria-hidden />
+
+      {/* 顶栏：境名 + 时辰 + 在线 + 导航 */}
+      <TopBar />
+
+      {/* 二级工具栏：搜索 + 用户菜单（境信息下方） */}
+      <header className="sticky top-12 z-20 backdrop-blur-md bg-[var(--g2)]/60 border-b border-[var(--line)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-12 flex items-center justify-between gap-3">
+          {/* 左：返回首页 + 板块入口 */}
+          <div className="flex items-center gap-2 min-w-0">
+            <Link
+              to="/"
+              className="flex items-center gap-1.5 text-[12px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
             >
-              <Link to="/">
-                <Home className="w-4 h-4" />
-                <span className="hidden sm:inline">返回首页</span>
-              </Link>
-            </Button>
+              <Home className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">首页</span>
+            </Link>
+            <span className="text-[var(--line)]">·</span>
+            <Link
+              to="/teams"
+              className="hidden sm:flex items-center gap-1.5 text-[12px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
+              title="发现团队"
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>团队</span>
+            </Link>
+            <Link
+              to="/achievements"
+              className="hidden sm:flex items-center gap-1.5 text-[12px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
+              title="成就"
+            >
+              <Trophy className="w-3.5 h-3.5" />
+              <span>成就</span>
+            </Link>
           </div>
 
-          <form onSubmit={handleSearch} className="flex-1 max-w-xs hidden sm:block">
+          {/* 中：搜索框（桌面端） */}
+          <form onSubmit={handleSearch} className="flex-1 max-w-xs hidden md:block">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-campus-text-tertiary" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--soft)]" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="搜索帖子..."
-                className="w-full pl-9 pr-4 py-1.5 bg-background border border-border rounded-full text-sm text-campus-text-primary placeholder-campus-text-tertiary focus:outline-none focus:border-primary/50 transition-colors"
+                className="w-full pl-9 pr-4 py-1.5 bg-[var(--card)] border border-[var(--line)] rounded-full text-[12px] text-[var(--ink)] placeholder:text-[var(--soft)] focus:outline-none focus:border-[var(--acc)] transition-colors"
               />
             </div>
           </form>
 
-          <nav className="flex items-center gap-3">
-            <ThemeSwitcher />
+          {/* 右：通知 + 收藏 + 用户菜单 */}
+          <div className="flex items-center gap-1">
             {canInstall && (
-              <button onClick={handleInstall} title="安装应用" className="p-2 hover:bg-background rounded-lg transition-colors">
-                <Download className="w-5 h-5 text-primary" />
+              <button
+                onClick={handleInstall}
+                title="安装应用"
+                className="p-2 hover:bg-[var(--card)] rounded-lg transition-colors text-[var(--soft)] hover:text-[var(--acc)]"
+              >
+                <Download className="w-4 h-4" />
               </button>
             )}
-            {/* Mobile hamburger */}
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="md:hidden p-2 hover:bg-background rounded-lg transition-colors"
-            >
-              {mobileOpen ? <X className="w-5 h-5 text-campus-text-secondary" /> : <Menu className="w-5 h-5 text-campus-text-secondary" />}
-            </button>
-            {/* Desktop nav (unchanged) */}
-            <div className="hidden md:flex items-center gap-3">
+
             {user ? (
               <>
-                <Link to="/search" className="sm:hidden p-2 hover:bg-background rounded-lg transition-colors">
-                  <Search className="w-5 h-5 text-campus-text-secondary" />
+                <Link
+                  to="/search"
+                  className="md:hidden p-2 hover:bg-[var(--card)] rounded-lg transition-colors text-[var(--soft)]"
+                >
+                  <Search className="w-4 h-4" />
                 </Link>
                 <NotificationBell />
-                <Link to="/favorites" className="hidden sm:block p-2 hover:bg-background rounded-lg transition-colors">
-                  <Heart className="w-5 h-5 text-campus-text-secondary" />
+                <Link
+                  to="/favorites"
+                  className="hidden sm:block p-2 hover:bg-[var(--card)] rounded-lg transition-colors text-[var(--soft)] hover:text-[var(--acc)]"
+                  title="我的收藏"
+                >
+                  <Heart className="w-4 h-4" />
                 </Link>
-                <Link to="/teams" className="hidden sm:flex items-center gap-1 p-2 hover:bg-background rounded-lg transition-colors" title="发现团队">
-                  <Users className="w-5 h-5 text-campus-text-secondary" />
-                </Link>
-                <Link to="/teams/my" className="hidden sm:flex items-center gap-1 p-2 hover:bg-background rounded-lg transition-colors" title="我的团队">
-                  <UserCheck className="w-5 h-5 text-campus-text-secondary" />
-                </Link>
-                <Link to="/achievements" className="hidden sm:flex items-center gap-1 p-2 hover:bg-background rounded-lg transition-colors" title="成就">
-                  <Trophy className="w-5 h-5 text-campus-text-secondary" />
-                </Link>
-                <div className="hidden sm:flex items-center gap-2">
+
+                {/* 用户菜单 */}
+                <div className="hidden md:flex items-center gap-2 ml-1">
                   <DropdownMenu>
-                    <DropdownMenuTrigger className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-primary font-body">
-                      {user.displayName}
-                      <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                    <DropdownMenuTrigger className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[var(--card)] transition-colors text-[12px] text-[var(--ink)]">
+                      <span
+                        className="font-bold"
+                        style={{ fontFamily: 'var(--disp)' }}
+                      >
+                        {user.displayName}
+                      </span>
+                      <ChevronDown className="w-3.5 h-3.5 text-[var(--soft)]" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <div className="px-2 py-1.5 text-xs text-muted-foreground border-b border-border mb-1">@{user.displayName}</div>
+                      <div className="px-2 py-1.5 text-[11px] text-[var(--soft)] border-b border-[var(--line)] mb-1">
+                        @{user.displayName}
+                      </div>
                       <DropdownMenuItem onClick={() => navigate('/my-posts')}>
                         <FileText className="w-4 h-4" /> 我的帖子
                       </DropdownMenuItem>
@@ -166,150 +224,119 @@ export default function Layout() {
                 </div>
               </>
             ) : (
-              <>
-                <Link to="/login" className="text-sm text-campus-text-secondary hover:text-primary transition-colors font-body">
-                  登录
-                </Link>
-              </>
+              <Link
+                to="/login"
+                className="text-[12px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"
+              >
+                登录
+              </Link>
             )}
-            </div>
-          </nav>
+
+            {/* 移动端汉堡 */}
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="md:hidden p-2 hover:bg-[var(--card)] rounded-lg transition-colors text-[var(--soft)]"
+              aria-label="菜单"
+            >
+              {mobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
 
-        {/* Mobile dropdown */}
-        {mobileOpen && (
-          <div className="md:hidden border-t border-border bg-surface px-4 py-3 space-y-2">
-            <Link to="/search" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
-              <Search className="w-4 h-4" /> 搜索
-            </Link>
-            {user ? (
-              <>
-                <div className="text-xs text-campus-text-tertiary px-3 pt-1 font-body">{user.displayName}</div>
-                <Link to="/notifications" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
-                  <Bell className="w-4 h-4" /> 通知
-                </Link>
-                <Link to="/favorites" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
-                  <Heart className="w-4 h-4" /> 我的收藏
-                </Link>
-                <Link to="/teams/my" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
-                  <UserCheck className="w-4 h-4" /> 我的团队
-                </Link>
-                <Link to="/achievements" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
-                  <Trophy className="w-4 h-4" /> 成就
-                </Link>
-                <Link to="/my-posts" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
-                  <Home className="w-4 h-4" /> 我的帖子
-                </Link>
-                <Link to="/settings" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
-                  设置
-                </Link>
-                {(user.role === 'admin' || user.role === 'superadmin') && (
-                  <Link to="/admin" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
-                    <Shield className="w-4 h-4" /> 管理后台
-                  </Link>
+        {/* 移动端展开菜单 */}
+        <AnimatePresence>
+          {mobileOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="md:hidden overflow-hidden border-t border-[var(--line)] bg-[var(--g2)]/95 backdrop-blur-md"
+            >
+              <div className="px-4 py-3 space-y-1">
+                {user ? (
+                  <>
+                    <div className="text-[11px] text-[var(--soft)] px-3 py-1">
+                      @{user.displayName}
+                    </div>
+                    <MobileLink to="/search" icon={<Search className="w-4 h-4" />} label="搜索" onClick={() => setMobileOpen(false)} />
+                    <MobileLink to="/notifications" icon={<Bell className="w-4 h-4" />} label="通知" onClick={() => setMobileOpen(false)} />
+                    <MobileLink to="/favorites" icon={<Heart className="w-4 h-4" />} label="我的收藏" onClick={() => setMobileOpen(false)} />
+                    <MobileLink to="/teams/my" icon={<UserCheck className="w-4 h-4" />} label="我的团队" onClick={() => setMobileOpen(false)} />
+                    <MobileLink to="/achievements" icon={<Trophy className="w-4 h-4" />} label="成就" onClick={() => setMobileOpen(false)} />
+                    <MobileLink to="/my-posts" icon={<Home className="w-4 h-4" />} label="我的帖子" onClick={() => setMobileOpen(false)} />
+                    <MobileLink to="/settings" icon={<Settings className="w-4 h-4" />} label="设置" onClick={() => setMobileOpen(false)} />
+                    {(user.role === 'admin' || user.role === 'superadmin') && (
+                      <MobileLink to="/admin" icon={<Shield className="w-4 h-4" />} label="管理后台" onClick={() => setMobileOpen(false)} />
+                    )}
+                    <button
+                      onClick={() => { setMobileOpen(false); handleLogout(); }}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--card)] transition-colors text-[12px] text-[var(--hot)] flex items-center gap-2"
+                    >
+                      <LogOut className="w-4 h-4" /> 退出登录
+                    </button>
+                  </>
+                ) : (
+                  <MobileLink to="/login" icon={<User className="w-4 h-4" />} label="登录" onClick={() => setMobileOpen(false)} />
                 )}
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-destructive font-body"
-                >
-                  退出登录
-                </button>
-              </>
-            ) : (
-              <>
-                <Link to="/login" className="block px-3 py-2 rounded-lg hover:bg-background transition-colors text-sm text-campus-text-secondary font-body">
-                  登录
-                </Link>
-              </>
-            )}
-          </div>
-        )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-6 md:pt-6 pt-4 pb-24 md:pb-6">
-        <Outlet />
+      {/* 主体内容 - 路由切换淡入上浮动画 */}
+      <main className="relative z-10 flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 md:pt-6 pt-4 pb-28 md:pb-12">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.3, ease: [0.22, 0.8, 0.28, 1] }}
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </main>
 
-      {/* ═══════════════════════════════════════════
-          移动端底部 Tab Bar（桌面端隐藏）
-          ═══════════════════════════════════════════ */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-lg border-t border-border safe-area-bottom">
-        <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
-          {/* 首页 */}
-          <Link
-            to="/"
-            className={`flex flex-col items-center justify-center gap-0.5 w-16 py-1 transition-colors ${
-              isActive('/') && !isActive('/board')
-                ? 'text-primary'
-                : 'text-campus-text-tertiary hover:text-campus-text-secondary'
-            }`}
-          >
-            <Home className="w-5 h-5" strokeWidth={isActive('/') && !isActive('/board') ? 2.5 : 2} />
-            <span className="text-[10px] font-body leading-none">首页</span>
-          </Link>
+      {/* 移动端底部 Tab Bar */}
+      <BottomNav />
 
-          {/* 搜索 */}
-          <Link
-            to="/search"
-            className={`flex flex-col items-center justify-center gap-0.5 w-16 py-1 transition-colors ${
-              isActive('/search')
-                ? 'text-primary'
-                : 'text-campus-text-tertiary hover:text-campus-text-secondary'
-            }`}
-          >
-            <Search className="w-5 h-5" strokeWidth={isActive('/search') ? 2.5 : 2} />
-            <span className="text-[10px] font-body leading-none">搜索</span>
-          </Link>
+      {/* 桌面端渡船导航（13境切换） - 仅在桌面显示 */}
+      <div className="hidden md:block">
+        <RealmSwitcher />
+      </div>
 
-          {/* 发帖 - 居中突出按钮 */}
-          <Link
-            to="/new"
-            className="flex items-center justify-center -mt-5 w-14 h-14 rounded-full bg-primary text-white shadow-lg shadow-primary/30 hover:bg-primary-hover active:scale-95 transition-all"
-          >
-            <Plus className="w-7 h-7" strokeWidth={2.5} />
-          </Link>
-
-          {/* 消息 */}
-          <Link
-            to="/messages"
-            className={`flex flex-col items-center justify-center gap-0.5 w-16 py-1 transition-colors ${
-              isActive('/messages')
-                ? 'text-primary'
-                : 'text-campus-text-tertiary hover:text-campus-text-secondary'
-            }`}
-          >
-            <MessageCircle className="w-5 h-5" strokeWidth={isActive('/messages') ? 2.5 : 2} />
-            <span className="text-[10px] font-body leading-none">消息</span>
-          </Link>
-
-          {/* 我的 */}
-          <Link
-            to={user ? `/user/${user.id}` : '/login'}
-            className={`flex flex-col items-center justify-center gap-0.5 w-16 py-1 transition-colors ${
-              isActive('/user') || isActive('/my-posts') || isActive('/favorites')
-                ? 'text-primary'
-                : 'text-campus-text-tertiary hover:text-campus-text-secondary'
-            }`}
-          >
-            <User className="w-5 h-5" strokeWidth={(isActive('/user') || isActive('/my-posts') || isActive('/favorites')) ? 2.5 : 2} />
-            <span className="text-[10px] font-body leading-none">我的</span>
-          </Link>
-        </div>
-      </nav>
-
-      {/* ═══════════════════════════════════════════
-          CSS for safe-area-bottom & bottom bar styles
-          ═══════════════════════════════════════════ */}
       <style>{`
-        .safe-area-bottom {
-          padding-bottom: env(safe-area-inset-bottom, 0px);
-        }
+        .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
         @supports (padding-bottom: env(safe-area-inset-bottom)) {
-          .safe-area-bottom {
-            padding-bottom: env(safe-area-inset-bottom);
-          }
+          .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
         }
       `}</style>
     </div>
+  );
+}
+
+function MobileLink({
+  to,
+  icon,
+  label,
+  onClick,
+}: {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <Link
+      to={to}
+      onClick={onClick}
+      className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--card)] transition-colors text-[12px] text-[var(--ink)]"
+    >
+      {icon}
+      <span>{label}</span>
+    </Link>
   );
 }
