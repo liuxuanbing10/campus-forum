@@ -59,4 +59,5 @@ jobs:
             cd /opt/campus-forum
             tar -xzf deploy.tar.gz
             rm -f deploy.tar.gz
-            npx pm2 restart campus-forum || npx pm2 start packages/server/dist/index.js --name campus-forum
+            npm install --omit=dev 2>&1 || true
+            npx pm2 restart campus-forum --update-env || npx pm2 start packages/server/dist/index.js --name campus-forum
