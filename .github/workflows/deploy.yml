@@ -39,9 +39,7 @@ jobs:
             plugins/social/dist \
             plugins/theme-default/dist \
             node_modules/sharp \
-            node_modules/ioredis \
-            node_modules/nodemailer \
-            node_modules/lru-cache
+            node_modules/@img
 
       - name: Upload & extract
         uses: appleboy/scp-action@v0.1.7
