@@ -124,12 +124,12 @@ export default function LoginPage() {
 
             <div className="text-center mb-8">
               <h1
-                className="text-3xl sm:text-4xl font-bold text-[var(--ink)]"
+                className="text-4xl sm:text-5xl font-bold text-[var(--ink)]"
                 style={{ fontFamily: 'var(--disp)' }}
               >
                 欢迎回来
               </h1>
-              <p className="text-[12px] text-[var(--soft)] mt-2 tracking-wide">
+              <p className="text-[13px] text-[var(--soft)] mt-2 tracking-wide">
                 登录账号，续写{realm.name}之卷
               </p>
             </div>
@@ -191,14 +191,14 @@ export default function LoginPage() {
                 disabled={isSubmitting}
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
-                className="relative w-full h-11 rounded-xl font-medium text-[var(--g1)] overflow-hidden transition-shadow disabled:opacity-70 disabled:cursor-not-allowed shadow-[0_4px_20px_-6px_var(--glow,rgba(0,0,0,0.3))]"
+                className="relative w-full h-12 rounded-xl font-medium text-[var(--g1)] overflow-hidden transition-shadow disabled:opacity-70 disabled:cursor-not-allowed shadow-[0_4px_20px_-6px_var(--glow,rgba(0,0,0,0.3))]"
                 style={{
                   background:
                     'linear-gradient(135deg, var(--acc), var(--acc2))',
                   fontFamily: 'var(--disp)',
                 }}
               >
-                <span className="relative z-10 flex items-center justify-center gap-2 text-sm tracking-widest">
+                <span className="relative z-10 flex items-center justify-center gap-2 text-base tracking-widest">
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -262,14 +262,14 @@ export default function LoginPage() {
       <style>{`
         .realm-input {
           width: 100%;
-          height: 2.75rem;
-          padding-left: 2.5rem;
+          height: 3rem;
+          padding-left: 2.75rem;
           padding-right: 1rem;
           background: var(--g1, transparent);
           border: 1px solid var(--line);
           border-radius: 0.625rem;
           color: var(--ink);
-          font-size: 14px;
+          font-size: 15px;
           outline: none;
           transition: all 0.2s ease;
         }
@@ -299,7 +299,7 @@ function Field({
 }) {
   return (
     <div>
-      <Label.Root className="block text-[12px] font-medium text-[var(--soft)] mb-1.5 tracking-wide">
+      <Label.Root className="block text-[13px] font-medium text-[var(--soft)] mb-1.5 tracking-wide">
         {label}
       </Label.Root>
       <div className="relative">

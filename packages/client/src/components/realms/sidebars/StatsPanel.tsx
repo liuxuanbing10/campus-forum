@@ -24,9 +24,9 @@ const defaultStats: Stat[] = [
  */
 export default function StatsPanel({ stats = defaultStats }: Props) {
   return (
-    <div className="rounded-xl border border-[var(--line)] bg-[var(--card)] backdrop-blur-md p-4">
+    <div className="rounded-xl border border-[var(--line)] bg-[var(--card)] backdrop-blur-md p-5">
       <h3
-        className="text-base font-bold text-[var(--ink)] mb-3 flex items-center gap-2"
+        className="text-lg font-bold text-[var(--ink)] mb-4 flex items-center gap-2"
         style={{ fontFamily: 'var(--disp)' }}
       >
         <span className="w-1 h-5 bg-[var(--acc2)] rounded-full" />
@@ -66,10 +66,10 @@ function StatItem({ stat, delay }: { stat: Stat; delay: number }) {
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className="rounded-lg border border-[var(--line)] p-3.5 bg-[var(--g1)]/40"
+      className="rounded-lg border border-[var(--line)] p-4 bg-[var(--g1)]/40"
     >
       <div
-        className="text-2xl font-bold tabular-nums text-[var(--acc)]"
+        className="text-3xl font-bold tabular-nums text-[var(--acc)]"
         style={{ fontFamily: 'var(--disp)' }}
       >
         {display}
@@ -77,7 +77,7 @@ function StatItem({ stat, delay }: { stat: Stat; delay: number }) {
           {stat.unit}
         </span>
       </div>
-      <div className="text-[12px] text-[var(--soft)] mt-0.5">
+      <div className="text-[13px] text-[var(--soft)] mt-1">
         {stat.label}
       </div>
     </motion.div>

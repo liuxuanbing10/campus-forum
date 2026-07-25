@@ -33,9 +33,9 @@ export default function WoodenFish() {
   }, [count]);
 
   return (
-    <div className="rounded-xl border border-[var(--line)] bg-[var(--card)] backdrop-blur-md p-4">
+    <div className="rounded-xl border border-[var(--line)] bg-[var(--card)] backdrop-blur-md p-5">
       <h3
-        className="text-base font-bold text-[var(--ink)] mb-3 flex items-center justify-between"
+        className="text-lg font-bold text-[var(--ink)] mb-4 flex items-center justify-between"
         style={{ fontFamily: 'var(--disp)' }}
       >
         <span className="flex items-center gap-2">

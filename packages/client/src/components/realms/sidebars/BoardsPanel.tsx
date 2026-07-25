@@ -33,8 +33,8 @@ const defaultIcon = <MessageCircle className="w-5 h-5" />;
  */
 export default function BoardsPanel({ boards, loading }: Props) {
   return (
-    <div className="rounded-xl border border-[var(--line)] bg-[var(--card)] backdrop-blur-md p-4">
-      <h3 className="text-base font-bold text-[var(--ink)] mb-3 flex items-center gap-2" style={{ fontFamily: 'var(--disp)' }}>
+    <div className="rounded-xl border border-[var(--line)] bg-[var(--card)] backdrop-blur-md p-5">
+      <h3 className="text-lg font-bold text-[var(--ink)] mb-4 flex items-center gap-2" style={{ fontFamily: 'var(--disp)' }}>
         <span className="w-1 h-5 bg-[var(--acc)] rounded-full" />
         诸版列阵
       </h3>
@@ -43,7 +43,7 @@ export default function BoardsPanel({ boards, loading }: Props) {
           {Array.from({ length: 5 }).map((_, i) => (
             <div
               key={i}
-              className="h-11 rounded-md bg-[var(--line)] animate-pulse"
+              className="h-12 rounded-md bg-[var(--line)] animate-pulse"
             />
           ))}
         </div>
@@ -58,20 +58,20 @@ export default function BoardsPanel({ boards, loading }: Props) {
             >
               <Link
                 to={`/board/${b.id}`}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--line)] transition-colors group"
+                className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-[var(--line)] transition-colors group"
               >
                 <span className="text-[var(--acc)] group-hover:scale-110 transition-transform">
                   {iconMap[b.icon] ?? defaultIcon}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[14px] font-medium text-[var(--ink)] truncate">
+                  <div className="text-[15px] font-medium text-[var(--ink)] truncate">
                     {b.name}
                   </div>
-                  <div className="text-[11px] text-[var(--soft)] truncate">
+                  <div className="text-[12px] text-[var(--soft)] truncate">
                     {b.description}
                   </div>
                 </div>
-                <span className="text-[11px] text-[var(--soft)] tabular-nums">
+                <span className="text-[12px] text-[var(--soft)] tabular-nums">
                   {b.post_count}
                 </span>
               </Link>
