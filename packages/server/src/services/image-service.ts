@@ -11,18 +11,6 @@ import type { DatabaseAdapter, RunResult } from '@campus-forum/core';
  * - 优雅降级：sharp 不可用或文件系统不可写时回退到 DB base64
  */
 
-declare module 'sharp' {
-  interface Sharp {
-    rotate(): Sharp;
-    resize(opts: { width?: number; height?: number; fit?: string; withoutEnlargement?: boolean }): Sharp;
-    webp(opts?: { quality?: number }): Sharp;
-    toBuffer(): Promise<Buffer>;
-    toBuffer(opts: { resolveWithObject: true }): Promise<{ data: Buffer; info: { width: number; height: number } }>;
-  }
-  function sharp(buf: Buffer, opts?: { failOn?: string }): Sharp;
-  export default sharp;
-}
-
 export interface ProcessedImage {
   id: number;
   url: string;
