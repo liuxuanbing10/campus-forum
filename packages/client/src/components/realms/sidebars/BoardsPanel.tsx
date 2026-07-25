@@ -34,8 +34,8 @@ const defaultIcon = <MessageCircle className="w-5 h-5" />;
 export default function BoardsPanel({ boards, loading }: Props) {
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--card)] backdrop-blur-md p-5">
-      <h3 className="text-lg font-bold text-[var(--ink)] mb-4 flex items-center gap-2" style={{ fontFamily: 'var(--disp)' }}>
-        <span className="w-1 h-5 bg-[var(--acc)] rounded-full" />
+      <h3 className="text-xl font-bold text-[var(--ink)] mb-4 flex items-center gap-2" style={{ fontFamily: 'var(--disp)' }}>
+        <span className="w-1.5 h-6 bg-[var(--acc)] rounded-full" />
         诸版列阵
       </h3>
       {loading ? (

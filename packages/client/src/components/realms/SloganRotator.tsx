@@ -82,7 +82,7 @@ export default function SloganRotator() {
         </motion.button>
 
         <motion.button
-          whileHover={{ scale: 1.08, rotate: 90 }}
+          whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.94 }}
           onClick={next}
           className="flex items-center gap-1.5 text-[12px] text-[var(--soft)] hover:text-[var(--acc)] transition-colors"

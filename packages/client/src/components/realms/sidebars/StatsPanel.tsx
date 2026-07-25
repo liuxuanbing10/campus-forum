@@ -26,10 +26,10 @@ export default function StatsPanel({ stats = defaultStats }: Props) {
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--card)] backdrop-blur-md p-5">
       <h3
-        className="text-lg font-bold text-[var(--ink)] mb-4 flex items-center gap-2"
+        className="text-xl font-bold text-[var(--ink)] mb-4 flex items-center gap-2"
         style={{ fontFamily: 'var(--disp)' }}
       >
-        <span className="w-1 h-5 bg-[var(--acc2)] rounded-full" />
+        <span className="w-1.5 h-6 bg-[var(--acc2)] rounded-full" />
         山河共记
       </h3>
       <div className="grid grid-cols-2 gap-3">
@@ -69,11 +69,11 @@ function StatItem({ stat, delay }: { stat: Stat; delay: number }) {
       className="rounded-lg border border-[var(--line)] p-4 bg-[var(--g1)]/40"
     >
       <div
-        className="text-3xl font-bold tabular-nums text-[var(--acc)]"
+        className="text-4xl font-bold tabular-nums text-[var(--acc)]"
         style={{ fontFamily: 'var(--disp)' }}
       >
         {display}
-        <span className="text-[12px] text-[var(--soft)] ml-1 font-sans">
+        <span className="text-[13px] text-[var(--soft)] ml-1 font-sans">
           {stat.unit}
         </span>
       </div>

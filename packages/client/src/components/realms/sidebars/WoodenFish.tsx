@@ -35,14 +35,14 @@ export default function WoodenFish() {
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--card)] backdrop-blur-md p-5">
       <h3
-        className="text-lg font-bold text-[var(--ink)] mb-4 flex items-center justify-between"
+        className="text-xl font-bold text-[var(--ink)] mb-4 flex items-center justify-between"
         style={{ fontFamily: 'var(--disp)' }}
       >
         <span className="flex items-center gap-2">
-          <span className="w-1 h-5 bg-[var(--hot)] rounded-full" />
+          <span className="w-1.5 h-6 bg-[var(--hot)] rounded-full" />
           电子木鱼
         </span>
-        <span className="text-[12px] text-[var(--soft)] tabular-nums font-sans">
+        <span className="text-[13px] text-[var(--soft)] tabular-nums font-sans">
           功德 {count}
         </span>
       </h3>
