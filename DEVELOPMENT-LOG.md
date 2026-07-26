@@ -72,6 +72,8 @@
 | lru-cache 版本错（5.1.1 vs 11.5.2） | 服务器残留旧版，API 不兼容（maxAge vs ttl） | 服务器 npm install lru-cache@^11.5.2 |
 | @libsql/linux-x64-gnu native binding 缺失 | npm install 漏装平台特定 optional 依赖 | deploy.yml 加 --include=optional + 兜底显式安装 |
 | ERR_MODULE_NOT_FOUND 周期性出现 | 服务器 plugins/achievements/package.json 用 workspace:* 协议 | sed 替换为 * |
+| Kysely where() 三参数类型错误 | `AnyDB = any` 时 Kysely 的 where 方法类型签名变化 | 改用 `kdb.sql` 模板标签或 `where(col as any, op, val)` |
+| 子代理迁移插件时 SQL 调用遗漏 | 复杂 JOIN/子查询容易遗漏 | 迁移后用 `grep -r "db\.\(get\|all\|run\)" plugins/*/src/` 扫描残留 |
 
 ---
 

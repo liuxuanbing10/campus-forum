@@ -341,23 +341,24 @@ export interface MailService {
 
 ### 10.3 迁移阶段（按优先级）
 
-**阶段 A（高优先级 · 低风险）**
-- A1. 注册 `ImageService`（基于 sharp）→ posts 插件 `/api/upload` 改为：上传 → sharp 优化（maxWidth=1920, quality=85, format=webp）→ 存二进制
-- A2. 注册 `CacheService`（基于 ioredis，无 Redis 时降级到 lru-cache）→ posts 插件热帖列表缓存 60s
-- A3. auth 插件头像上传接入 `ImageService`（裁剪为 256×256 + WebP）
+**阶段 A（高优先级 · 低风险）** ✅ 2026-07-26 完成
+- ✅ A1. 注册 `ImageService`（基于 sharp）→ posts 插件 `/api/upload` 改为：上传 → sharp 优化（maxWidth=1920, quality=85, format=webp）→ 存二进制
+- ✅ A2. 注册 `CacheService`（基于 ioredis，无 Redis 时降级到 lru-cache）→ posts 插件热帖列表缓存 60s
+- ✅ A3. auth 插件头像上传接入 `ImageService`（裁剪为 256×256 + WebP）
 
-**阶段 B（中优先级）**
-- B1. 注册 `MailService`（基于 nodemailer）→ auth 插件 `/api/auth/forgot-password` 发送真实邮件（开发期用 console transport）
-- B2. 注册 `QueueService`（基于 bullmq）→ export 插件导出任务异步化
-- B3. 在 `notifications` 插件中加入邮件摘要订阅（每日/每周）
+**阶段 B（中优先级）** ✅ 2026-07-26 完成
+- ✅ B1. 注册 `MailService`（基于 nodemailer）→ auth 插件 `/api/auth/forgot-password` 发送真实邮件（开发期用 console transport）
+- ✅ B2. 注册 `QueueService`（基于 bullmq）→ export 插件导出任务异步化
+- ✅ B3. 在 `notifications` 插件中加入邮件摘要订阅（每日/每周）
 
 **阶段 C（长期 · 高投入）** ✅ 2026-07-26 完成
 - ✅ C1. 引入 `kysely` 作为 `DatabaseAdapter` 的新实现 `KyselyAdapter`，与 `LibSQLAdapter` 并存
   - 新增 `packages/database/src/kysely-adapter.ts`
   - 实现 DatabaseAdapter 接口 + query() 类型安全 builder + sql 模板标签
-- ✅ C2. 逐插件迁移到 kysely（从 posts 开始）
-  - posts 插件 boards/posts/comments/votes/favorites CRUD 改用 query builder
-  - 复杂查询用 sql 模板标签，保持 DatabaseAdapter 接口兼容
+- ✅ C2. 逐插件迁移到 kysely（全插件完成）
+  - posts/boards/auth/teams/admin/social/messages/notifications/search/export/achievements/rss 全部迁移
+  - 简单 CRUD 用 Kysely 链式 query builder，复杂查询用 sql 模板标签
+  - 保持 DatabaseAdapter 接口兼容，渐进式迁移
 - ✅ C3. 用 `@fastify/multipart` 替代 base64 上传，前端 `MarkdownEditor` 改用 FormData
   - server 注册 @fastify/multipart（10MB/文件，9 文件上限）
   - ImageService 新增 uploadFromBuffer 方法
@@ -392,6 +393,9 @@ export interface MailService {
 3. ✅ Phase 5：Login/Register/Settings 用 react-hook-form + zod + sonner + Radix UI 重写
 4. ✅ Phase 6-7：Masthead/TopBar/RealmSwitcher 整合
 5. ✅ Phase 10：后端第三方组件集成 → 阶段 A/B/C 全部完成（2026-07-26）
+   - A: ImageService(sharp) + CacheService(ioredis/lru-cache) 接入
+   - B: MailService(nodemailer) + QueueService(bullmq) 功能落地
+   - C: Kysely 全插件迁移 + @fastify/multipart 文件流上传
 6. ⏸ Phase 11：移动端 capacitor/harmony 适配 → 单独分支按 11.1/11.2 推进
 
 后端与移动端的重写需要独立 session 充分测试，避免破坏云服务器运行中的服务。
