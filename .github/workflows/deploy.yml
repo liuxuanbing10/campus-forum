@@ -78,7 +78,8 @@ jobs:
             tar -xzf deploy.tar.gz
             rm -f deploy.tar.gz
             # 同步依赖：确保新增 npm 包（如 @fastify/multipart、kysely、nodemailer、lru-cache 等）在服务器上安装
-            npm install --no-audit --no-fund --loglevel=error --omit=dev
+            # 不用 --omit=dev：会误删 native optional 依赖（如 @libsql/linux-x64-gnu）
+            npm install --no-audit --no-fund --loglevel=error
             npx pm2 restart campus-forum --update-env 2>&1 || npx pm2 start packages/server/dist/index.js --name campus-forum 2>&1
             sleep 5
             curl -sm 5 -A 'Mozilla/5.0' http://localhost:3001/api/health 2>&1 | head -c 200 || echo "HEALTH_CHECK_FAILED"
