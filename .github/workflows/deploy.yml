@@ -37,7 +37,25 @@ jobs:
             plugins/rss/dist \
             plugins/search/dist \
             plugins/social/dist \
-            plugins/theme-default/dist
+            plugins/theme-default/dist \
+            package.json \
+            package-lock.json \
+            packages/server/package.json \
+            packages/database/package.json \
+            packages/core/package.json \
+            plugins/achievements/package.json \
+            plugins/admin/package.json \
+            plugins/auth/package.json \
+            plugins/boards/package.json \
+            plugins/export/package.json \
+            plugins/messages/package.json \
+            plugins/notifications/package.json \
+            plugins/posts/package.json \
+            plugins/rss/package.json \
+            plugins/search/package.json \
+            plugins/social/package.json \
+            plugins/teams/package.json \
+            plugins/theme-default/package.json
 
       - name: Upload & extract
         uses: appleboy/scp-action@v0.1.7
@@ -59,6 +77,8 @@ jobs:
             cd /opt/campus-forum
             tar -xzf deploy.tar.gz
             rm -f deploy.tar.gz
+            # 同步依赖：确保新增 npm 包（如 @fastify/multipart、kysely、nodemailer、lru-cache 等）在服务器上安装
+            npm install --no-audit --no-fund --loglevel=error --omit=dev
             npx pm2 restart campus-forum --update-env 2>&1 || npx pm2 start packages/server/dist/index.js --name campus-forum 2>&1
             sleep 5
             curl -sm 5 -A 'Mozilla/5.0' http://localhost:3001/api/health 2>&1 | head -c 200 || echo "HEALTH_CHECK_FAILED"
