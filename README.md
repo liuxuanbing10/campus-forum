@@ -90,11 +90,6 @@ npm run dev
 - 后端 API：http://localhost:3001
 - API 文档：http://localhost:3001/documentation
 
-### 默认账号
-
-- 用户名：`admin`
-- 密码：`123456`
-
 ### 常用脚本
 
 | 命令 | 说明 |
