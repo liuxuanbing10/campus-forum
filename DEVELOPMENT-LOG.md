@@ -143,3 +143,76 @@ ssh -i ~/.ssh/id_rsa_cloud root@47.121.137.231 \
 | `campus-forum-deploy` | 部署流程 + 踩坑 |
 | `multi-platform-react` | 多端适配最佳实践 |
 | `fix-ssh-connection-failure` | SSH 连接故障排查 |
+
+---
+
+## 2026-07-26 移动端暗色主题适配（Phase 11）
+
+### 一、适配目标
+
+十三境论坛视觉风格统一为暗色主题（`#1a1f2e` 深色背景 + `#e8e0d0` 米白前景 + `#d4a574` 暖金强调）。本次将 Capacitor（Android/iOS）与 HarmonyOS 两个原生客户端同步对齐到该主题，并把服务器 URL 从 `:3001` 切换到 nginx 80 端口反代。
+
+### 二、Capacitor 分支（mobile/capacitor）
+
+#### 1. 分支同步
+- 起点：`mobile/capacitor` 落后 `main` 6 个提交（Kysely 迁移 + 部署修复）
+- 操作：`git merge main --no-edit`
+- 踩坑：首次 merge 报 `unable to unlink old '.gitignore': Invalid argument`，原因是 Windows 上文件被 IDE 监视进程占用。解法：重试一次即成功（临時锁定释放后即可）
+- 结果：merge commit `4bf8166`，41 个文件变更，包含全部 Kysely 适配与第三方服务集成
+
+#### 2. 配置变更（commit `fde75b0`）
+- `packages/client/capacitor.config.ts`：
+  - `appName`: `校园论坛` → `十三境论坛`
+  - `SplashScreen.backgroundColor`: `#ffffff` → `#1a1f2e`，时长 2000ms → 1500ms
+  - `StatusBar.backgroundColor`: `#ffffff` → `#1a1f2e`，新增 `overlaysWebView: false`
+  - 服务器 URL 注释说明（nginx 80 端口反代，无需 `:3001`）
+- `packages/client/android/app/src/main/res/values/strings.xml`：
+  - `app_name` / `title_activity_main` 同步改为 `十三境论坛`
+
+#### 3. 未做的事项
+- 未添加 `@capacitor/haptics` 插件配置（包未安装，配置无效，待后续按需引入）
+- 未修改 `styles.xml` 原生主题（启动画面与状态栏已由 Capacitor 插件接管，WebView 内由前端暗色化处理）
+
+### 三、HarmonyOS 分支（mobile/harmony）
+
+#### 1. 分支状态
+- `mobile/harmony` 已包含 `main` 全部提交，领先 1 个 docs 提交（`5fc6ce5`）
+- 无需 merge main，直接追加适配 commit
+
+#### 2. 配置变更（commit `497cca9`）
+- `packages/client/harmony/entry/src/main/ets/pages/Index.ets`：
+  - 服务器 URL 改为 `http://47.121.137.231`（80 端口，去掉 `:3001`）
+  - 顶部导航栏背景 `#1a1f2e`，文字 `#e8e0d0`，加载指示器 `#d4a574`
+  - 底部 Tab Bar 暗色化（与前端 BottomNav 配色对齐）
+  - 新增 `onAccessBackward` 手势返回支持（鸿蒙左滑返回手势）
+- `packages/client/harmony/entry/src/main/module.json5`：
+  - 新增 `requestPermissions` 声明 `ohos.permission.INTERNET`
+  - `usedScene`: `EntryAbility` + `when: "always"`
+- `packages/client/harmony/entry/src/main/resources/base/element/string.json`：
+  - `app_name`: `十三境论坛`
+  - `module_desc`: `十三境论坛鸿蒙客户端`
+  - 新增 `reason_internet`: `用于访问云端论坛内容与图片资源`
+
+### 四、APK 构建触发
+
+- workflow 文件：`.github/workflows/build-apk.yml`
+- 触发方式：`workflow_dispatch`（手动）
+- **token 权限问题**：`gh workflow run` 报 HTTP 403 `Resource not accessible by integration`
+  - 根因：当前 GH_TOKEN 缺少 `workflow` scope
+  - 解法：在 GitHub 网页 → Actions → Build APK → Run workflow 手动触发，或为 token 添加 workflow 权限
+- 构建产物：`campus-forum-debug.apk`（artifact 上传，可在 Actions 运行页面下载）
+
+### 五、分支管理更新
+
+| 分支 | 最新 commit | 状态 |
+|------|-------------|------|
+| `main` | `500ea41` | 已部署，待合并 mobile 分支的 docs 提交 |
+| `mobile/capacitor` | `fde75b0` | 已同步 main + 暗色主题适配 |
+| `mobile/harmony` | `497cca9` | 已同步 main + 暗色主题适配 + 网络权限 |
+
+### 六、后续待办
+
+- [ ] 修复 GH_TOKEN workflow 权限或改用 PAT（fine-grained token 需勾选 Actions: Write）
+- [ ] 触发 APK 构建验证暗色主题效果
+- [ ] 鸿蒙端需在 DevEco Studio 中编译验证（本地无鸿蒙工具链）
+- [ ] 考虑将 `mobile/harmony` 的 docs 提交（`5fc6ce5`）合并回 main 统一文档

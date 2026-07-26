@@ -2,6 +2,15 @@ name: Build APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - mobile/capacitor
+    paths:
+      - 'packages/client/capacitor.config.ts'
+      - 'packages/client/android/**'
+      - 'packages/client/src/**'
+      - 'packages/client/package.json'
+      - '.github/workflows/build-apk.yml'
 
 jobs:
   build:
