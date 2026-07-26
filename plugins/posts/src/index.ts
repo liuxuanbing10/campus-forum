@@ -1,6 +1,24 @@
 import { Plugin, PluginContext, uid, isAdmin, paginate, addPoints, checkSensitive, logAction, notify } from '@campus-forum/core';
 import { z } from 'zod';
 
+// ── 服务接口（结构化类型，与 server/services 实现匹配） ──────────
+interface ImageService {
+  uploadFromBase64(
+    base64Data: string,
+    opts: { userId: number; filename?: string; maxSize?: number; generateThumb?: boolean },
+  ): Promise<{
+    id: number; url: string; thumbUrl: string;
+    width: number; height: number; size: number; mimeType: string;
+  }>;
+  readById(id: number): Promise<{ buf: Buffer; mimeType: string } | null>;
+  readThumb(id: number): Promise<{ buf: Buffer; mimeType: string } | null>;
+}
+
+interface CacheService {
+  wrap<T>(key: string, loader: () => Promise<T>, ttl?: number): Promise<T>;
+  invalidate(pattern: string): Promise<number>;
+}
+
 // ── 类型定义 ──────────────────────────────────
 interface BoardRow { id: number; name: string; description: string; icon: string; }
 interface PostRow { id: number; title: string; content: string; author_id: number; board_id: number; is_anonymous: number; created_at: string; }
@@ -92,10 +110,15 @@ function buildPostListSql(opts: {
 
 // ── 插件 ──────────────────────────────────────
 export const postsPlugin: Plugin = {
-  manifest: { name: 'posts', version: '0.4.0', description: '帖子管理 + zod 校验 + 完整类型', author: 'campus-forum' },
+  manifest: { name: 'posts', version: '0.5.0', description: '帖子管理 + zod 校验 + ImageService(sharp) + CacheService', author: 'campus-forum' },
 
   apply(ctx: PluginContext) {
     const { app, db } = ctx;
+    // 从服务容器获取第三方服务（若未注册则降级为 null，保留旧逻辑）
+    let imageService: ImageService | null = null;
+    let cacheService: CacheService | null = null;
+    try { imageService = ctx.getService<ImageService>('imageService'); } catch { /* 未注册时降级 */ }
+    try { cacheService = ctx.getService<CacheService>('cacheService'); } catch { /* 未注册时降级 */ }
 
     // ─── 创建版块（管理员）───
     app.post('/api/boards', async (req, rep) => {
@@ -142,6 +165,8 @@ export const postsPlugin: Plugin = {
         title, content, userId, boardId, isAnonymous ? 1 : 0, isPrivate ? 1 : 0, images ? JSON.stringify(images) : null, isPending);
       // 积分：发帖+5分（管理员发帖不审核直接加分）
       if (!isPending) await addPoints(db, userId, 5);
+      // 失效帖子列表缓存
+      if (cacheService) await cacheService.invalidate('posts:list:*');
       return { success: true, isPending: isPending === 1, post: await db.get<PostRow>('SELECT id, title, content, author_id, board_id, is_anonymous, is_pending, created_at FROM posts ORDER BY id DESC LIMIT 1') };
     });
 
@@ -199,6 +224,8 @@ export const postsPlugin: Plugin = {
       await db.run('DELETE FROM favorites WHERE post_id = ?', id);
       await db.run('DELETE FROM comments WHERE post_id = ?', id);
       await db.run('DELETE FROM posts WHERE id = ?', id);
+      // 失效帖子列表缓存
+      if (cacheService) await cacheService.invalidate('posts:list:*');
       return { success: true, message: '帖子已删除' };
     });
 
@@ -214,14 +241,32 @@ export const postsPlugin: Plugin = {
       return { posts, page, limit };
     });
 
-    // ─── 帖子列表 ───
+    // ─── 帖子列表 ─── 匿名 + 热帖/最新排序走缓存
     app.get('/api/posts', async (req) => {
       const { page, boardId, sort } = paginationSchema.parse(req.query);
       const userId = uid(req);
       const limit = 20; const offset = (page - 1) * limit;
       const userIdVal = userId || 0;
 
-      // 私密帖子仅作者可见（管理员也不可见），过滤待审核帖子
+      // 匿名用户的热帖/最新列表走缓存（60 秒），登录用户不缓存（含个性化收藏/私密）
+      const cacheKey = `posts:list:${sort}:${boardId || 'all'}:p${page}`;
+      const useCache = !userId && cacheService && sort !== 'replied';
+
+      if (useCache) {
+        const cached = await cacheService!.wrap(
+          cacheKey,
+          () => loadPostList(userIdVal, boardId, sort, limit, offset),
+          60, // 60 秒 TTL
+        );
+        return { posts: cached, page, limit };
+      }
+
+      const posts = await loadPostList(userIdVal, boardId, sort, limit, offset);
+      return { posts, page, limit };
+    });
+
+    // 帖子列表查询函数（供缓存包装）
+    async function loadPostList(userIdVal: number, boardId: number | undefined, sort: string, limit: number, offset: number): Promise<PostListItem[]> {
       const privateFilter = `AND (p.is_private = 0 OR p.author_id = ?) AND p.is_pending = 0`;
       const params: unknown[] = [userIdVal];
       if (boardId) { params.push(boardId); }
@@ -232,8 +277,8 @@ export const postsPlugin: Plugin = {
       params.unshift(userIdVal);
       const sql = buildPostListSql({ withContent: true, withFavorites: true, where, orderBy, limit: true });
       params.push(limit, offset);
-      return { posts: await db.all<PostListItem>(sql, ...params), page, limit };
-    });
+      return db.all<PostListItem>(sql, ...params);
+    }
 
     // ─── 帖子详情 ───
     app.get('/api/posts/:id', async (req, rep) => {
@@ -262,28 +307,53 @@ export const postsPlugin: Plugin = {
       return post;
     });
 
-    // ─── 图片上传（base64）───
+    // ─── 图片上传（base64）─── 使用 ImageService（sharp 优化 + WebP + 缩略图）
     app.post('/api/upload', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
       const { image, filename } = uploadSchema.parse(req.body);
-      const m = image.match(/^data:(image\/\w+);base64,(.+)$/);
-      if (!m) return rep.status(400).send({ error: '图片格式错误' });
-      const mimeType = m[1];
-      const base64Data = m[2];
-      const buf = Buffer.from(base64Data, 'base64');
-      if (buf.length > 5 * 1024 * 1024) return rep.status(400).send({ error: '图片不能超过 5MB' });
-      const result = await db.run(
-        'INSERT INTO uploaded_images (user_id, filename, mime_type, data, size) VALUES (?, ?, ?, ?, ?)',
-        userId, filename || null, mimeType, base64Data, buf.length
-      );
-      const id = result.lastInsertRowid as number;
-      return { success: true, url: `/api/images/${id}`, filename: filename || `image_${id}` };
+      try {
+        if (imageService) {
+          // 新路径：sharp 优化 + 文件系统存储 + 缩略图
+          const result = await imageService.uploadFromBase64(image, { userId, filename });
+          return {
+            success: true,
+            url: result.url,
+            thumbUrl: result.thumbUrl,
+            filename: filename || `image_${result.id}`,
+            width: result.width,
+            height: result.height,
+          };
+        }
+        // 降级路径：原 base64 存 DB（兼容旧部署）
+        const m = image.match(/^data:(image\/\w+);base64,(.+)$/);
+        if (!m) return rep.status(400).send({ error: '图片格式错误' });
+        const mimeType = m[1];
+        const base64Data = m[2];
+        const buf = Buffer.from(base64Data, 'base64');
+        if (buf.length > 5 * 1024 * 1024) return rep.status(400).send({ error: '图片不能超过 5MB' });
+        const result = await db.run(
+          'INSERT INTO uploaded_images (user_id, filename, mime_type, data, size) VALUES (?, ?, ?, ?, ?)',
+          userId, filename || null, mimeType, base64Data, buf.length
+        );
+        const id = result.lastInsertRowid as number;
+        return { success: true, url: `/api/images/${id}`, filename: filename || `image_${id}` };
+      } catch (err) {
+        return rep.status(400).send({ error: (err as Error).message });
+      }
     });
 
-    // ─── 图片读取 ───
+    // ─── 图片读取 ─── 优先用 ImageService（文件系统）
     app.get('/api/images/:id', async (req, rep) => {
       const id = Number((req.params as { id: string }).id);
       if (!id || id <= 0) return rep.status(404).send({ error: 'Not found' });
+      if (imageService) {
+        const img = await imageService.readById(id);
+        if (!img) return rep.status(404).send({ error: 'Not found' });
+        rep.header('Content-Type', img.mimeType);
+        rep.header('Cache-Control', 'public, max-age=86400');
+        return img.buf;
+      }
+      // 降级
       const img = await db.get<{ mime_type: string; data: string }>(
         'SELECT mime_type, data FROM uploaded_images WHERE id = ?', id
       );
@@ -291,6 +361,21 @@ export const postsPlugin: Plugin = {
       rep.header('Content-Type', img.mime_type);
       rep.header('Cache-Control', 'public, max-age=86400');
       return Buffer.from(img.data, 'base64');
+    });
+
+    // ─── 缩略图读取 ─── 由 ImageService 提供（sharp 生成）
+    app.get('/api/images/:id/thumb', async (req, rep) => {
+      const id = Number((req.params as { id: string }).id);
+      if (!id || id <= 0) return rep.status(404).send({ error: 'Not found' });
+      if (imageService) {
+        const img = await imageService.readThumb(id);
+        if (!img) return rep.status(404).send({ error: 'Not found' });
+        rep.header('Content-Type', img.mimeType);
+        rep.header('Cache-Control', 'public, max-age=86400');
+        return img.buf;
+      }
+      // 无缩略图服务时，回退到原图
+      return rep.redirect(`/api/images/${id}`, 302);
     });
 
     // ─── 评论列表（含 my_vote + 排序）───

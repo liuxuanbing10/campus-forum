@@ -2,514 +2,982 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ═══════════════════════════════════════════════
-   字体：全部使用系统字体（零加载时间）
-   ═══════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════════════
+   十三境 · 校园论坛 — 全局样式
+   每境定义独立配色 + 字体 + 氛围，通过 [data-theme="rN"] 切换
+   ════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* 默认 = campus 主题 */
-  --color-primary: #7C3AED;
-  --color-primary-hover: #6D28D9;
-  --color-primary-light: #FAF5FF;
-  --color-accent: #F59E0B;
-  --color-accent-hover: #D97706;
-  --color-surface: #FFFFFF;
-  --color-surface-hover: #F8F5FF;
-  --color-bg: #FAF5FF;
-  --color-text-primary: #4C1D95;
-  --color-text-secondary: #6D28D9;
-  --color-text-tertiary: #A78BFA;
-  --color-border: #DDD6FE;
-  --color-border-light: #EDE9FE;
-  --color-destructive: #DC2626;
-  --color-destructive-hover: #B91C1C;
-  --color-success: #16A34A;
-  --color-warning: #F59E0B;
-  --shadow-card: 0 1px 3px 0 rgb(124 58 237 / 0.1), 0 1px 2px -1px rgb(124 58 237 / 0.1);
-  --shadow-card-hover: 0 4px 6px -1px rgb(124 58 237 / 0.15), 0 2px 4px -2px rgb(124 58 237 / 0.1);
-  --shadow-float: 0 10px 15px -3px rgb(124 58 237 / 0.15), 0 4px 6px -4px rgb(124 58 237 / 0.1);
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
-  --font-display: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-body: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-handwrite: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-slogan: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  /* 默认 = r1 流年拾光 */
+  --g1: #081410;
+  --g2: #0d211a;
+  --g3: #133226;
+  --ink: #f2eddc;
+  --soft: rgba(242, 237, 220, 0.55);
+  --acc: #f0bd5e;
+  --acc2: #8fbfa8;
+  --hot: #c8452f;
+  --card: rgba(12, 26, 19, 0.66);
+  --line: rgba(242, 237, 220, 0.13);
+  --slogc: #ffd98a;
+  --glow: rgba(255, 217, 138, 0.2);
+  --sealc: #c8452f;
+  --mistc: rgba(240, 189, 94, 0.09);
+  --sc1: #0d231b;
+  --sc2: #071009;
+  --sc3: #123226;
+  --phsky: linear-gradient(180deg, #1d3a4a, #7a4a3a 46%, #e8965a 68%, #f7c877 78%, #0a1811 79%);
+  --phsun: #ffcf7d;
+  --phglow: rgba(255, 190, 110, 0.55);
+  --phh1: #131f18;
+  --phh2: #0c1712;
+  --phw: #0a1811;
+  --disp: 'Ma Shan Zheng', cursive;
+  --body: 'Noto Sans SC', sans-serif;
+
+  /* 兼容旧 Tailwind 类映射（保留原有业务页面可用） */
+  --color-primary: var(--acc);
+  --color-primary-hover: var(--acc);
+  --color-primary-light: rgba(240, 189, 94, 0.12);
+  --color-accent: var(--acc2);
+  --color-accent-hover: var(--acc2);
+  --color-surface: var(--card);
+  --color-surface-hover: rgba(255, 255, 255, 0.06);
+  --color-bg: var(--g1);
+  --color-text-primary: var(--ink);
+  --color-text-secondary: var(--soft);
+  --color-text-tertiary: var(--soft);
+  --color-border: var(--line);
+  --color-border-light: var(--line);
+  --color-destructive: #ef4444;
+  --color-success: #22c55e;
+  --color-warning: var(--acc);
+  --shadow-card: 0 14px 36px rgba(0, 0, 0, 0.16);
+  --shadow-card-hover: 0 16px 34px rgba(0, 0, 0, 0.28);
+  --shadow-float: 0 12px 36px rgba(0, 0, 0, 0.5);
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --font-display: var(--disp);
+  --font-body: var(--body);
+  --font-handwrite: var(--disp);
+  --font-slogan: var(--disp);
+  --transition-fast: 150ms cubic-bezier(0.22, 0.8, 0.28, 1);
+  --transition-normal: 250ms cubic-bezier(0.22, 0.8, 0.28, 1);
+  --transition-slow: 350ms cubic-bezier(0.22, 0.8, 0.28, 1);
+  --ease: cubic-bezier(0.22, 0.8, 0.28, 1);
 }
 
-/* ═══════════════════════════════════════════════
-   主题 1: campus 校园紫
-   温暖学术风，紫色主调 + 琥珀点缀，霞鹜文楷
-   ═══════════════════════════════════════════════ */
-[data-theme="campus"] {
-  --color-primary: #7C3AED;
-  --color-primary-hover: #6D28D9;
-  --color-primary-light: #FAF5FF;
-  --color-accent: #F59E0B;
-  --color-accent-hover: #D97706;
-  --color-surface: #FFFFFF;
-  --color-surface-hover: #F8F5FF;
-  --color-bg: #FAF5FF;
-  --color-text-primary: #4C1D95;
-  --color-text-secondary: #6D28D9;
-  --color-text-tertiary: #A78BFA;
-  --color-border: #DDD6FE;
-  --color-border-light: #EDE9FE;
-  --color-destructive: #DC2626;
-  --shadow-card: 0 1px 3px 0 rgb(124 58 237 / 0.1), 0 1px 2px -1px rgb(124 58 237 / 0.1);
-  --shadow-card-hover: 0 4px 6px -1px rgb(124 58 237 / 0.15), 0 2px 4px -2px rgb(124 58 237 / 0.1);
-  --shadow-float: 0 10px 15px -3px rgb(124 58 237 / 0.15), 0 4px 6px -4px rgb(124 58 237 / 0.1);
-  --radius-sm: 0.5rem; --radius-md: 0.75rem; --radius-lg: 1rem;
-  --font-display: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-body: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-handwrite: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-slogan: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+/* ════════════════════════════════════════════════
+   十三境配色板（r1 ~ r13）
+   ════════════════════════════════════════════════ */
+
+/* r1 流年拾光 · 暗绿金 · 萤火 · 马善政 */
+[data-theme="r1"] {
+  --g1: #081410; --g2: #0d211a; --g3: #133226;
+  --ink: #f2eddc; --soft: rgba(242, 237, 220, 0.55);
+  --acc: #f0bd5e; --acc2: #8fbfa8; --hot: #c8452f;
+  --card: rgba(12, 26, 19, 0.66); --line: rgba(242, 237, 220, 0.13);
+  --slogc: #ffd98a; --glow: rgba(255, 217, 138, 0.2);
+  --sealc: #c8452f; --mistc: rgba(240, 189, 94, 0.09);
+  --sc1: #0d231b; --sc2: #071009; --sc3: #123226;
+  --phsky: linear-gradient(180deg, #1d3a4a, #7a4a3a 46%, #e8965a 68%, #f7c877 78%, #0a1811 79%);
+  --phsun: #ffcf7d; --phglow: rgba(255, 190, 110, 0.55);
+  --phh1: #131f18; --phh2: #0c1712; --phw: #0a1811;
+  --disp: 'Ma Shan Zheng', cursive; --body: 'Noto Sans SC', sans-serif;
 }
 
-/* ═══════════════════════════════════════════════
-   主题 2: glass 毛玻璃
-   通透水晶感，青紫渐变 + 玫瑰金点缀，龙藏草书
-   ═══════════════════════════════════════════════ */
-[data-theme="glass"] {
-  --color-primary: #8B5CF6;
-  --color-primary-hover: #7C3AED;
-  --color-primary-light: rgba(139, 92, 246, 0.12);
-  --color-accent: #EC4899;
-  --color-accent-hover: #DB2777;
-  --color-surface: rgba(255, 255, 255, 0.55);
-  --color-surface-hover: rgba(255, 255, 255, 0.72);
-  --color-bg: #F0EAFF;
-  --color-text-primary: #4C1D95;
-  --color-text-secondary: #6D28D9;
-  --color-text-tertiary: #A78BFA;
-  --color-border: rgba(255, 255, 255, 0.45);
-  --color-border-light: rgba(255, 255, 255, 0.25);
-  --color-destructive: #DC2626;
-  --shadow-card: 0 8px 32px 0 rgba(139, 92, 246, 0.15);
-  --shadow-card-hover: 0 8px 32px 0 rgba(139, 92, 246, 0.28);
-  --shadow-float: 0 12px 40px 0 rgba(139, 92, 246, 0.3);
-  --radius-sm: 0.5rem; --radius-md: 0.75rem; --radius-lg: 1.25rem;
-  --font-display: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-body: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-handwrite: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-slogan: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+/* r2 如梦令 · 暮紫 · 落花 · 站酷小薇 */
+[data-theme="r2"] {
+  --g1: #221c24; --g2: #2c2430; --g3: #1c1820;
+  --ink: #e8e4e8; --soft: rgba(232, 228, 232, 0.55);
+  --acc: #d8c8d4; --acc2: #a08aa0; --hot: #c0708a;
+  --card: rgba(40, 32, 42, 0.6); --line: rgba(232, 228, 232, 0.14);
+  --slogc: #e0d2dc; --glow: rgba(216, 200, 212, 0.18);
+  --sealc: #a06a7a; --mistc: rgba(180, 150, 175, 0.12);
+  --sc1: #2a2230; --sc2: #1a1520; --sc3: #241c28;
+  --phsky: linear-gradient(180deg, #2c2430, #4a3a4a 46%, #8a6a7a 68%, #c0a0b0 78%, #1c1820 79%);
+  --phsun: #e0d2dc; --phglow: rgba(224, 210, 220, 0.5);
+  --phh1: #241c28; --phh2: #1a1520; --phw: #16121a;
+  --disp: 'ZCOOL XiaoWei', serif; --body: 'Noto Sans SC', sans-serif;
 }
 
-/* ═══════════════════════════════════════════════
-   主题 3: dark 暗黑模式
-   深邃星空感，靛蓝夜空 + 翡翠星辉，站酷小薇
-   ═══════════════════════════════════════════════ */
-[data-theme="dark"] {
-  --color-primary: #A78BFA;
-  --color-primary-hover: #8B5CF6;
-  --color-primary-light: rgba(167, 139, 250, 0.15);
-  --color-accent: #34D399;
-  --color-accent-hover: #10B981;
-  --color-surface: #1E1B4B;
-  --color-surface-hover: #2D2A6B;
-  --color-bg: #0B0A1F;
-  --color-text-primary: #F5F3FF;
-  --color-text-secondary: #DDD6FE;
-  --color-text-tertiary: #8B5CF6;
-  --color-border: #312E81;
-  --color-border-light: #1E1B4B;
-  --color-destructive: #F87171;
-  --shadow-card: 0 2px 8px 0 rgba(0, 0, 0, 0.4);
-  --shadow-card-hover: 0 4px 16px 0 rgba(0, 0, 0, 0.5);
-  --shadow-float: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
-  --radius-sm: 0.5rem; --radius-md: 0.75rem; --radius-lg: 1rem;
-  --font-display: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-body: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-handwrite: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-slogan: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+/* r3 参商 · 深夜蓝 · 星辰 · 志莽行 */
+[data-theme="r3"] {
+  --g1: #0a1220; --g2: #101c30; --g3: #0a1424;
+  --ink: #cfe0f0; --soft: rgba(207, 224, 240, 0.55);
+  --acc: #d9c9a0; --acc2: #7a9ab0; --hot: #c05a4a;
+  --card: rgba(14, 24, 42, 0.62); --line: rgba(207, 224, 240, 0.13);
+  --slogc: #e8dcc0; --glow: rgba(207, 224, 240, 0.2);
+  --sealc: #c05a4a; --mistc: rgba(122, 154, 176, 0.1);
+  --sc1: #101c30; --sc2: #0a1220; --sc3: #0e1826;
+  --phsky: linear-gradient(180deg, #0a1220, #16263e 50%, #2a4058 72%, #0a1220 73%);
+  --phsun: #e8dcc0; --phglow: rgba(232, 220, 192, 0.4);
+  --phh1: #101c30; --phh2: #0a1424; --phw: #081020;
+  --disp: 'Zhi Mang Xing', cursive; --body: 'Noto Sans SC', sans-serif;
 }
 
-/* ═══════════════════════════════════════════════
-   主题 4: neumorphism 新拟态
-   柔和立体感，薰衣草灰 + 薄荷绿，霞鹜文楷
-   ═══════════════════════════════════════════════ */
-[data-theme="neumorphism"] {
-  --color-primary: #7C3AED;
-  --color-primary-hover: #6D28D9;
-  --color-primary-light: rgba(124, 58, 237, 0.08);
-  --color-accent: #14B8A6;
-  --color-accent-hover: #0D9488;
-  --color-surface: #ECEEF9;
-  --color-surface-hover: #E0E3F0;
-  --color-bg: #ECEEF9;
-  --color-text-primary: #3B0764;
-  --color-text-secondary: #6D28D9;
-  --color-text-tertiary: #9F8FCC;
-  --color-border: transparent;
-  --color-border-light: transparent;
-  --color-destructive: #DC2626;
-  --shadow-card: 8px 8px 16px #C4B5FD, -8px -8px 16px #FFFFFF;
-  --shadow-card-hover: 6px 6px 12px #C4B5FD, -6px -6px 12px #FFFFFF;
-  --shadow-float: 12px 12px 24px #C4B5FD, -12px -12px 24px #FFFFFF;
-  --radius-sm: 0.75rem; --radius-md: 1rem; --radius-lg: 1.25rem;
-  --font-display: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-body: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-handwrite: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-slogan: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+/* r4 千里江山 · 青绿 · 雾气 · Noto Serif SC */
+[data-theme="r4"] {
+  --g1: #cfe0da; --g2: #bcd4cc; --g3: #a8c8be;
+  --ink: #2a3a38; --soft: rgba(42, 58, 56, 0.62);
+  --acc: #2a6a82; --acc2: #4a8a72; --hot: #b03a2e;
+  --card: rgba(248, 246, 238, 0.78); --line: rgba(42, 58, 56, 0.18);
+  --slogc: #2a5a6a; --glow: transparent;
+  --sealc: #b03a2e; --mistc: rgba(255, 255, 255, 0.5);
+  --sc1: #4a8a72; --sc2: #2a5a6a; --sc3: #3a7a9a;
+  --phsky: linear-gradient(180deg, #a8c8c0, #bcd4cc 45%, #d8e6de 68%, #4a8a72 69%);
+  --phsun: #f2f0e0; --phglow: rgba(242, 240, 224, 0.5);
+  --phh1: #3a7a9a; --phh2: #2a6a82; --phw: #2a5a6a;
+  --disp: 'Noto Serif SC', serif; --body: 'Noto Sans SC', sans-serif;
 }
 
-/* ═══════════════════════════════════════════════
-   主题 5: cyberpunk 赛博朋克
-   霓虹未来感，热粉荧光 + 电光绿，柳建毛草
-   ═══════════════════════════════════════════════ */
-[data-theme="cyberpunk"] {
-  --color-primary: #F72585;
-  --color-primary-hover: #E01A6B;
-  --color-primary-light: rgba(247, 37, 133, 0.15);
-  --color-accent: #39FF14;
-  --color-accent-hover: #22CC0E;
-  --color-surface: #1A1A2E;
-  --color-surface-hover: #16213E;
-  --color-bg: #0A0A0F;
-  --color-text-primary: #E2E8F0;
-  --color-text-secondary: #94A3B8;
-  --color-text-tertiary: #475569;
-  --color-border: #F72585;
-  --color-border-light: rgba(247, 37, 133, 0.3);
-  --color-destructive: #EF4444;
-  --shadow-card: 0 0 15px rgba(247, 37, 133, 0.3), 0 0 5px rgba(57, 255, 20, 0.1);
-  --shadow-card-hover: 0 0 25px rgba(247, 37, 133, 0.5), 0 0 10px rgba(57, 255, 20, 0.2);
-  --shadow-float: 0 0 35px rgba(247, 37, 133, 0.4), 0 0 15px rgba(57, 255, 20, 0.15);
-  --radius-sm: 0.125rem; --radius-md: 0.25rem; --radius-lg: 0.5rem;
-  --font-display: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-body: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-handwrite: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-slogan: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+/* r5 潇湘 · 苍青 · 雾气 · 站酷小薇 */
+[data-theme="r5"] {
+  --g1: #14201e; --g2: #1a2a26; --g3: #101a18;
+  --ink: #d8e6e0; --soft: rgba(216, 230, 224, 0.55);
+  --acc: #8fbcb0; --acc2: #6a8a7a; --hot: #b06a5a;
+  --card: rgba(20, 32, 28, 0.62); --line: rgba(216, 230, 224, 0.14);
+  --slogc: #c8e0d8; --glow: rgba(143, 188, 176, 0.18);
+  --sealc: #5a8a8a; --mistc: rgba(143, 188, 176, 0.1);
+  --sc1: #1a2a26; --sc2: #101a18; --sc3: #16241f;
+  --phsky: linear-gradient(180deg, #1a2a26, #2a4a40 46%, #5a8a7a 68%, #8fbcb0 78%, #101a18 79%);
+  --phsun: #d8e6e0; --phglow: rgba(216, 230, 224, 0.4);
+  --phh1: #16241f; --phh2: #101a18; --phw: #0d1512;
+  --disp: 'ZCOOL XiaoWei', serif; --body: 'Noto Sans SC', sans-serif;
 }
 
-/* ═══════════════════════════════════════════════
-   主题 6: vintage 复古暖调
-   怀旧纸质感，焦糖棕 + 墨绿，马善政毛笔
-   ═══════════════════════════════════════════════ */
-[data-theme="vintage"] {
-  --color-primary: #C2410C;
-  --color-primary-hover: #9A3412;
-  --color-primary-light: #FFF7ED;
-  --color-accent: #166534;
-  --color-accent-hover: #14532D;
-  --color-surface: #FEF7ED;
-  --color-surface-hover: #FDE6C8;
-  --color-bg: #FDF2E9;
-  --color-text-primary: #431407;
-  --color-text-secondary: #7C2D12;
-  --color-text-tertiary: #A07C5B;
-  --color-border: #FED7AA;
-  --color-border-light: #FFEDD5;
-  --color-destructive: #B91C1C;
-  --shadow-card: 0 2px 8px 0 rgba(120, 70, 30, 0.12);
-  --shadow-card-hover: 0 4px 16px 0 rgba(120, 70, 30, 0.18);
-  --shadow-float: 0 8px 24px 0 rgba(120, 70, 30, 0.15);
-  --radius-sm: 0.25rem; --radius-md: 0.375rem; --radius-lg: 0.5rem;
-  --font-display: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-body: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-handwrite: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-slogan: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+/* r6 雷乃发声 · 嫩芽绿 · 雨丝 · 清刻黄油 */
+[data-theme="r6"] {
+  --g1: #1a2420; --g2: #223028; --g3: #16201c;
+  --ink: #e4ecdf; --soft: rgba(228, 236, 223, 0.55);
+  --acc: #9ad07a; --acc2: #e8d04a; --hot: #d98a4a;
+  --card: rgba(26, 36, 30, 0.62); --line: rgba(228, 236, 223, 0.14);
+  --slogc: #c8e8a8; --glow: rgba(154, 208, 122, 0.2);
+  --sealc: #5a8a4a; --mistc: rgba(154, 208, 122, 0.08);
+  --sc1: #223028; --sc2: #16201c; --sc3: #1c2822;
+  --phsky: linear-gradient(180deg, #223028, #3a5a40 46%, #7aa05a 68%, #c8e0a0 78%, #16201c 79%);
+  --phsun: #e8f0c0; --phglow: rgba(232, 240, 192, 0.5);
+  --phh1: #1c2822; --phh2: #16201c; --phw: #121a16;
+  --disp: 'ZCOOL QingKe HuangYou', sans-serif; --body: 'Noto Sans SC', sans-serif;
 }
 
-/* ═══════════════════════════════════════════════
-   主题 7: minimalist 极简白
-   克制留白感，纯黑灰 + 一点蓝，霞鹜文楷
-   ═══════════════════════════════════════════════ */
-[data-theme="minimalist"] {
-  --color-primary: #171717;
-  --color-primary-hover: #000000;
-  --color-primary-light: #FAFAFA;
-  --color-accent: #3B82F6;
-  --color-accent-hover: #2563EB;
-  --color-surface: #FFFFFF;
-  --color-surface-hover: #F5F5F5;
-  --color-bg: #FFFFFF;
-  --color-text-primary: #171717;
-  --color-text-secondary: #404040;
-  --color-text-tertiary: #A3A3A3;
-  --color-border: #E5E5E5;
-  --color-border-light: #F5F5F5;
-  --color-destructive: #DC2626;
-  --shadow-card: 0 0 0 1px rgba(0, 0, 0, 0.05);
-  --shadow-card-hover: 0 0 0 1px rgba(0, 0, 0, 0.1);
-  --shadow-float: 0 4px 12px 0 rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05);
-  --radius-sm: 0.25rem; --radius-md: 0.375rem; --radius-lg: 0.5rem;
-  --font-display: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-body: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-handwrite: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-slogan: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+/* r7 麦秋至 · 米黄 · 微尘 · 龙藏 */
+[data-theme="r7"] {
+  --g1: #f0ede4; --g2: #e8e4d6; --g3: #dfdac8;
+  --ink: #4a4436; --soft: rgba(74, 68, 54, 0.6);
+  --acc: #b8934a; --acc2: #8aa06a; --hot: #c07a3a;
+  --card: rgba(252, 251, 246, 0.8); --line: rgba(74, 68, 54, 0.16);
+  --slogc: #8a7a4a; --glow: transparent;
+  --sealc: #a8843a; --mistc: rgba(255, 252, 240, 0.6);
+  --sc1: #c8c0a8; --sc2: #a8a088; --sc3: #b8b098;
+  --phsky: linear-gradient(180deg, #d8dcc0, #e8e4c8 45%, #f0e8c8 68%, #c8b888 69%);
+  --phsun: #fff3c8; --phglow: rgba(255, 240, 190, 0.6);
+  --phh1: #b8a878; --phh2: #a09060; --phw: #8a7a52;
+  --disp: 'Long Cang', cursive; --body: 'Noto Sans SC', sans-serif;
 }
 
-/* ═══════════════════════════════════════════════
-   主题 8: nature 自然森绿
-   清新自然感，翠绿 + 大地棕，霞鹜文楷
-   ═══════════════════════════════════════════════ */
-[data-theme="nature"] {
-  --color-primary: #16A34A;
-  --color-primary-hover: #15803D;
-  --color-primary-light: #F0FDF4;
-  --color-accent: #D97706;
-  --color-accent-hover: #B45309;
-  --color-surface: #F0FDF4;
-  --color-surface-hover: #DCFCE7;
-  --color-bg: #ECFDF5;
-  --color-text-primary: #14532D;
-  --color-text-secondary: #166534;
-  --color-text-tertiary: #6BAA7B;
-  --color-border: #BBF7D0;
-  --color-border-light: #DCFCE7;
-  --color-destructive: #DC2626;
-  --shadow-card: 0 2px 8px 0 rgba(22, 163, 74, 0.1);
-  --shadow-card-hover: 0 4px 16px 0 rgba(22, 163, 74, 0.15);
-  --shadow-float: 0 8px 24px 0 rgba(22, 163, 74, 0.12);
-  --radius-sm: 0.5rem; --radius-md: 0.75rem; --radius-lg: 1.25rem;
-  --font-display: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-body: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-handwrite: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-slogan: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+/* r8 白露 · 雾灰 · 露珠 · 马善政 */
+[data-theme="r8"] {
+  --g1: #e2e9e4; --g2: #d6e0d9; --g3: #c9d6cd;
+  --ink: #2a3836; --soft: rgba(42, 56, 54, 0.6);
+  --acc: #5a7060; --acc2: #7a9aa8; --hot: #b03a2e;
+  --card: rgba(250, 251, 248, 0.76); --line: rgba(42, 56, 54, 0.16);
+  --slogc: #4a5a50; --glow: transparent;
+  --sealc: #b03a2e; --mistc: rgba(255, 255, 255, 0.55);
+  --sc1: #a8b8ae; --sc2: #8a9a90; --sc3: #98a89e;
+  --phsky: linear-gradient(180deg, #cfdcd6, #dde7e0 45%, #eae8d8 68%, #8aa094 69%);
+  --phsun: #f2f0e0; --phglow: rgba(242, 240, 224, 0.6);
+  --phh1: #7a948a; --phh2: #64806f; --phw: #54705f;
+  --disp: 'Ma Shan Zheng', cursive; --body: 'Noto Sans SC', sans-serif;
 }
 
-/* ═══════════════════════════════════════════════
-   主题 9: sakura 樱花粉
-   浪漫少女感，樱花粉 + 薰衣草紫，龙藏草书
-   ═══════════════════════════════════════════════ */
-[data-theme="sakura"] {
-  --color-primary: #EC4899;
-  --color-primary-hover: #DB2777;
-  --color-primary-light: #FDF2F8;
-  --color-accent: #A855F7;
-  --color-accent-hover: #9333EA;
-  --color-surface: #FDF2F8;
-  --color-surface-hover: #FCE7F3;
-  --color-bg: #FCE7F3;
-  --color-text-primary: #831843;
-  --color-text-secondary: #9D174D;
-  --color-text-tertiary: #E09DB5;
-  --color-border: #FBCFE8;
-  --color-border-light: #FCE7F3;
-  --color-destructive: #DC2626;
-  --shadow-card: 0 2px 8px 0 rgba(236, 72, 153, 0.1);
-  --shadow-card-hover: 0 4px 16px 0 rgba(236, 72, 153, 0.15);
-  --shadow-float: 0 8px 24px 0 rgba(236, 72, 153, 0.12);
-  --radius-sm: 0.75rem; --radius-md: 1rem; --radius-lg: 1.5rem;
-  --font-display: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-body: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-handwrite: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-slogan: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+/* r9 雨霖铃 · 远山蓝 · 雨丝 · 马善政 */
+[data-theme="r9"] {
+  --g1: #1c242c; --g2: #232e38; --g3: #171e26;
+  --ink: #c8d4d8; --soft: rgba(200, 212, 216, 0.55);
+  --acc: #9ab0b8; --acc2: #7a9a8a; --hot: #b06a5a;
+  --card: rgba(35, 46, 56, 0.66); --line: rgba(200, 212, 216, 0.14);
+  --slogc: #d8e2e6; --glow: rgba(154, 176, 184, 0.15);
+  --sealc: #b06a5a; --mistc: rgba(154, 176, 184, 0.08);
+  --sc1: #232e38; --sc2: #171e26; --sc3: #1d2731;
+  --phsky: linear-gradient(180deg, #232e38, #3a4a58 46%, #6a8090 68%, #9ab0b8 78%, #171e26 79%);
+  --phsun: #d8e2e6; --phglow: rgba(216, 226, 230, 0.4);
+  --phh1: #1d2731; --phh2: #171e26; --phw: #12181f;
+  --disp: 'Ma Shan Zheng', cursive; --body: 'Noto Sans SC', sans-serif;
 }
 
-/* ═══════════════════════════════════════════════
-   主题 10: ocean 深海蓝
-   深邃静谧感，海蓝 + 珊瑚橙，站酷快乐体
-   ═══════════════════════════════════════════════ */
-[data-theme="ocean"] {
-  --color-primary: #0284C7;
-  --color-primary-hover: #0369A1;
-  --color-primary-light: #F0F9FF;
-  --color-accent: #FB7185;
-  --color-accent-hover: #E11D48;
-  --color-surface: #F0F9FF;
-  --color-surface-hover: #E0F2FE;
-  --color-bg: #E0F2FE;
-  --color-text-primary: #0C4A6E;
-  --color-text-secondary: #075985;
-  --color-text-tertiary: #7BA9C9;
-  --color-border: #BAE6FD;
-  --color-border-light: #E0F2FE;
-  --color-destructive: #DC2626;
-  --shadow-card: 0 2px 8px 0 rgba(2, 132, 199, 0.1);
-  --shadow-card-hover: 0 4px 16px 0 rgba(2, 132, 199, 0.15);
-  --shadow-float: 0 8px 24px 0 rgba(2, 132, 199, 0.12);
-  --radius-sm: 0.5rem; --radius-md: 0.75rem; --radius-lg: 1.25rem;
-  --font-display: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-body: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-handwrite: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --font-slogan: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+/* r10 高山流水 · 古琴褐 · 无 · 志莽行 */
+[data-theme="r10"] {
+  --g1: #2a211a; --g2: #3a2e22; --g3: #241c14;
+  --ink: #e8e4dc; --soft: rgba(232, 228, 220, 0.55);
+  --acc: #d9c9a8; --acc2: #a08a6a; --hot: #c04a3a;
+  --card: rgba(46, 36, 26, 0.62); --line: rgba(232, 228, 220, 0.14);
+  --slogc: #e8e0d0; --glow: rgba(217, 201, 168, 0.18);
+  --sealc: #c04a3a; --mistc: rgba(217, 201, 168, 0.08);
+  --sc1: #3a2e22; --sc2: #241c14; --sc3: #322618;
+  --phsky: linear-gradient(180deg, #3a2e22, #5a4a34 46%, #8a7a5a 68%, #c8b890 78%, #241c14 79%);
+  --phsun: #e8dcc0; --phglow: rgba(232, 220, 192, 0.5);
+  --phh1: #322618; --phh2: #241c14; --phw: #1c140c;
+  --disp: 'Zhi Mang Xing', cursive; --body: 'Noto Sans SC', sans-serif;
 }
 
-/* ═══════════════════════════════════════════════
-   基础样式
-   ═══════════════════════════════════════════════ */
-@layer base {
-  body {
-    @apply bg-page-bg text-campus-text-secondary min-h-screen antialiased;
-    font-family: var(--font-body);
-  }
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-display);
-  }
-  html {
-    scroll-behavior: smooth;
-  }
+/* r11 藻井星河 · 敦煌赭 · 沙粒 · Noto Serif SC */
+[data-theme="r11"] {
+  --g1: #3a2a20; --g2: #2e2118; --g3: #241a12;
+  --ink: #e8dcc8; --soft: rgba(232, 220, 200, 0.55);
+  --acc: #d9b36a; --acc2: #7aa08a; --hot: #b05a3a;
+  --card: rgba(58, 42, 32, 0.62); --line: rgba(217, 179, 106, 0.2);
+  --slogc: #e8dcc8; --glow: rgba(217, 179, 106, 0.2);
+  --sealc: #b05a3a; --mistc: rgba(217, 179, 106, 0.08);
+  --sc1: #2e2118; --sc2: #241a12; --sc3: #2a1e14;
+  --phsky: linear-gradient(180deg, #3a2a20, #6a4a30 45%, #a06a3a 68%, #d9a05a 78%, #241a12 79%);
+  --phsun: #e8c47c; --phglow: rgba(232, 196, 124, 0.5);
+  --phh1: #2e2118; --phh2: #241a12; --phw: #1c140c;
+  --disp: 'Noto Serif SC', serif; --body: 'Noto Sans SC', sans-serif;
 }
 
-/* ═══════════════════════════════════════════════
-   无障碍：减弱动画
-   ═══════════════════════════════════════════════ */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+/* r12 青梧里 · 翠梧绿 · 落叶 · 快乐体 */
+[data-theme="r12"] {
+  --g1: #0c2418; --g2: #143626; --g3: #0e2a1c;
+  --ink: #eef6e6; --soft: rgba(238, 246, 230, 0.6);
+  --acc: #ffd76a; --acc2: #7fc98f; --hot: #e2704f;
+  --card: rgba(14, 38, 26, 0.62); --line: rgba(238, 246, 230, 0.15);
+  --slogc: #ffe9a8; --glow: rgba(255, 215, 106, 0.18);
+  --sealc: #3f7d54; --mistc: rgba(210, 240, 215, 0.25);
+  --sc1: #143626; --sc2: #0a2015; --sc3: #123020;
+  --phsky: linear-gradient(180deg, #bfe3c9, #e9f5d8 45%, #f7e9b0 70%, #2a5238 71%);
+  --phsun: #fff3c0; --phglow: rgba(255, 235, 160, 0.7);
+  --phh1: #2f6242; --phh2: #234e34; --phw: #1c4029;
+  --disp: 'ZCOOL KuaiLe', sans-serif; --body: 'Noto Sans SC', sans-serif;
 }
 
-/* ═══════════════════════════════════════════════
-   毛玻璃主题特殊样式
-   ═══════════════════════════════════════════════ */
-[data-theme="glass"] .card,
-[data-theme="glass"] .input,
-[data-theme="glass"] .btn-primary,
-[data-theme="glass"] .btn-secondary {
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+/* r13 夜航船 · 夜灯橙 · 孔明灯 · 站酷小薇 */
+[data-theme="r13"] {
+  --g1: #120e0b; --g2: #1e1712; --g3: #2a2018;
+  --ink: #f5e6d3; --soft: rgba(245, 230, 211, 0.55);
+  --acc: #ffb347; --acc2: #7a93b5; --hot: #e2574c;
+  --card: rgba(26, 19, 14, 0.7); --line: rgba(245, 230, 211, 0.13);
+  --slogc: #ffd9a0; --glow: rgba(255, 217, 160, 0.22);
+  --sealc: #8c3b2e; --mistc: rgba(255, 220, 180, 0.16);
+  --sc1: #1e1712; --sc2: #120e0b; --sc3: #1a130d;
+  --phsky: linear-gradient(180deg, #1a2233, #2c3350 55%, #4a4668 72%, #14100e 73%);
+  --phsun: #f4f0e2; --phglow: rgba(230, 225, 205, 0.4);
+  --phh1: #191410; --phh2: #120e0b; --phw: #0e0a08;
+  --disp: 'ZCOOL XiaoWei', serif; --body: 'Noto Sans SC', sans-serif;
 }
 
-/* ═══════════════════════════════════════════════
-   组件层
-   ═══════════════════════════════════════════════ */
-@layer components {
-  .card {
-    @apply bg-surface rounded-lg shadow-card border border-border p-6 transition-all duration-200;
-  }
-  .card:hover {
-    @apply shadow-card-hover;
-  }
-  .input {
-    @apply w-full h-12 px-4 border border-border rounded-lg bg-surface text-campus-text-primary text-base
-           focus:outline-none focus:ring-2 focus:border-primary
-           placeholder-campus-text-tertiary transition-all duration-200;
-    --tw-ring-color: var(--color-primary, rgba(124, 58, 237, 0.3));
-  }
-  .input-error {
-    @apply border-destructive focus:border-destructive;
-    --tw-ring-color: rgba(220, 38, 38, 0.3);
-  }
-  .btn-primary {
-    @apply w-full h-12 px-6 bg-primary hover:bg-primary-hover text-white rounded-lg
-           font-semibold text-base transition-all duration-200
-           focus:outline-none focus:ring-2 focus:ring-offset-2
-           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary;
-    --tw-ring-color: var(--color-primary, rgba(124, 58, 237, 0.5));
-  }
-  .btn-secondary {
-    @apply w-full h-12 px-6 bg-surface-hover hover:bg-border text-campus-text-primary rounded-lg
-           font-semibold text-base transition-all duration-200
-           focus:outline-none focus:ring-2 focus:ring-offset-2
-           disabled:opacity-50 disabled:cursor-not-allowed;
-    --tw-ring-color: var(--color-primary, rgba(124, 58, 237, 0.3));
-  }
-  .btn-destructive {
-    @apply w-full h-12 px-6 bg-destructive hover:bg-destructive-hover text-white rounded-lg
-           font-semibold text-base transition-all duration-200
-           focus:outline-none focus:ring-2 focus:ring-offset-2
-           disabled:opacity-50 disabled:cursor-not-allowed;
-    --tw-ring-color: rgba(220, 38, 38, 0.5);
-  }
-  .btn-accent {
-    @apply w-full h-12 px-6 bg-accent hover:bg-accent-hover text-white rounded-lg
-           font-semibold text-base transition-all duration-200
-           focus:outline-none focus:ring-2 focus:ring-offset-2
-           disabled:opacity-50 disabled:cursor-not-allowed;
-    --tw-ring-color: var(--color-accent, rgba(22, 163, 74, 0.5));
-  }
-  .btn-sm {
-    @apply h-9 px-4 text-sm;
-  }
-  .btn-inline {
-    @apply w-auto inline-flex items-center justify-center;
+/* ════════════════════════════════════════════════
+   基础元素
+   ════════════════════════════════════════════════ */
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--body);
+  font-size: 24px;
+  color: var(--ink);
+  background: var(--g1);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  min-height: 100vh;
+  isolation: isolate;
+}
+
+/* 链接 */
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.3s var(--ease);
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--g2);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--acc);
+  border-radius: 4px;
+  opacity: 0.6;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--acc);
+}
+
+/* 选中文字 */
+::selection {
+  background: var(--acc);
+  color: var(--g1);
+}
+
+/* ════════════════════════════════════════════════
+   通用工具类
+   ════════════════════════════════════════════════ */
+
+/* 噪点纹理叠加 */
+.grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  z-index: 70;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
+}
+
+/* 雾气漂浮 */
+.mist {
+  position: fixed;
+  left: -20%;
+  width: 140%;
+  height: 200px;
+  pointer-events: none;
+  z-index: 1;
+  filter: blur(38px);
+  background: radial-gradient(ellipse at center, var(--mistc), transparent 70%);
+  animation: mist-drift 56s ease-in-out infinite alternate;
+}
+.mist.mb {
+  top: 56%;
+  animation-duration: 74s;
+  animation-direction: alternate-reverse;
+  opacity: 0.7;
+}
+.mist.ma { top: 10%; }
+
+@keyframes mist-drift {
+  to { transform: translateX(9%); }
+}
+
+/* 境背景 */
+.realm-bg {
+  background: linear-gradient(175deg, var(--g1), var(--g2) 48%, var(--g3));
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+/* 境切换动画 */
+.realm-enter {
+  animation: realm-in 0.7s var(--ease);
+}
+@keyframes realm-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
   }
 }
 
-/* ═══════════════════════════════════════════════
-   手写字体工具类
-   ═══════════════════════════════════════════════ */
-.font-handwrite {
-  font-family: var(--font-handwrite);
-}
-.font-slogan {
-  font-family: var(--font-slogan);
-}
-
-/* ═══════════════════════════════════════════════
-   手写动画：标语逐字书写效果
-   光标用伪元素独立实现，避免淡出时覆盖 typewriter 动画导致文字消失
-   ═══════════════════════════════════════════════ */
-.slogan-write {
-  display: inline-block;
-  overflow: hidden;
-  white-space: nowrap;
-  font-family: var(--font-slogan);
-  position: relative;
-  padding-right: 4px;
-  animation: slogan-typewriter 2.8s steps(7, end) forwards;
-  width: 0;
-}
-.slogan-write-delay {
-  animation-delay: 0.8s;
-}
-/* 光标作为伪元素，独立于文字宽度动画 */
-.slogan-write::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 0;
-  width: 3px;
-  background-color: var(--color-primary);
-  animation: slogan-cursor-blink 0.8s step-end infinite;
-}
-@keyframes slogan-typewriter {
-  from { width: 0; }
-  to { width: 8em; }
-}
-@keyframes slogan-cursor-blink {
-  from, to { opacity: 0; }
-  50% { opacity: 1; }
-}
-/* 标语写完后只淡出光标伪元素，不影响文字 width */
-.slogan-write-done::after {
-  animation: slogan-cursor-fade 0.6s ease forwards;
-}
-@keyframes slogan-cursor-fade {
-  to { opacity: 0; }
-}
-
-/* ═══════════════════════════════════════════════
-   文字过渡动画
-   ═══════════════════════════════════════════════ */
-.text-fade-in {
+/* 显现动画 */
+.reveal {
   opacity: 0;
-  animation: text-fade-up 0.6s ease forwards;
+  transform: translateY(26px);
+  transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
 }
-.text-fade-in-delay-1 { animation-delay: 0.3s; }
-.text-fade-in-delay-2 { animation-delay: 0.6s; }
-.text-fade-in-delay-3 { animation-delay: 0.9s; }
-@keyframes text-fade-up {
+.reveal.in {
+  opacity: 1;
+  transform: none;
+}
+
+/* 卡片基础 */
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.16);
+  backdrop-filter: blur(8px);
+}
+
+/* 帖子卡 */
+.post-card {
+  position: relative;
+  cursor: pointer;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  transition: transform 0.35s var(--ease), border-color 0.35s, box-shadow 0.35s;
+}
+.post-card:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--acc) 55%, transparent);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+}
+.post-card .title {
+  transition: color 0.3s;
+}
+.post-card:hover .title {
+  color: var(--acc);
+}
+
+/* 标签 */
+.tag {
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 2px;
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+  font-family: var(--body);
+}
+.tag-top { background: var(--hot); color: #f6efe4; }
+.tag-hot {
+  background: color-mix(in srgb, var(--hot) 12%, transparent);
+  color: var(--hot);
+  border: 1px solid color-mix(in srgb, var(--hot) 42%, transparent);
+}
+.tag-new {
+  background: color-mix(in srgb, var(--acc2) 12%, transparent);
+  color: var(--acc2);
+  border: 1px solid color-mix(in srgb, var(--acc2) 42%, transparent);
+}
+
+/* 按钮：换一句 */
+.btn-swap {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: transparent;
+  cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--ink) 40%, transparent);
+  color: var(--ink);
+  font-size: 12.5px;
+  letter-spacing: 0.22em;
+  padding: 9px 24px;
+  border-radius: 2px;
+  font-family: inherit;
+  transition: 0.35s;
+}
+.btn-swap:hover {
+  background: var(--ink);
+  color: var(--g1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+.btn-swap i {
+  font-style: normal;
+  display: inline-block;
+  transition: transform 0.6s var(--ease);
+}
+.btn-swap:hover i {
+  transform: rotate(180deg);
+}
+
+/* 圆点指示器 */
+.dots {
+  display: flex;
+  gap: 12px;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ink) 25%, transparent);
+  cursor: pointer;
+  transition: 0.35s;
+}
+.dot.on {
+  background: var(--acc);
+  transform: scale(1.35);
+}
+
+/* 顶栏链接下划线 */
+.nav-link {
+  position: relative;
+  transition: 0.3s;
+}
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 0;
+  height: 1px;
+  background: var(--acc);
+  transition: width 0.3s var(--ease);
+}
+.nav-link:hover {
+  color: var(--acc);
+}
+.nav-link:hover::after {
+  width: 100%;
+}
+
+/* 跳动数字脉冲 */
+.pulse {
+  animation: pulse-a 0.6s;
+}
+@keyframes pulse-a {
+  0% { color: var(--acc); }
+}
+
+/* 在线小绿点 */
+.live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--acc2);
+  margin-right: 7px;
+  animation: blink 2.2s infinite;
+}
+@keyframes blink {
+  50% { opacity: 0.25; }
+}
+
+/* 跑马灯 */
+.broadcast-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 44s linear infinite;
+}
+.broadcast:hover .broadcast-track {
+  animation-play-state: paused;
+}
+@keyframes marquee {
+  to { transform: translateX(-50%); }
+}
+
+/* 标语切换 */
+.slogan.swap {
+  opacity: 0;
+  filter: blur(8px);
+  transform: translateY(8px);
+}
+.slogan {
+  transition: opacity 0.45s, filter 0.45s, transform 0.45s;
+}
+
+/* 品牌字竖排 */
+.brand-chars {
+  display: flex;
+  writing-mode: vertical-rl;
+  font-family: var(--disp);
+  font-weight: 400;
+  line-height: 1;
+  color: var(--acc);
+  letter-spacing: 0.22em;
+  font-size: clamp(46px, 6.8vw, 76px);
+  text-shadow: 0 0 40px var(--glow);
+}
+.brand-chars span {
+  display: inline-block;
+  transition: opacity 0.45s;
+}
+.brand-chars.swap span {
+  opacity: 0;
+}
+
+/* 印章 */
+.seal {
+  width: 46px;
+  height: 46px;
+  background: var(--sealc);
+  border-radius: 6px;
+  transform: rotate(-5deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  writing-mode: vertical-rl;
+  font-family: var(--disp);
+  font-size: 16px;
+  letter-spacing: 0.12em;
+  color: #f6efe4;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--sealc) 45%, transparent);
+  transition: transform 0.4s;
+  cursor: pointer;
+}
+.seal:hover {
+  transform: rotate(0) scale(1.08);
+}
+
+/* 双层 plaque 边框 */
+.plaque {
+  position: relative;
+  border: 1px solid var(--acc);
+  padding: 18px 12px;
+}
+.plaque::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1px solid color-mix(in srgb, var(--acc) 45%, transparent);
+}
+
+/* 罗盘旋转指针 */
+.dial-ptr {
+  transition: transform 1.4s var(--ease);
+  transform-origin: 150px 150px;
+}
+
+/* 藻井旋转 */
+@keyframes zaojing-spin {
+  to { transform: rotate(360deg); }
+}
+.zaojing-rotor {
+  animation: zaojing-spin 70s linear infinite;
+}
+
+/* 山景窗格灯光 */
+@keyframes window-flicker {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.25; }
+}
+
+/* 帖子弹出 */
+@keyframes pop-in {
   from {
     opacity: 0;
     transform: translateY(12px);
   }
+}
+.post-pop {
+  animation: pop-in 0.45s var(--ease);
+}
+
+/* 木鱼涟漪 */
+@keyframes ripple-burst {
   to {
-    opacity: 1;
-    transform: translateY(0);
+    transform: translate(-50%, -50%) scale(1.9);
+    opacity: 0;
+  }
+}
+.ripple-burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--acc) 55%, transparent);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: ripple-burst 0.7s ease-out forwards;
+}
+
+/* 功德 +1 上浮 */
+@keyframes merit-float {
+  to {
+    transform: translate(-50%, -36px);
+    opacity: 0;
+  }
+}
+.merit-float {
+  position: absolute;
+  left: 50%;
+  top: 14%;
+  transform: translateX(-50%);
+  font-size: 13px;
+  color: var(--hot);
+  letter-spacing: 0.16em;
+  pointer-events: none;
+  white-space: nowrap;
+  animation: merit-float 1s ease-out forwards;
+}
+
+/* 木鱼数字 bump */
+@keyframes bump {
+  40% { transform: scale(1.4); }
+}
+.bump {
+  animation: bump 0.35s;
+}
+
+/* ════════════════════════════════════════════════
+   粒子动画（保留 CSS 兜底，React 端可改用 framer-motion）
+   ════════════════════════════════════════════════ */
+@keyframes particle-rise {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: var(--o); }
+  50% { transform: translate(var(--dx), -55vh); }
+  90% { opacity: var(--o); }
+  100% { transform: translate(0, -108vh); opacity: 0; }
+}
+@keyframes particle-glow {
+  0%, 100% { box-shadow: 0 0 5px 2px rgba(255, 222, 150, 0.3); }
+  50% { box-shadow: 0 0 14px 5px rgba(255, 222, 150, 0.65); }
+}
+.particle-firefly {
+  position: absolute;
+  bottom: -12px;
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(circle, #ffe9b0, rgba(255, 217, 138, 0.5) 40%, transparent 72%);
+  animation-name: particle-rise, particle-glow;
+  animation-timing-function: linear, ease-in-out;
+  animation-iteration-count: infinite, infinite;
+}
+
+@keyframes petal-fall {
+  0% { transform: translate(0, 0) rotate(0); }
+  50% { transform: translate(-30px, 55vh) rotate(180deg); }
+  100% { transform: translate(10px, 110vh) rotate(360deg); opacity: 0; }
+}
+.particle-petal {
+  position: absolute;
+  top: -20px;
+  border-radius: 60% 0 60% 0;
+  animation: petal-fall linear infinite;
+}
+
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.12; transform: scale(0.7); }
+  50% { opacity: 1; transform: scale(1.3); }
+}
+.particle-star {
+  position: absolute;
+  border-radius: 50%;
+  animation: star-twinkle ease-in-out infinite;
+}
+
+@keyframes rain-fall {
+  to { transform: translateY(125vh); }
+}
+.particle-rain {
+  position: absolute;
+  top: -12vh;
+  width: 1.5px;
+  background: linear-gradient(transparent, var(--rc, rgba(200, 220, 230, 0.5)));
+  animation: rain-fall linear infinite;
+}
+
+@keyframes mote-float {
+  from { transform: translate(0, 0); opacity: 0.12; }
+  to { transform: translate(24px, -30px); opacity: 0.8; }
+}
+.particle-mote {
+  position: absolute;
+  border-radius: 50%;
+  animation: mote-float ease-in-out infinite alternate;
+}
+
+@keyframes leaf-fall {
+  0% { transform: translate(0, -24px) rotate(0); }
+  25% { transform: translate(20px, 26vh) rotate(95deg); }
+  50% { transform: translate(-10px, 53vh) rotate(200deg); }
+  75% { transform: translate(22px, 79vh) rotate(305deg); }
+  100% { transform: translate(4px, 108vh) rotate(385deg); opacity: 0; }
+}
+.particle-leaf {
+  position: absolute;
+  top: -24px;
+  border-radius: 0 55% 0 55%;
+  animation: leaf-fall linear infinite;
+}
+
+@keyframes lantern-rise {
+  0% { transform: translate(0, 0); opacity: 0; }
+  10% { opacity: 0.9; }
+  50% { transform: translate(16px, -56vh) rotate(4deg); }
+  100% { transform: translate(-10px, -112vh) rotate(-3deg); opacity: 0; }
+}
+.particle-lantern {
+  position: absolute;
+  bottom: -40px;
+  border-radius: 6px 6px 9px 9px;
+  background: radial-gradient(circle at 50% 30%, #ffd9a0, #ff9d4d 72%);
+  box-shadow: 0 0 15px 4px rgba(255, 160, 70, 0.5);
+  animation: lantern-rise linear infinite;
+}
+
+@keyframes sand-fall {
+  to { transform: translateY(110vh); }
+}
+.particle-sand {
+  position: absolute;
+  top: -10px;
+  border-radius: 50%;
+  animation: sand-fall linear infinite;
+}
+
+/* ════════════════════════════════════════════════
+   移动端响应式
+   ════════════════════════════════════════════════ */
+@media (max-width: 980px) {
+  .masthead {
+    grid-template-columns: 1fr !important;
+    grid-template-areas: "brand" "slogan" !important;
+    gap: 28px;
+    padding-top: 32px;
+  }
+  .brand {
+    border: none !important;
+    padding: 0 !important;
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+  .deco { display: none !important; }
+  .content {
+    grid-template-columns: 1fr !important;
+  }
+  .brand-chars {
+    writing-mode: horizontal-tb !important;
+    font-size: clamp(36px, 10vw, 52px) !important;
+  }
+  /* 移动端侧栏统计/木鱼用更紧凑的布局 */
+  .masonry-feed {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .pavilion-feed .stop {
+    margin-left: 0 !important;
+  }
+  .pavilion-feed .post {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .scatter-feed {
+    height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .scatter-feed .post {
+    position: static !important;
+    width: 100% !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .niche-feed, .windows-feed {
+    grid-template-columns: 1fr !important;
+  }
+  .niche-feed .post.feat, .windows-feed .post.feat {
+    grid-column: span 1 !important;
   }
 }
 
-/* 文字逐字渐入 */
-.text-char-enter {
-  display: inline-block;
-  opacity: 0;
-  animation: text-char-pop 0.4s ease forwards;
+/* iPad 竖屏微调 */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .content {
+    grid-template-columns: 1fr 280px !important;
+    gap: 20px;
+  }
 }
-@keyframes text-char-pop {
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001s !important;
+    transition-duration: 0.001s !important;
+  }
+}
+
+/* ════════════════════════════════════════════════
+   兼容旧 Tailwind 类（保留现有业务页面可用）
+   ════════════════════════════════════════════════ */
+@layer base {
+  body {
+    @apply font-body;
+    color: var(--ink);
+    background: var(--g1);
+  }
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+}
+
+.font-display { font-family: var(--disp); }
+.font-body { font-family: var(--body); }
+.font-handwrite { font-family: var(--disp); }
+.font-slogan { font-family: var(--disp); }
+
+.text-campus-text-primary { color: var(--ink); }
+.text-campus-text-secondary { color: var(--soft); }
+.text-campus-text-tertiary { color: var(--soft); }
+.text-primary { color: var(--acc); }
+.text-accent { color: var(--acc2); }
+.text-destructive { color: var(--color-destructive); }
+
+.bg-surface { background: var(--card); }
+.bg-surface-hover:hover { background: var(--color-surface-hover); }
+.bg-background { background: var(--g1); }
+.bg-primary { background: var(--acc); }
+.bg-primary\/5 { background: rgba(240, 189, 94, 0.05); }
+.bg-primary\/10 { background: rgba(240, 189, 94, 0.1); }
+.bg-primary\/20 { background: rgba(240, 189, 94, 0.2); }
+
+.border-border { border-color: var(--line); }
+.border-primary { border-color: var(--acc); }
+.border-primary\/20 { border-color: rgba(240, 189, 94, 0.2); }
+.border-primary\/40 { border-color: rgba(240, 189, 94, 0.4); }
+
+.from-primary { --tw-gradient-from: var(--acc); }
+.to-primary-hover { --tw-gradient-to: var(--acc); }
+.from-primary-light\/50 { --tw-gradient-from: rgba(240, 189, 94, 0.5); }
+.to-surface { --tw-gradient-to: var(--card); }
+
+.ring-primary { --tw-ring-color: var(--acc); }
+
+.shadow-card { box-shadow: var(--shadow-card); }
+.shadow-float { box-shadow: var(--shadow-float); }
+
+/* 毛玻璃卡片 */
+.glass-card {
+  background: var(--card);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+}
+
+/* 行限制 */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 滚动条隐藏 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* 安全区域 */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* 页面进入动画 */
+.page-enter {
+  animation: page-enter 0.5s var(--ease);
+}
+@keyframes page-enter {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.9);
+    transform: translateY(12px);
+  }
+}
+
+/* 卡片渐入 */
+.card-enter {
+  opacity: 0;
+  animation: card-enter-anim 0.45s var(--ease) forwards;
+}
+@keyframes card-enter-anim {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
   }
   to {
     opacity: 1;
@@ -517,232 +985,28 @@
   }
 }
 
-/* TipTap editor placeholder */
-.tiptap p.is-editor-empty:first-child::before {
-  content: attr(data-placeholder);
-  float: left;
-  color: var(--color-text-tertiary);
-  pointer-events: none;
-  height: 0;
+/* 文字渐入 */
+.text-fade-in {
+  animation: text-fade-in 0.8s var(--ease) forwards;
+  opacity: 0;
 }
-.tiptap {
-  outline: none;
+@keyframes text-fade-in {
+  to { opacity: 1; }
 }
-.tiptap pre {
-  @apply bg-background rounded-lg p-3 my-2 overflow-x-auto;
-}
-.tiptap pre code {
-  @apply text-sm;
-}
-.tiptap code {
-  @apply bg-background px-1.5 py-0.5 rounded text-sm;
-}
-.tiptap pre code {
-  @apply bg-transparent p-0;
-}
-.tiptap blockquote {
-  @apply border-l-4 border-primary-light pl-4 italic text-campus-text-secondary;
-}
-.tiptap img {
-  @apply rounded-lg max-w-full my-2;
-}
-.tiptap hr {
-  @apply border-border my-4;
-}
-.tiptap ul,
-.tiptap ol {
-  @apply pl-6 my-2;
-}
-.tiptap ul {
-  @apply list-disc;
-}
-.tiptap ol {
-  @apply list-decimal;
-}
-.tiptap h2 {
-  @apply text-lg font-bold mt-4 mb-2;
-}
+.text-fade-in-delay-1 { animation-delay: 0.15s; }
+.text-fade-in-delay-2 { animation-delay: 0.3s; }
 
-/* campus-prose: PostDetail HTML rendering with theme-aware colors */
-.campus-prose {
-  color: var(--color-text-secondary);
-}
-.campus-prose h1, .campus-prose h2, .campus-prose h3,
-.campus-prose h4, .campus-prose h5, .campus-prose h6 {
-  color: var(--color-text-primary);
-}
-.campus-prose a {
-  color: var(--color-primary);
-}
-.campus-prose a:hover {
-  color: var(--color-primary-hover);
-}
-.campus-prose code {
-  background: var(--color-bg);
-  padding: 0.15em 0.4em;
-  border-radius: 0.25rem;
-  font-size: 0.875em;
-}
-.campus-prose pre {
-  background: var(--color-bg);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  overflow-x: auto;
-}
-.campus-prose pre code {
-  background: none;
-  padding: 0;
-}
-.campus-prose blockquote {
-  border-left-color: var(--color-primary);
-  opacity: 0.7;
-}
-.campus-prose img {
-  border-radius: 0.5rem;
-  max-width: 100%;
-}
-.campus-prose hr {
-  border-color: var(--color-border);
-}
-
-/* 页面切换过渡 */
-.page-enter {
-  animation: page-slide-in 0.4s cubic-bezier(0.21, 0.98, 0.35, 1) forwards;
-}
-@keyframes page-slide-in {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ═══════════════════════════════════════════════
-   shadcn/ui CSS 变量层
-   映射到我们已有的主题变量，自动跟随主题切换
-   ═══════════════════════════════════════════════ */
-@layer base {
-  :root,
-  [data-theme="campus"] {
-    --background: var(--color-bg);
-    --foreground: var(--color-text-primary);
-    --card: var(--color-surface);
-    --card-foreground: var(--color-text-primary);
-    --popover: var(--color-surface);
-    --popover-foreground: var(--color-text-primary);
-    --primary: var(--color-primary);
-    --primary-foreground: 255 255 255;
-    --secondary: var(--color-surface-hover);
-    --secondary-foreground: var(--color-text-secondary);
-    --muted: var(--color-bg);
-    --muted-foreground: var(--color-text-tertiary);
-    --accent: var(--color-accent);
-    --accent-foreground: 255 255 255;
-    --destructive: var(--color-destructive);
-    --destructive-foreground: 255 255 255;
-    --border: var(--color-border);
-    --input: var(--color-border);
-    --ring: var(--color-primary);
-    --radius: var(--radius-md);
-    --sidebar-background: var(--color-surface);
-    --sidebar-foreground: var(--color-text-primary);
-    --sidebar-primary: var(--color-primary);
-    --sidebar-primary-foreground: 255 255 255;
-    --sidebar-accent: var(--color-surface-hover);
-    --sidebar-accent-foreground: var(--color-text-primary);
-    --sidebar-border: var(--color-border);
-    --sidebar-ring: var(--color-primary);
-  }
-
-  [data-theme="glass"] {
-    --background: var(--color-bg);
-    --foreground: var(--color-text-primary);
-    --card: var(--color-surface);
-    --card-foreground: var(--color-text-primary);
-    --popover: var(--color-surface);
-    --popover-foreground: var(--color-text-primary);
-    --primary: var(--color-primary);
-    --primary-foreground: 255 255 255;
-    --secondary: var(--color-surface-hover);
-    --secondary-foreground: var(--color-text-secondary);
-    --muted: var(--color-bg);
-    --muted-foreground: var(--color-text-tertiary);
-    --accent: var(--color-accent);
-    --accent-foreground: 255 255 255;
-    --destructive: var(--color-destructive);
-    --destructive-foreground: 255 255 255;
-    --border: var(--color-border);
-    --input: var(--color-border);
-    --ring: var(--color-primary);
-    --radius: var(--radius-md);
-    --sidebar-background: var(--color-surface);
-    --sidebar-foreground: var(--color-text-primary);
-    --sidebar-primary: var(--color-primary);
-    --sidebar-primary-foreground: 255 255 255;
-    --sidebar-accent: var(--color-surface-hover);
-    --sidebar-accent-foreground: var(--color-text-primary);
-    --sidebar-border: var(--color-border);
-    --sidebar-ring: var(--color-primary);
-  }
-
-  [data-theme="dark"] {
-    --background: var(--color-bg);
-    --foreground: var(--color-text-primary);
-    --card: var(--color-surface);
-    --card-foreground: var(--color-text-primary);
-    --popover: var(--color-surface);
-    --popover-foreground: var(--color-text-primary);
-    --primary: var(--color-primary);
-    --primary-foreground: 15 10 31;
-    --secondary: var(--color-surface-hover);
-    --secondary-foreground: var(--color-text-secondary);
-    --muted: var(--color-bg);
-    --muted-foreground: var(--color-text-tertiary);
-    --accent: var(--color-accent);
-    --accent-foreground: 15 10 31;
-    --destructive: var(--color-destructive);
-    --destructive-foreground: 255 255 255;
-    --border: var(--color-border);
-    --input: var(--color-border);
-    --ring: var(--color-primary);
-    --radius: var(--radius-md);
-    --sidebar-background: var(--color-surface);
-    --sidebar-foreground: var(--color-text-primary);
-    --sidebar-primary: var(--color-primary);
-    --sidebar-primary-foreground: 15 10 31;
-    --sidebar-accent: var(--color-surface-hover);
-    --sidebar-accent-foreground: var(--color-text-primary);
-    --sidebar-border: var(--color-border);
-    --sidebar-ring: var(--color-primary);
-  }
-}
-
-/* ═══════════════════════════════════════════════
-   骨架屏 shimmer 动画
-   用线性渐变扫光替代死板的 pulse，更接近现代设计语言
-   ═══════════════════════════════════════════════ */
-@keyframes skeleton-shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
+/* 骨架屏微光 */
 .skeleton-shimmer {
   background: linear-gradient(
     90deg,
-    var(--color-border-light) 25%,
-    var(--color-surface-hover) 37%,
-    var(--color-border-light) 63%
+    var(--card) 0%,
+    color-mix(in srgb, var(--acc) 15%, var(--card)) 50%,
+    var(--card) 100%
   );
   background-size: 200% 100%;
-  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  animation: shimmer 1.6s infinite;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .skeleton-shimmer {
-    animation: none;
-    background: var(--color-border-light);
-  }
+@keyframes shimmer {
+  to { background-position: -200% 0; }
 }

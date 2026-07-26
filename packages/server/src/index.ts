@@ -13,6 +13,7 @@ import 'dotenv/config';
 import { createDatabase, initializeSchema, migrateSchema, seedData } from '@campus-forum/database';
 import { TursoSessionStore } from './session-store.js';
 import { WsManager } from './websocket.js';
+import { ImageService, CacheService, EmailService, QueueService } from './services/index.js';
 
 let __dirname: string;
 try {
@@ -145,6 +146,21 @@ export async function buildApp(options?: { plugins?: any[] }) {
   await migrateSchema(db);
   await seedData(db);
 
+  // ── 第三方服务注册 ───────────────────────────────
+  // ImageService（基于 sharp）：图片上传优化
+  const imageService = new ImageService(db);
+  // CacheService（基于 ioredis + lru-cache）：双层缓存
+  const cacheService = new CacheService({
+    redisUrl: process.env.REDIS_URL,
+    prefix: 'cf:',
+    maxKeys: 500,
+    ttlDefault: 300,
+  });
+  // EmailService（基于 nodemailer）：邮件发送
+  const emailService = new EmailService();
+  // QueueService（基于 bullmq）：异步任务队列，Redis 不可用时降级同步执行
+  const queueService = new QueueService({ redisUrl: process.env.REDIS_URL });
+
   // ── Session with Turso-backed store ─────────────
   let sessionPlugin: any;
   try {
@@ -173,13 +189,24 @@ export async function buildApp(options?: { plugins?: any[] }) {
   const config = new Map<string, unknown>();
   const events = new SimpleEventBus();
 
+  // 服务容器：供 plugins 通过 getService<T>('name') 调用
+  const services = new Map<string, unknown>();
+  services.set('imageService', imageService);
+  services.set('cacheService', cacheService);
+  services.set('emailService', emailService);
+  services.set('queueService', queueService);
+
   const pluginCtx: PluginContext = {
     app, db, events, logger,
     config: {
       get: <T>(key: string, defaultValue?: T) => (config.get(key) as T) ?? defaultValue!,
       set: (key: string, value: unknown) => config.set(key, value),
     },
-    getService: () => { throw new Error('Services not yet implemented'); },
+    getService: <T>(name: string): T => {
+      const svc = services.get(name);
+      if (!svc) throw new Error(`Service "${name}" not registered`);
+      return svc as T;
+    },
   };
 
   const pluginManager = new PluginManager(pluginCtx);

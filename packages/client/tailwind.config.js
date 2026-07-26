@@ -5,36 +5,51 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: 'var(--color-bg)',
-        surface: 'var(--color-surface)',
-        'surface-hover': 'var(--color-surface-hover)',
-        'page-bg': 'var(--color-bg)',
-        'campus-text': {
-          primary: 'var(--color-text-primary)',
-          secondary: 'var(--color-text-secondary)',
-          tertiary: 'var(--color-text-tertiary)',
+        // 十三境配色映射
+        realm: {
+          ink: 'var(--ink)',
+          soft: 'var(--soft)',
+          acc: 'var(--acc)',
+          acc2: 'var(--acc2)',
+          hot: 'var(--hot)',
+          card: 'var(--card)',
+          line: 'var(--line)',
+          slogc: 'var(--slogc)',
+          g1: 'var(--g1)',
+          g2: 'var(--g2)',
+          g3: 'var(--g3)',
         },
-        border: 'var(--color-border)',
-        'border-light': 'var(--color-border-light)',
+        // 兼容旧业务页面
+        background: 'var(--g1)',
+        surface: 'var(--card)',
+        'surface-hover': 'var(--color-surface-hover)',
+        'page-bg': 'var(--g1)',
+        'campus-text': {
+          primary: 'var(--ink)',
+          secondary: 'var(--soft)',
+          tertiary: 'var(--soft)',
+        },
+        border: 'var(--line)',
+        'border-light': 'var(--line)',
         accent: {
-          DEFAULT: 'var(--color-accent)',
-          hover: 'var(--color-accent-hover)',
+          DEFAULT: 'var(--acc2)',
+          hover: 'var(--acc2)',
         },
         destructive: {
           DEFAULT: 'var(--color-destructive)',
-          hover: 'var(--color-destructive-hover)',
+          hover: 'var(--color-destructive)',
         },
         success: 'var(--color-success)',
-        warning: 'var(--color-warning)',
+        warning: 'var(--acc)',
         primary: {
-          DEFAULT: 'var(--color-primary)',
-          hover: 'var(--color-primary-hover)',
-          light: 'var(--color-primary-light)',
-          50: 'var(--color-primary-light)',
-          100: 'var(--color-primary-light)',
-          500: 'var(--color-primary-500)',
-          600: 'var(--color-primary)',
-          700: 'var(--color-primary-hover)',
+          DEFAULT: 'var(--acc)',
+          hover: 'var(--acc)',
+          light: 'rgba(240, 189, 94, 0.12)',
+          50: 'rgba(240, 189, 94, 0.08)',
+          100: 'rgba(240, 189, 94, 0.12)',
+          500: 'var(--acc)',
+          600: 'var(--acc)',
+          700: 'var(--acc)',
         },
       },
       boxShadow: {
@@ -49,15 +64,52 @@ export default {
         xl: 'var(--radius-xl)',
       },
       fontFamily: {
-        display: 'var(--font-display)',
-        body: 'var(--font-body)',
-        handwrite: 'var(--font-handwrite)',
-        slogan: 'var(--font-slogan)',
+        display: 'var(--disp)',
+        body: 'var(--body)',
+        handwrite: 'var(--disp)',
+        slogan: 'var(--disp)',
       },
       transitionTimingFunction: {
-        'theme-fast': 'cubic-bezier(0.4, 0, 0.2, 1)',
-        'theme-normal': 'cubic-bezier(0.4, 0, 0.2, 1)',
-        'theme-slow': 'cubic-bezier(0.4, 0, 0.2, 1)',
+        'theme-fast': 'cubic-bezier(0.22, 0.8, 0.28, 1)',
+        'theme-normal': 'cubic-bezier(0.22, 0.8, 0.28, 1)',
+        'theme-slow': 'cubic-bezier(0.22, 0.8, 0.28, 1)',
+        ease: 'cubic-bezier(0.22, 0.8, 0.28, 1)',
+      },
+      animation: {
+        'realm-in': 'realm-in 0.7s var(--ease)',
+        'pop-in': 'pop-in 0.45s var(--ease)',
+        'bump': 'bump 0.35s',
+        'blink': 'blink 2.2s infinite',
+        'marquee': 'marquee 44s linear infinite',
+        'mist-drift': 'mist-drift 56s ease-in-out infinite alternate',
+        'shimmer': 'shimmer 1.6s infinite',
+        'zaojing-spin': 'zaojing-spin 70s linear infinite',
+      },
+      keyframes: {
+        'realm-in': {
+          from: { opacity: '0', transform: 'translateY(24px)' },
+        },
+        'pop-in': {
+          from: { opacity: '0', transform: 'translateY(12px)' },
+        },
+        'bump': {
+          '40%': { transform: 'scale(1.4)' },
+        },
+        'blink': {
+          '50%': { opacity: '0.25' },
+        },
+        'marquee': {
+          to: { transform: 'translateX(-50%)' },
+        },
+        'mist-drift': {
+          to: { transform: 'translateX(9%)' },
+        },
+        'shimmer': {
+          to: { backgroundPosition: '-200% 0' },
+        },
+        'zaojing-spin': {
+          to: { transform: 'rotate(360deg)' },
+        },
       },
     },
   },

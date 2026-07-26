@@ -543,6 +543,12 @@ export async function migrateSchema(db: DatabaseAdapter): Promise<void> {
       -- 确保 is_banned=1 的用户角色为 banned
       UPDATE users SET role='banned' WHERE is_banned=1 AND role!='superadmin';
     `],
+    ['add_image_service_columns', `
+      ALTER TABLE uploaded_images ADD COLUMN storage TEXT DEFAULT 'db';
+      ALTER TABLE uploaded_images ADD COLUMN width INTEGER;
+      ALTER TABLE uploaded_images ADD COLUMN height INTEGER;
+      ALTER TABLE uploaded_images ADD COLUMN thumb_filename TEXT;
+    `],
   ];
 
   for (const [name, sql] of migrations) {
