@@ -1,72 +1,101 @@
-# 🎓 校园论坛 (Campus Forum)
+# 十三境论坛 (Campus Forum)
 
-一个面向学生群体的校园论坛，支持匿名树洞、课程交流、二手交易等功能。
+一个面向学生群体的校园论坛，以"十三境"视觉系统为骨架——13 套配色境象可一键切换，配合粒子动画与地支时钟，营造水墨与现代融合的浏览体验。
 
-## ✨ 特性
+## 特性
 
-- 🔌 **插件化架构** — 功能模块独立，按需增删
-- 🎨 **现代化 UI** — React 19 + Tailwind CSS，支持暗色模式
-- 🔒 **Session 认证** — 安全的用户登录注册
-- 📱 **响应式设计** — 适配手机和桌面
-- 🌲 **匿名树洞** — 匿名发帖，保护隐私
-- 🔍 **搜索功能** — 全文搜索帖子内容
-- 📟 **设备码绑定** — 一个设备码只能登录一个账号
+- **十三境主题系统** — 13 套配色境象（玄水/青木/朱火/金风/土黄/天玄/地黄/日昀/月华/星河/云起/雾隐/雷动），站头三布局 + 粒子动画 + 地支时钟
+- **插件化架构** — 13 个功能插件独立装载，按需启停
+- **多端覆盖** — Web (PWA) + Android (Capacitor) + iOS (Capacitor) + 鸿蒙 (ArkUI WebView)
+- **类型安全查询** — Kysely 构造器替代裸 SQL，全插件迁移完成
+- **JWT 认证** — 无状态登录，设备码绑定防多号注册
+- **第三方服务集成** — nodemailer 邮件 / bullmq 队列 / ioredis 缓存 / sharp 图像 / @fastify/multipart 文件上传
+- **暗色主题** — `#1a1f2e` 深色背景 + `#e8e0d0` 米白前景 + `#d4a574` 暖金强调
+- **响应式设计** — 桌面/平板/手机自适应，底部 Tab 导航 + safe-area 安全区适配
 
-## 🛠️ 技术栈
+## 技术栈
 
 | 层级 | 技术 |
 |------|------|
-| 前端 | React 19 + TypeScript + Vite 6 + Tailwind CSS 3.4 |
-| 后端 | Node.js + TypeScript + Fastify 5 |
-| 数据库 | SQLite (sql.js) |
+| 前端 | React 19 + TypeScript 5.7 + Vite 6 + Tailwind CSS 3.4 |
+| 后端 | Node.js 22 + TypeScript + Fastify 5 |
+| 数据库 | LibSQL (SQLite 兼容) + Kysely 类型安全查询 |
+| 认证 | JWT (jsonwebtoken) + 设备码绑定 |
 | 状态管理 | Zustand 5 |
 | 路由 | React Router 7 |
-| 插件系统 | 自研轻量级 IoC 容器 (PluginManager + EventBus) |
+| 表单 | react-hook-form + zod + Radix UI |
+| 富文本 | Tiptap 3 + CodeMirror + lowlight |
+| 实时通信 | WebSocket (@fastify/websocket) |
+| 文件上传 | @fastify/multipart (FormData) |
+| 图像处理 | sharp |
+| 邮件 | nodemailer |
+| 队列 | bullmq + ioredis |
+| 缓存 | ioredis (Redis) + lru-cache (进程内兜底) |
+| PWA | vite-plugin-pwa |
+| 移动端 | @capacitor/core + @capacitor/android + @capacitor/ios |
+| 鸿蒙 | ArkUI WebView (DevEco Studio) |
+| 插件系统 | 自研轻量级 IoC (PluginManager + EventBus) |
 
-## 📁 项目结构
+## 项目结构
 
 ```
 campus-forum/
 ├── packages/
 │   ├── core/          # 插件系统核心（类型定义 + PluginManager + EventBus）
-│   ├── database/      # 数据库层（sql.js 适配器 + Schema + Seed）
-│   ├── server/        # Fastify 后端 API
-│   └── client/        # React 前端 SPA
-├── plugins/
-│   └── auth/          # 认证插件（注册/登录/登出/获取当前用户）
-├── package.json       # Monorepo 配置（npm workspaces）
-└── tsconfig.base.json # TypeScript 基础配置
+│   ├── database/      # 数据库层（LibSQL + KyselyAdapter + Schema + Seed）
+│   ├── server/        # Fastify 后端 API + 服务集成
+│   ├── client/        # React 前端 SPA + Capacitor + HarmonyOS
+│   │   ├── android/   # Capacitor Android 原生工程
+│   │   ├── ios/       # Capacitor iOS 原生工程
+│   │   └── harmony/   # 鸿蒙 ArkUI WebView 工程
+│   └── data/          # 运行时数据（图片等，gitignore）
+├── plugins/           # 13 个功能插件
+│   ├── achievements/  # 成就系统
+│   ├── admin/         # 管理后台
+│   ├── auth/          # 认证（注册/登录/JWT）
+│   ├── boards/        # 板块
+│   ├── export/        # 数据导出（bullmq 队列）
+│   ├── messages/      # 私信
+│   ├── notifications/ # 通知（邮件 + 站内）
+│   ├── posts/         # 帖子（multipart 上传）
+│   ├── rss/           # RSS 订阅
+│   ├── search/        # 全文搜索
+│   ├── social/        # 关注/收藏
+│   ├── teams/         # 团队
+│   └── theme-default/ # 默认主题
+├── .github/workflows/ # CI/CD（deploy.yml + build-apk.yml）
+└── package.json       # Monorepo (npm workspaces)
 ```
 
-## 🚀 快速开始
+## 快速开始
 
 ### 环境要求
 
 - Node.js >= 22
 - npm >= 10
+- Java 21（构建 Android APK 时需要）
+- Android SDK（构建 APK 时需要）
+- DevEco Studio（构建鸿蒙 APP 时需要）
 
-### 安装
+### 安装与启动
 
 ```bash
-# 克隆仓库
 git clone https://github.com/liuxuanbing10/campus-forum.git
 cd campus-forum
-
-# 安装依赖
 npm install
-
-# 启动开发服务器（前端 + 后端同时启动）
 npm run dev
 ```
 
-前端访问 http://localhost:5173，后端 API 运行在 http://localhost:3001。
+- 前端：http://localhost:5173
+- 后端 API：http://localhost:3001
+- API 文档：http://localhost:3001/documentation
 
 ### 默认账号
 
 - 用户名：`admin`
-- 密码：`123456`（与数据库 seed 一致）
+- 密码：`123456`
 
-### 可用脚本
+### 常用脚本
 
 | 命令 | 说明 |
 |------|------|
@@ -74,80 +103,54 @@ npm run dev
 | `npm run dev:server` | 只启动后端 |
 | `npm run dev:client` | 只启动前端 |
 | `npm run build` | 构建所有包 |
+| `npm run build:server` | 按依赖顺序构建后端包 |
+| `npm run build:client` | 构建前端 |
+| `npm run start:server` | 启动后端生产服务 |
+| `npm test` | 运行测试 (vitest) |
 | `npm run lint` | ESLint 检查 |
 | `npm run format` | Prettier 格式化 |
 
-## 🚢 部署
+## 部署
 
-### Vercel 一键部署
+### 云服务器部署（当前生产环境）
 
-本项目已配置好 Vercel 部署，支持前后端一体化部署：
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/liuxuanbing10/campus-forum)
-
-**部署说明：**
-- 前端静态资源由 Vercel CDN 托管
-- 后端 API 通过 Vercel Serverless Functions 运行
-- 数据库使用 SQLite（文件存储在 `/tmp` 目录，注意：Vercel Serverless 环境为无状态，数据不持久化，生产环境建议改用 PostgreSQL 或 MySQL）
-
-**部署步骤：**
-1. 点击上方按钮，或在 Vercel 中导入本仓库
-2. 配置环境变量（见下方）
-3. 点击 Deploy，等待构建完成
-4. 部署成功后访问 Vercel 分配的域名即可
-
-### 本地生产部署
+- 服务器：`47.121.137.231`（Ubuntu 26.04, 2 vCPU / 2 GiB RAM）
+- 进程管理：PM2 + ecosystem.config.cjs
+- 反向代理：nginx 80 端口 → 3001 后端
+- 数据库：SQLite `/opt/campus-forum/data/campus-forum.db`
+- 部署方式：GitHub Actions push to main 自动触发
 
 ```bash
-# 1. 安装依赖
-npm install
-
-# 2. 构建所有包
-npm run build
-
-# 3. 启动后端服务
-npm run start:server
-
-# 4. 前端静态文件位于 packages/client/dist，可用 nginx 等托管
+# 手动部署（SSH 可用时）
+tar -czf /tmp/campus-forum-full.tar.gz --exclude='node_modules' --exclude='.git' .
+scp /tmp/campus-forum-full.tar.gz root@47.121.137.231:/tmp/
+ssh root@47.121.137.231 "cd /opt/campus-forum && tar -xzf /tmp/campus-forum-full.tar.gz && npm install --include=optional && pm2 restart campus-forum"
 ```
 
-### Docker 部署
+### 移动端构建
 
-```dockerfile
-FROM node:22-alpine
-WORKDIR /app
-COPY package*.json ./
-COPY packages ./packages
-COPY plugins ./plugins
-COPY tsconfig.base.json ./
-RUN npm install && npm run build
-EXPOSE 3001
-CMD ["npm", "run", "start:server"]
-```
+**Android APK**（GitHub Actions 自动构建）：
 
-前端构建产物 `packages/client/dist` 可单独用 Nginx 托管，也可由后端提供静态文件服务。
+push 到 `mobile/capacitor` 分支或手动触发 `Build APK` workflow，构建产物 `campus-forum-debug.apk` 上传至 artifact。
+
+**鸿蒙 APP**：
+
+需在 DevEco Studio 中打开 `packages/client/harmony/` 编译，本地需配置鸿蒙 SDK。
 
 ### 环境变量
 
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
-| `NODE_ENV` | 运行环境 | `development` |
+| `NODE_ENV` | 运行环境（生产必须为 `production`） | `development` |
 | `PORT` | 后端服务端口 | `3001` |
 | `DATABASE_PATH` | SQLite 数据库文件路径 | `packages/server/data/forum.db` |
-| `SESSION_SECRET` | Session 加密密钥 | （开发环境有默认值，生产环境必须修改） |
+| `JWT_SECRET` | JWT 签名密钥 | 开发环境有默认值，生产必须修改 |
+| `REDIS_URL` | Redis 连接地址（可选，未配置时降级到 lru-cache） | — |
+| `SMTP_*` | 邮件服务配置（可选） | — |
 
-### 生产环境注意事项
+## 开发指南
 
-1. **数据库迁移**：生产环境建议从 SQLite 切换到 PostgreSQL 或 MySQL，确保数据持久化和并发性能
-2. **Session 存储**：默认使用内存存储，多实例部署时需改用 Redis 等外部存储
-3. **HTTPS**：生产环境必须启用 HTTPS，Vercel 部署自动提供
-4. **速率限制**：已内置 `@fastify/rate-limit`，可根据需要调整阈值
-5. **安全头**：已内置 `@fastify/helmet`，提供基础安全防护
-6. **备份**：定期备份数据库文件，防止数据丢失
-
-## 📝 开发指南
-
-详见 [CONTRIBUTING.md](./CONTRIBUTING.md)
+详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
 
 ### 添加新插件
 
@@ -155,8 +158,6 @@ CMD ["npm", "run", "start:server"]
 2. 创建 `package.json`，声明依赖 `@campus-forum/core`
 3. 实现 `Plugin` 接口
 4. 在 `packages/server/src/index.ts` 中注册插件
-
-### 插件示例
 
 ```typescript
 import { Plugin } from '@campus-forum/core';
@@ -170,18 +171,29 @@ export const myPlugin: Plugin = {
   },
   apply(ctx: PluginContext) {
     const { app, db } = ctx;
-    // 添加路由
-    app.get('/api/my-feature', async () => {
-      return { hello: 'world' };
+    // 使用 Kysely 类型安全查询
+    app.get('/api/my-feature', async (request) => {
+      const rows = await db.selectFrom('posts').selectAll().limit(10).execute();
+      return { data: rows };
     });
   },
 };
 ```
 
-### 设备码说明
+### 设备码机制
 
-前端使用 localStorage 自动生成设备码（UUID v4），通过 `X-Device-Code` 请求头自动发送到后端。一个设备码只能绑定一个账号，换设备/清缓存后需要重新登录。
+- 注册时：前端生成 UUID v4 设备码，POST `/api/auth/register` 时绑定到账号
+- 登录时：仅需用户名 + 密码，不校验设备码
+- 一个设备码只能绑定一个账号，防止多号注册
 
-## 📄 License
+## 分支管理
+
+| 分支 | 用途 |
+|------|------|
+| `main` | 主分支，服务端 + Web 前端，自动部署到云服务器 |
+| `mobile/capacitor` | Android/iOS 原生 APP，push 自动触发 APK 构建 |
+| `mobile/harmony` | 鸿蒙 ArkUI WebView 客户端 |
+
+## License
 
 MIT

@@ -44,3 +44,12 @@ release/
 # 运行时生成的数据（图片等）
 packages/data/
 
+# 内部经验日志/谋划文档（仅本地保留，不提交到 GitHub）
+DEVELOPMENT-LOG.md
+REFACTORING-PLAN.md
+campus-forum-strategic-plan.md
+CHANGELOG.md
+IDEA.md
+hermes-readme.md
+.hermes/
+
