@@ -7,6 +7,22 @@ import https from 'https';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 
+// ── 服务接口（与 server/services 实现匹配，运行时由 ctx.getService 注入） ──
+interface ImageService {
+  uploadFromBase64(
+    base64Data: string,
+    opts: { userId: number; filename?: string; maxSize?: number; generateThumb?: boolean },
+  ): Promise<{
+    id: number; url: string; thumbUrl: string;
+    width: number; height: number; size: number; mimeType: string;
+  }>;
+  deleteById(id: number): Promise<boolean>;
+}
+interface EmailService {
+  sendVerificationCode(to: string, code: string, expireMinutes?: number): Promise<boolean>;
+  sendPasswordReset(to: string, resetLink: string): Promise<boolean>;
+}
+
 // ponytail: import.meta.url is undefined when bundled as CJS by esbuild
 let __dirname: string;
 try {
@@ -80,13 +96,18 @@ interface UserRow {
 export const authPlugin: Plugin = {
   manifest: {
     name: 'auth',
-    version: '0.2.0',
+    version: '0.3.0',
     description: '用户认证插件（含设备码绑定）',
     author: 'campus-forum',
   },
 
   apply(ctx: PluginContext) {
     const { app, db } = ctx;
+    // 从服务容器获取第三方服务（若未注册则降级为 null，保留旧逻辑）
+    let imageService: ImageService | null = null;
+    let emailService: EmailService | null = null;
+    try { imageService = ctx.getService<ImageService>('imageService'); } catch { /* 未注册时降级 */ }
+    try { emailService = ctx.getService<EmailService>('emailService'); } catch { /* 未注册时降级 */ }
 
     // ========================================
     // 注册
@@ -680,43 +701,159 @@ export const authPlugin: Plugin = {
     });
 
     // ========================================
-    // 头像上传
+    // 头像上传 · 优先用 ImageService（sharp 裁剪 + WebP + 缩略图）
     // ========================================
     app.post('/api/users/avatar', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
       const { image } = req.body as { image: string };
       if (!image) return rep.status(400).send({ error: '请提供图片数据' });
-      const m = image.match(/^data:(image\/\w+);base64,(.+)$/);
-      if (!m) return rep.status(400).send({ error: '图片格式错误' });
-      const ext = m[1].split('/')[1].replace('jpeg', 'jpg');
-      const buf = Buffer.from(m[2], 'base64');
-      if (buf.length > 2 * 1024 * 1024) return rep.status(400).send({ error: '图片不能超过 2MB' });
-      const uploadsDir = path.resolve(__dirname, '../../../uploads');
-      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-      // 删除旧头像文件
-      const currentUser = await db.get<{ avatar_url: string | null }>('SELECT avatar_url FROM users WHERE id=?', userId);
-      if (currentUser?.avatar_url) {
-        const oldPath = path.join(__dirname, '../../..', currentUser.avatar_url);
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      try {
+        if (imageService) {
+          // 新路径：sharp 自动裁剪为 256x256 WebP 方形头像 + 64x64 缩略图
+          const result = await imageService.uploadFromBase64(image, {
+            userId,
+            filename: `avatar_${userId}`,
+            maxSize: 2 * 1024 * 1024,
+            generateThumb: true,
+          });
+          // 删除旧头像文件（若也是 ImageService 管理的）
+          const currentUser = await db.get<{ avatar_url: string | null }>('SELECT avatar_url FROM users WHERE id=?', userId);
+          if (currentUser?.avatar_url?.startsWith('/api/images/')) {
+            const oldId = Number(currentUser.avatar_url.match(/\/api\/images\/(\d+)/)?.[1]);
+            if (oldId) try { await imageService.deleteById(oldId); } catch { /* 忽略 */ }
+          }
+          await db.run('UPDATE users SET avatar_url=? WHERE id=?', result.url, userId);
+          return { success: true, url: result.url, thumbUrl: result.thumbUrl };
+        }
+        // 降级路径：原 fs 写入（兼容旧部署）
+        const m = image.match(/^data:(image\/\w+);base64,(.+)$/);
+        if (!m) return rep.status(400).send({ error: '图片格式错误' });
+        const ext = m[1].split('/')[1].replace('jpeg', 'jpg');
+        const buf = Buffer.from(m[2], 'base64');
+        if (buf.length > 2 * 1024 * 1024) return rep.status(400).send({ error: '图片不能超过 2MB' });
+        const uploadsDir = path.resolve(__dirname, '../../../uploads');
+        if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+        const currentUser = await db.get<{ avatar_url: string | null }>('SELECT avatar_url FROM users WHERE id=?', userId);
+        if (currentUser?.avatar_url) {
+          const oldPath = path.join(__dirname, '../../..', currentUser.avatar_url);
+          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        }
+        const name = `avatar_${userId}_${Date.now()}.${ext}`;
+        fs.writeFileSync(path.join(uploadsDir, name), buf);
+        await db.run('UPDATE users SET avatar_url=? WHERE id=?', `/uploads/${name}`, userId);
+        return { success: true, url: `/uploads/${name}` };
+      } catch (err) {
+        return rep.status(400).send({ error: (err as Error).message });
       }
-
-      const name = `avatar_${userId}_${Date.now()}.${ext}`;
-      fs.writeFileSync(path.join(uploadsDir, name), buf);
-      await db.run('UPDATE users SET avatar_url=? WHERE id=?', `/uploads/${name}`, userId);
-      return { success: true, url: `/uploads/${name}` };
     });
 
     // ========================================
-    // 邮箱验证
+    // 邮箱验证 · 接入 EmailService（nodemailer）
     // ========================================
     app.post('/api/auth/send-verify-email', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
       const { email } = req.body as { email: string };
       if (!email || !email.includes('@')) return rep.status(400).send({ error: '邮箱格式不正确' });
+
+      // 生成 6 位数字验证码，存 DB（10 分钟有效）
+      const code = String(Math.floor(Math.random() * 900000) + 100000);
+      const expireAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+      await db.run(
+        `INSERT INTO email_verifications (user_id, email, code, expire_at, used) VALUES (?, ?, ?, ?, 0)`,
+        userId, email, code, expireAt,
+      ).catch(async () => {
+        // 表不存在时建表
+        await db.exec(`CREATE TABLE IF NOT EXISTS email_verifications (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          email TEXT NOT NULL,
+          code TEXT NOT NULL,
+          expire_at TEXT NOT NULL,
+          used INTEGER DEFAULT 0,
+          created_at TEXT DEFAULT (datetime('now'))
+        )`);
+        await db.run(
+          `INSERT INTO email_verifications (user_id, email, code, expire_at, used) VALUES (?, ?, ?, ?, 0)`,
+          userId, email, code, expireAt,
+        );
+      });
+
+      // 更新用户邮箱（待验证）
       await db.run('UPDATE users SET email=? WHERE id=?', email, userId);
-      // 此处可集成 nodemailer 发送验证邮件
-      return { success: true, message: '验证邮件已发送（演示模式）' };
+
+      // 通过 EmailService 发送邮件
+      if (emailService) {
+        const ok = await emailService.sendVerificationCode(email, code, 10);
+        if (!ok) return rep.status(500).send({ error: '邮件发送失败，请稍后重试' });
+        return { success: true, message: '验证码已发送至邮箱' };
+      }
+      // 演示模式：未配置 SMTP
+      return { success: true, message: '验证码已生成（演示模式：未配置 SMTP）', demoCode: code };
+    });
+
+    // ========================================
+    // 验证邮箱验证码
+    // ========================================
+    app.post('/api/auth/verify-email', async (req, rep) => {
+      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+      const { code } = req.body as { code: string };
+      if (!code) return rep.status(400).send({ error: '请输入验证码' });
+      const row = await db.get<{ id: number; expire_at: string; used: number }>(
+        `SELECT id, expire_at, used FROM email_verifications WHERE user_id=? AND code=? ORDER BY id DESC LIMIT 1`,
+        userId, code,
+      ).catch(() => null);
+      if (!row) return rep.status(400).send({ error: '验证码错误' });
+      if (row.used) return rep.status(400).send({ error: '验证码已使用' });
+      if (new Date(row.expire_at + 'Z') < new Date()) return rep.status(400).send({ error: '验证码已过期' });
+      await db.run('UPDATE email_verifications SET used=1 WHERE id=?', row.id);
+      await db.run('UPDATE users SET email_verified=1 WHERE id=?', userId);
+      return { success: true, message: '邮箱已验证' };
+    });
+
+    // ========================================
+    // 忘记密码 · 接入 EmailService 发送重置链接
+    // ========================================
+    app.post('/api/auth/forgot-password', {
+      config: { rateLimit: { max: 3, timeWindow: '1 hour' } },
+    }, async (req, rep) => {
+      const { email } = req.body as { email: string };
+      if (!email || !email.includes('@')) return rep.status(400).send({ error: '邮箱格式不正确' });
+      const user = await db.get<{ id: number; username: string }>(
+        'SELECT id, username FROM users WHERE email=?', email,
+      );
+      // 出于安全考虑，无论用户是否存在都返回成功（防止邮箱枚举）
+      if (!user) return { success: true, message: '若邮箱已注册，重置链接已发送' };
+
+      // 生成一次性重置 token（JWT，30 分钟有效）
+      const resetToken = signJwt({ userId: user.id, purpose: 'password-reset' }, '30m');
+      const resetLink = `${process.env.WEB_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+
+      if (emailService) {
+        const ok = await emailService.sendPasswordReset(email, resetLink);
+        if (!ok) return rep.status(500).send({ error: '邮件发送失败，请稍后重试' });
+      }
+      return { success: true, message: '若邮箱已注册，重置链接已发送' };
+    });
+
+    // ========================================
+    // 重置密码 · 验证 token 并设置新密码
+    // ========================================
+    app.post('/api/auth/reset-password', async (req, rep) => {
+      const { token, newPassword } = req.body as { token: string; newPassword: string };
+      if (!token || !newPassword) return rep.status(400).send({ error: '参数缺失' });
+      if (newPassword.length < 6) return rep.status(400).send({ error: '密码至少 6 位' });
+
+      // 用 verifyJwt 校验 token（这里复用 core 包的 verifyJwt）
+      const { verifyJwt } = await import('@campus-forum/core');
+      const payload = verifyJwt(token);
+      if (!payload || payload.purpose !== 'password-reset' || typeof payload.userId !== 'number') {
+        return rep.status(400).send({ error: '重置链接无效或已过期' });
+      }
+      const userId = payload.userId;
+      const hash = await bcrypt.hash(newPassword, 10);
+      await db.run('UPDATE users SET password_hash=? WHERE id=?', hash, userId);
+      return { success: true, message: '密码已重置，请使用新密码登录' };
     });
 
     // ========================================

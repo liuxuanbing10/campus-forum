@@ -256,4 +256,31 @@ export class ImageService {
       if (err.code !== 'EEXIST') throw err;
     }
   }
+
+  /**
+   * 删除图片（文件系统文件 + 缩略图 + DB 记录）
+   * 头像更新时调用，避免遗留垃圾文件
+   */
+  async deleteById(id: number): Promise<boolean> {
+    const row = await this.db.get<{ filename: string; thumb_filename: string | null; storage: string }>(
+      'SELECT filename, thumb_filename, storage FROM uploaded_images WHERE id = ?',
+      id,
+    );
+    if (!row) return false;
+
+    // 删除文件系统文件
+    if (row.storage === 'filesystem') {
+      if (row.filename) {
+        const mainFile = path.join(IMAGES_DIR, row.filename);
+        try { await fs.promises.unlink(mainFile); } catch { /* 忽略 */ }
+      }
+      if (row.thumb_filename) {
+        const thumbFile = path.join(IMAGES_DIR, row.thumb_filename);
+        try { await fs.promises.unlink(thumbFile); } catch { /* 忽略 */ }
+      }
+    }
+    // 删除 DB 记录
+    await this.db.run('DELETE FROM uploaded_images WHERE id = ?', id);
+    return true;
+  }
 }

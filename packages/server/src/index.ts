@@ -13,7 +13,7 @@ import 'dotenv/config';
 import { createDatabase, initializeSchema, migrateSchema, seedData } from '@campus-forum/database';
 import { TursoSessionStore } from './session-store.js';
 import { WsManager } from './websocket.js';
-import { ImageService, CacheService, EmailService } from './services/index.js';
+import { ImageService, CacheService, EmailService, QueueService } from './services/index.js';
 
 let __dirname: string;
 try {
@@ -158,6 +158,8 @@ export async function buildApp(options?: { plugins?: any[] }) {
   });
   // EmailService（基于 nodemailer）：邮件发送
   const emailService = new EmailService();
+  // QueueService（基于 bullmq）：异步任务队列，Redis 不可用时降级同步执行
+  const queueService = new QueueService({ redisUrl: process.env.REDIS_URL });
 
   // ── Session with Turso-backed store ─────────────
   let sessionPlugin: any;
@@ -192,6 +194,7 @@ export async function buildApp(options?: { plugins?: any[] }) {
   services.set('imageService', imageService);
   services.set('cacheService', cacheService);
   services.set('emailService', emailService);
+  services.set('queueService', queueService);
 
   const pluginCtx: PluginContext = {
     app, db, events, logger,
