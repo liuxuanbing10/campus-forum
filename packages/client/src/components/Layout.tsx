@@ -112,7 +112,7 @@ function LayoutInner() {
           <div className="flex items-center gap-3 min-w-0">
             <Link
               to="/"
-              className="flex items-center gap-1.5 text-[13px] text-[var(--soft)] hover:-translate-y-0.5 hover:text-[var(--acc)] transition-all"
+              className="flex items-center gap-1.5 text-sm text-[var(--soft)] hover:-translate-y-0.5 hover:text-[var(--acc)] transition-all"
             >
               <Home className="w-4 h-4" />
               <span className="hidden sm:inline">首页</span>
@@ -120,7 +120,7 @@ function LayoutInner() {
             <span className="text-[var(--line)]">·</span>
             <Link
               to="/teams"
-              className="hidden sm:flex items-center gap-1.5 text-[13px] text-[var(--soft)] hover:-translate-y-0.5 hover:text-[var(--acc)] transition-all"
+              className="hidden sm:flex items-center gap-1.5 text-sm text-[var(--soft)] hover:-translate-y-0.5 hover:text-[var(--acc)] transition-all"
               title="发现团队"
             >
               <Users className="w-4 h-4" />
@@ -128,7 +128,7 @@ function LayoutInner() {
             </Link>
             <Link
               to="/achievements"
-              className="hidden sm:flex items-center gap-1.5 text-[13px] text-[var(--soft)] hover:-translate-y-0.5 hover:text-[var(--acc)] transition-all"
+              className="hidden sm:flex items-center gap-1.5 text-sm text-[var(--soft)] hover:-translate-y-0.5 hover:text-[var(--acc)] transition-all"
               title="成就"
             >
               <Trophy className="w-4 h-4" />
@@ -145,7 +145,7 @@ function LayoutInner() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="搜索帖子..."
-                className="w-full pl-10 pr-4 py-2 bg-[var(--card)] border border-[var(--line)] rounded-full text-[13px] text-[var(--ink)] placeholder:text-[var(--soft)] focus:outline-none focus:border-[var(--acc)] transition-colors"
+                className="w-full pl-10 pr-4 py-2 bg-[var(--card)] border border-[var(--line)] rounded-full text-sm text-[var(--ink)] placeholder:text-[var(--soft)] focus:outline-none focus:border-[var(--acc)] transition-colors"
               />
             </div>
           </form>
@@ -182,7 +182,7 @@ function LayoutInner() {
                 {/* 用户菜单 */}
                 <div className="hidden md:flex items-center gap-2 ml-2">
                   <DropdownMenu>
-                    <DropdownMenuTrigger className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg hover:bg-[var(--card)] transition-colors text-[13px] text-[var(--ink)]">
+                    <DropdownMenuTrigger className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg hover:bg-[var(--card)] transition-colors text-sm text-[var(--ink)]">
                       <span
                         className="font-bold"
                         style={{ fontFamily: 'var(--disp)' }}
@@ -192,7 +192,7 @@ function LayoutInner() {
                       <ChevronDown className="w-4 h-4 text-[var(--soft)]" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <div className="px-2 py-1.5 text-[12px] text-[var(--soft)] border-b border-[var(--line)] mb-1">
+                      <div className="px-2 py-1.5 text-xs text-[var(--soft)] border-b border-[var(--line)] mb-1">
                         @{user.displayName}
                       </div>
                       <DropdownMenuItem onClick={() => navigate('/my-posts')}>
@@ -226,7 +226,7 @@ function LayoutInner() {
             ) : (
               <Link
                 to="/login"
-                className="text-[13px] text-[var(--soft)] hover:-translate-y-0.5 hover:text-[var(--acc)] transition-all px-3 py-2"
+                className="text-sm text-[var(--soft)] hover:-translate-y-0.5 hover:text-[var(--acc)] transition-all px-3 py-2"
               >
                 登录
               </Link>
@@ -256,7 +256,7 @@ function LayoutInner() {
               <div className="px-4 py-3 space-y-1">
                 {user ? (
                   <>
-                    <div className="text-[11px] text-[var(--soft)] px-3 py-1">
+                    <div className="text-xs text-[var(--soft)] px-3 py-1">
                       @{user.displayName}
                     </div>
                     <MobileLink to="/search" icon={<Search className="w-4 h-4" />} label="搜索" onClick={() => setMobileOpen(false)} />
@@ -271,7 +271,7 @@ function LayoutInner() {
                     )}
                     <button
                       onClick={() => { setMobileOpen(false); handleLogout(); }}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--card)] transition-colors text-[12px] text-[var(--hot)] flex items-center gap-2"
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--card)] transition-colors text-xs text-[var(--hot)] flex items-center gap-2"
                     >
                       <LogOut className="w-4 h-4" /> 退出登录
                     </button>
@@ -333,7 +333,7 @@ function MobileLink({
     <Link
       to={to}
       onClick={onClick}
-      className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--card)] transition-colors text-[12px] text-[var(--ink)]"
+      className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--card)] transition-colors text-xs text-[var(--ink)]"
     >
       {icon}
       <span>{label}</span>

@@ -113,7 +113,7 @@ export default function LoginPage() {
               <span className="block w-10 h-px bg-[var(--line)]" />
               <Sparkles className="w-3.5 h-3.5 text-[var(--acc)]" />
               <span
-                className="text-[11px] tracking-[0.3em] text-[var(--soft)] uppercase"
+                className="text-xs tracking-[0.3em] text-[var(--soft)] uppercase"
                 style={{ fontFamily: 'var(--disp)' }}
               >
                 {realm.seal}
@@ -129,7 +129,7 @@ export default function LoginPage() {
               >
                 欢迎回来
               </h1>
-              <p className="text-[13px] text-[var(--soft)] mt-2 tracking-wide">
+              <p className="text-sm text-[var(--soft)] mt-2 tracking-wide">
                 登录账号，续写{realm.name}之卷
               </p>
             </div>
@@ -179,7 +179,7 @@ export default function LoginPage() {
               <div className="flex justify-end -mt-2">
                 <Link
                   to="/forgot-password"
-                  className="text-[12px] text-[var(--soft)] hover:text-[var(--acc)] hover:-translate-y-0.5 transition-all"
+                  className="text-xs text-[var(--soft)] hover:text-[var(--acc)] hover:-translate-y-0.5 transition-all"
                 >
                   忘记密码？
                 </Link>
@@ -232,7 +232,7 @@ export default function LoginPage() {
               </div>
 
               {/* 注册引导 */}
-              <p className="text-center text-[12px] text-[var(--soft)] mt-4">
+              <p className="text-center text-xs text-[var(--soft)] mt-4">
                 还没有账号？{' '}
                 <Link
                   to="/register"
@@ -249,7 +249,7 @@ export default function LoginPage() {
               aria-hidden
             >
               <p
-                className="text-[11px] text-[var(--soft)] italic"
+                className="text-xs text-[var(--soft)] italic"
                 style={{ fontFamily: 'var(--disp)' }}
               >
                 {realm.sub}
@@ -299,7 +299,7 @@ function Field({
 }) {
   return (
     <div>
-      <Label.Root className="block text-[13px] font-medium text-[var(--soft)] mb-1.5 tracking-wide">
+      <Label.Root className="block text-sm font-medium text-[var(--soft)] mb-1.5 tracking-wide">
         {label}
       </Label.Root>
       <div className="relative">
@@ -315,7 +315,7 @@ function Field({
         <motion.p
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-[11px] text-[var(--hot)] mt-1.5 ml-1"
+          className="text-xs text-[var(--hot)] mt-1.5 ml-1"
         >
           {error}
         </motion.p>
@@ -340,7 +340,7 @@ function OAuthButton({
       onClick={onClick}
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.97 }}
-      className="flex items-center justify-center gap-1.5 h-11 rounded-xl border border-[var(--line)] text-[12px] text-[var(--ink)] hover:-translate-y-0.5 hover:shadow-lg hover:border-[var(--acc)] transition-all"
+      className="flex items-center justify-center gap-1.5 h-11 rounded-xl border border-[var(--line)] text-xs text-[var(--ink)] hover:-translate-y-0.5 hover:shadow-lg hover:border-[var(--acc)] transition-all"
       style={{ backgroundColor: `${color}10` }}
     >
       <span

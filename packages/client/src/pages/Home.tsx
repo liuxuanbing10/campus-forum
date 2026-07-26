@@ -163,7 +163,7 @@ export default function Home() {
                     <Tabs.Trigger
                       key={t.v}
                       value={t.v}
-                      className="relative px-5 py-2 text-[13px] rounded-md transition-colors data-[state=active]:text-[var(--acc)] data-[state=active]:bg-[var(--g1)]/60 text-[var(--soft)] hover:text-[var(--ink)]"
+                      className="relative px-5 py-2 text-sm rounded-md transition-colors data-[state=active]:text-[var(--acc)] data-[state=active]:bg-[var(--g1)]/60 text-[var(--soft)] hover:text-[var(--ink)]"
                     >
                       {t.label}
                     </Tabs.Trigger>
@@ -195,7 +195,7 @@ export default function Home() {
                         >
                           虚位以待
                         </p>
-                        <p className="text-[11px] mt-1">暂无帖子，抢沙发吧</p>
+                        <p className="text-xs mt-1">暂无帖子，抢沙发吧</p>
                       </div>
                     ) : (
                       <>
@@ -210,7 +210,7 @@ export default function Home() {
                             {postsLoadingMore ? (
                               <Loader2 className="w-5 h-5 text-[var(--acc)] animate-spin" />
                             ) : (
-                              <span className="text-[11px] text-[var(--soft)]">
+                              <span className="text-xs text-[var(--soft)]">
                                 ··· 加载更多 ···
                               </span>
                             )}
@@ -219,7 +219,7 @@ export default function Home() {
 
                         {!postsHasMore && posts.length > 0 && (
                           <div
-                            className="text-center py-6 text-[11px] text-[var(--soft)] italic"
+                            className="text-center py-6 text-xs text-[var(--soft)] italic"
                             style={{ fontFamily: 'var(--disp)' }}
                           >
                             ✦ 已至卷尾 ✦
@@ -259,15 +259,15 @@ export default function Home() {
                   <div className="flex-1 min-w-0">
                     <h3 className="text-base font-bold text-[var(--ink)] flex items-center gap-2">
                       社区公约
-                      <span className="text-[11px] bg-[var(--acc)]/20 text-[var(--acc)] px-2 py-0.5 rounded-full">
+                      <span className="text-xs bg-[var(--acc)]/20 text-[var(--acc)] px-2 py-0.5 rounded-full">
                         置顶
                       </span>
                     </h3>
-                    <p className="text-[12px] text-[var(--soft)] mt-1">
+                    <p className="text-xs text-[var(--soft)] mt-1">
                       互相尊重 · 友善交流 · 理性讨论 · 保护隐私
                     </p>
                   </div>
-                  <span className="text-[12px] text-[var(--acc)] group-hover:underline shrink-0 hidden sm:inline">
+                  <span className="text-xs text-[var(--acc)] group-hover:underline shrink-0 hidden sm:inline">
                     查看 →
                   </span>
                 </div>
@@ -319,7 +319,7 @@ function QuickAction({
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="text-base font-bold text-[var(--ink)] mb-0.5">{title}</h3>
-          <p className="text-[12px] text-[var(--soft)] leading-relaxed">{desc}</p>
+          <p className="text-xs text-[var(--soft)] leading-relaxed">{desc}</p>
         </div>
       </div>
     </Link>
@@ -347,19 +347,19 @@ function NotLoggedIn() {
         <div className="flex items-center justify-center gap-4">
           <Link
             to="/login"
-            className="px-7 py-3 rounded-md bg-[var(--acc)] text-[var(--g1)] font-bold text-[15px] hover:-translate-y-0.5 hover:shadow-lg transition-all"
+            className="px-7 py-3 rounded-md bg-[var(--acc)] text-[var(--g1)] font-bold text-base hover:-translate-y-0.5 hover:shadow-lg transition-all"
           >
             登录
           </Link>
           <Link
             to="/register"
-            className="px-7 py-3 rounded-md border border-[var(--line)] text-[var(--ink)] text-[15px] hover:-translate-y-0.5 hover:shadow-lg hover:border-[var(--acc)] transition-all"
+            className="px-7 py-3 rounded-md border border-[var(--line)] text-[var(--ink)] text-base hover:-translate-y-0.5 hover:shadow-lg hover:border-[var(--acc)] transition-all"
           >
             注册
           </Link>
           <Link
             to="/download"
-            className="px-7 py-3 rounded-md border border-[var(--line)] text-[var(--soft)] text-[15px] hover:-translate-y-0.5 hover:shadow-lg hover:text-[var(--acc)] hover:border-[var(--acc)] transition-all flex items-center gap-1.5"
+            className="px-7 py-3 rounded-md border border-[var(--line)] text-[var(--soft)] text-base hover:-translate-y-0.5 hover:shadow-lg hover:text-[var(--acc)] hover:border-[var(--acc)] transition-all flex items-center gap-1.5"
           >
             <Download className="w-5 h-5" />
             下载 APP
@@ -380,12 +380,12 @@ function Footer() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-[13px] text-[var(--soft)] italic leading-relaxed"
+          className="text-sm text-[var(--soft)] italic leading-relaxed"
           style={{ fontFamily: 'var(--disp)' }}
         >
           {config.ft ?? `—— ${realm.name} ——`}
         </motion.p>
-        <div className="mt-4 flex items-center justify-center gap-3 text-[11px] text-[var(--soft)]">
+        <div className="mt-4 flex items-center justify-center gap-3 text-xs text-[var(--soft)]">
           <Link to="/rules" className="hover:text-[var(--acc)] transition-colors">
             社区公约
           </Link>

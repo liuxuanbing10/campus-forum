@@ -56,7 +56,7 @@ export default function RiverFeed({ posts }: Props) {
               <div className="font-bold text-base text-[var(--ink)] group-hover:text-[var(--acc)] transition-colors leading-relaxed">
                 {p.title}
               </div>
-              <div className="text-[12px] text-[var(--soft)] mt-1.5 flex items-center gap-2">
+              <div className="text-xs text-[var(--soft)] mt-1.5 flex items-center gap-2">
                 <span>{p.author_name}</span>
                 <span>·</span>
                 <span>{p.board_name}</span>
@@ -76,7 +76,7 @@ export default function RiverFeed({ posts }: Props) {
           style={{ marginLeft: 8 }}
         >
           <span
-            className="text-[11px] text-[var(--soft)] italic"
+            className="text-xs text-[var(--soft)] italic"
             style={{ fontFamily: 'var(--disp)' }}
           >
             ✦ 灯火阑珊处 ✦

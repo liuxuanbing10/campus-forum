@@ -65,7 +65,7 @@ export default function TopBar({ onlineCount = 0 }: { onlineCount?: number }) {
               >
                 {realm.name}
               </span>
-              <span className="text-[11px] tracking-[0.2em] text-[var(--soft)] uppercase hidden sm:inline">
+              <span className="text-xs tracking-[0.2em] text-[var(--soft)] uppercase hidden sm:inline">
                 {en}
               </span>
             </motion.div>
@@ -81,7 +81,7 @@ export default function TopBar({ onlineCount = 0 }: { onlineCount?: number }) {
         </div>
 
         {/* 右：时辰 + 在线 + 时间 */}
-        <div className="flex items-center gap-4 sm:gap-6 text-[12px] text-[var(--soft)]">
+        <div className="flex items-center gap-4 sm:gap-6 text-xs text-[var(--soft)]">
           <div className="hidden md:flex items-center gap-1.5">
             <span className="text-[var(--acc)] font-medium" title="当前时辰">{branch}</span>
             <span>时</span>
@@ -96,7 +96,7 @@ export default function TopBar({ onlineCount = 0 }: { onlineCount?: number }) {
             </span>
             <span>在线</span>
           </div>
-          <div className="tabular-nums font-mono text-[var(--ink)]/80 text-[13px]" title={shichen}>
+          <div className="tabular-nums font-mono text-[var(--ink)]/80 text-sm" title={shichen}>
             {timeStr}
           </div>
         </div>

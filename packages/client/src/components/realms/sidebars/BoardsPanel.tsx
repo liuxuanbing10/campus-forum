@@ -64,14 +64,14 @@ export default function BoardsPanel({ boards, loading }: Props) {
                   {iconMap[b.icon] ?? defaultIcon}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[15px] font-medium text-[var(--ink)] truncate">
+                  <div className="text-base font-medium text-[var(--ink)] truncate">
                     {b.name}
                   </div>
-                  <div className="text-[12px] text-[var(--soft)] truncate">
+                  <div className="text-xs text-[var(--soft)] truncate">
                     {b.description}
                   </div>
                 </div>
-                <span className="text-[12px] text-[var(--soft)] tabular-nums">
+                <span className="text-xs text-[var(--soft)] tabular-nums">
                   {b.post_count}
                 </span>
               </Link>

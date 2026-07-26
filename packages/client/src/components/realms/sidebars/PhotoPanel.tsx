@@ -67,7 +67,7 @@ export default function PhotoPanel() {
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-[11px] tracking-[0.2em] text-[var(--phsun)] uppercase"
+            className="text-xs tracking-[0.2em] text-[var(--phsun)] uppercase"
           >
             {realm.cat}
           </motion.div>
@@ -85,7 +85,7 @@ export default function PhotoPanel() {
       </div>
 
       {/* 底部信息 */}
-      <div className="px-4 py-3.5 flex items-center justify-between text-[13px] text-[var(--soft)]">
+      <div className="px-4 py-3.5 flex items-center justify-between text-sm text-[var(--soft)]">
         <span>—— {realm.sub}</span>
         <span className="tabular-nums">No.{String(realm.idx).padStart(2, '0')}</span>
       </div>

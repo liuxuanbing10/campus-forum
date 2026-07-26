@@ -47,7 +47,7 @@ export default function TimelineFeed({ posts }: Props) {
               />
               {/* 时辰标签 */}
               <span
-                className="absolute -left-14 top-4 text-[11px] text-[var(--soft)] hidden sm:inline"
+                className="absolute -left-14 top-4 text-xs text-[var(--soft)] hidden sm:inline"
                 style={{ fontFamily: 'var(--disp)' }}
               >
                 {shichen}
@@ -55,7 +55,7 @@ export default function TimelineFeed({ posts }: Props) {
               <div className="font-bold text-base text-[var(--ink)] group-hover:text-[var(--acc)] transition-colors leading-relaxed">
                 {p.is_pinned ? '📌 ' : ''}{p.title}
               </div>
-              <div className="text-[12px] text-[var(--soft)] mt-1.5 flex items-center gap-2 flex-wrap">
+              <div className="text-xs text-[var(--soft)] mt-1.5 flex items-center gap-2 flex-wrap">
                 <span>{p.author_name}</span>
                 <span>·</span>
                 <span>{p.board_name}</span>

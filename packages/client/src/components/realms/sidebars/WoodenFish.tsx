@@ -42,7 +42,7 @@ export default function WoodenFish() {
           <span className="w-1.5 h-6 bg-[var(--hot)] rounded-full" />
           电子木鱼
         </span>
-        <span className="text-[13px] text-[var(--soft)] tabular-nums font-sans">
+        <span className="text-sm text-[var(--soft)] tabular-nums font-sans">
           功德 {count}
         </span>
       </h3>
@@ -90,7 +90,7 @@ export default function WoodenFish() {
           key={count}
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-[12px] text-[var(--soft)]"
+          className="text-xs text-[var(--soft)]"
         >
           {count === 0 ? '点击敲击，静心修禅' : `功德 +${count}`}
         </motion.p>
