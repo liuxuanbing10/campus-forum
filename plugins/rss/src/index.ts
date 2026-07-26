@@ -1,4 +1,5 @@
 import { Plugin, PluginContext } from '@campus-forum/core';
+import { KyselyAdapter } from '@campus-forum/database';
 
 function escapeXml(s: string): string {
   return s.replace(/&/g, '&amp;')
@@ -16,21 +17,19 @@ export const rssPlugin: Plugin = {
   },
   apply(ctx: PluginContext) {
     const { app, db } = ctx;
+    const kdb = db as KyselyAdapter;
+    const q = kdb.query?.bind(kdb);
 
     app.get('/api/rss/boards/:id', async (req, rep) => {
       const boardId = Number((req.params as { id: string }).id);
-      const board = await db.get<{ name: string; description: string }>(
-        'SELECT name, description FROM boards WHERE id = ?', boardId
-      );
+      const boardResult = await kdb.sql<{ name: string; description: string }>`SELECT name, description FROM boards WHERE id = ${boardId}`;
+      const board = boardResult[0];
       if (!board) return rep.status(404).send({ error: '版块不存在' });
 
-      const posts = await db.all<any>(
-        `SELECT p.id, p.title, p.content, p.created_at, u.username
-         FROM posts p JOIN users u ON p.author_id = u.id
-         WHERE p.board_id = ? AND p.is_pending = 0 AND p.is_private = 0
-         ORDER BY p.created_at DESC LIMIT 20`,
-        boardId
-      );
+      const posts = await kdb.sql<any>`SELECT p.id, p.title, p.content, p.created_at, u.username
+        FROM posts p JOIN users u ON p.author_id = u.id
+        WHERE p.board_id = ${boardId} AND p.is_pending = 0 AND p.is_private = 0
+        ORDER BY p.created_at DESC LIMIT 20`;
 
       const siteUrl = process.env.CLIENT_URL || 'http://localhost:5173';
       let xml = `<?xml version="1.0" encoding="UTF-8"?>

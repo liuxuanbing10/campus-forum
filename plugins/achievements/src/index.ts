@@ -1,4 +1,5 @@
 import { Plugin, PluginContext, uid } from '@campus-forum/core';
+import { KyselyAdapter } from '@campus-forum/database';
 
 interface AchievementRow {
   id: number;
@@ -30,38 +31,36 @@ async function checkAndAward(
   achievementKey: string,
 ): Promise<{ newlyUnlocked: boolean; achievement?: AchievementRow }> {
   const { db } = ctx;
+  const kdb = db as KyselyAdapter;
+  const q = kdb.query?.bind(kdb);
 
   // 找到成就定义
-  const ach = await db.get<AchievementRow>(
-    'SELECT * FROM achievements WHERE key = ?', achievementKey,
-  );
+  const ach = await q()!.selectFrom('achievements').selectAll().where('key', '=', achievementKey).executeTakeFirst() as AchievementRow | undefined;
   if (!ach) return { newlyUnlocked: false };
 
   // ── 可重复成就 ──
   if (ach.repeat_interval > 0) {
     // 查询当前已获得的次数
-    const existing = await db.get<{ id: number; repeat_count: number }>(
-      'SELECT id, COALESCE(repeat_count,0) as repeat_count FROM user_achievements WHERE user_id = ? AND achievement_id = ?',
-      userId, ach.id,
-    );
+    const existingRows = await kdb.sql<{ id: number; repeat_count: number }>`SELECT id, COALESCE(repeat_count,0) as repeat_count FROM user_achievements WHERE user_id = ${userId} AND achievement_id = ${ach.id}`;
+    const existing = existingRows[0];
     const totalAwarded = existing?.repeat_count || 0;
 
     // 计算总计数
     let totalCount = 0;
     switch (achievementKey) {
       case 'repeat_posts': {
-        const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM posts WHERE author_id=?', userId);
-        totalCount = c?.c ?? 0;
+        const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM posts WHERE author_id = ${userId}`;
+        totalCount = rows[0]?.c ?? 0;
         break;
       }
       case 'repeat_comments': {
-        const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM comments WHERE author_id=?', userId);
-        totalCount = c?.c ?? 0;
+        const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM comments WHERE author_id = ${userId}`;
+        totalCount = rows[0]?.c ?? 0;
         break;
       }
       case 'repeat_likes': {
-        const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM votes WHERE value=1 AND post_id IN (SELECT id FROM posts WHERE author_id=?)', userId);
-        totalCount = c?.c ?? 0;
+        const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM votes WHERE value=1 AND post_id IN (SELECT id FROM posts WHERE author_id = ${userId})`;
+        totalCount = rows[0]?.c ?? 0;
         break;
       }
     }
@@ -75,11 +74,11 @@ async function checkAndAward(
       const timesToAward = expectedTimes - totalAwarded;
       const newTotal = expectedTimes;
       if (existing) {
-        await db.run('UPDATE user_achievements SET repeat_count=? WHERE id=?', newTotal, existing.id);
+        await q()!.updateTable('user_achievements').set({ repeat_count: newTotal }).where('id', '=', existing.id).execute();
       } else {
-        await db.run('INSERT INTO user_achievements (user_id, achievement_id, repeat_count) VALUES (?,?,?)', userId, ach.id, newTotal);
+        await q()!.insertInto('user_achievements').values({ user_id: userId, achievement_id: ach.id, repeat_count: newTotal }).execute();
       }
-      await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', ach.points * timesToAward, userId);
+      await kdb.sql<unknown>`UPDATE users SET points=COALESCE(points,0)+${ach.points * timesToAward} WHERE id=${userId}`;
       // 发送通知
       try {
         await (ctx as any).createNotification?.(
@@ -94,10 +93,7 @@ async function checkAndAward(
   }
 
   // ── 一次性成就 ──
-  const existing = await db.get<UserAchievementRow>(
-    'SELECT id FROM user_achievements WHERE user_id = ? AND achievement_id = ?',
-    userId, ach.id,
-  );
+  const existing = await q()!.selectFrom('user_achievements').select('id').where('user_id', '=', userId).where('achievement_id', '=', ach.id).executeTakeFirst() as UserAchievementRow | undefined;
   if (existing) return { newlyUnlocked: false };
 
   // 条件判断
@@ -106,101 +102,98 @@ async function checkAndAward(
   switch (achievementKey) {
     // ── 内容创作 ──
     case 'first_post': {
-      const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM posts WHERE author_id=?', userId);
-      met = (c?.c ?? 0) >= 1;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM posts WHERE author_id = ${userId}`;
+      met = (rows[0]?.c ?? 0) >= 1;
       break;
     }
     case 'ten_posts': {
-      const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM posts WHERE author_id=?', userId);
-      met = (c?.c ?? 0) >= 10;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM posts WHERE author_id = ${userId}`;
+      met = (rows[0]?.c ?? 0) >= 10;
       break;
     }
     case 'fifty_posts': {
-      const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM posts WHERE author_id=?', userId);
-      met = (c?.c ?? 0) >= 50;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM posts WHERE author_id = ${userId}`;
+      met = (rows[0]?.c ?? 0) >= 50;
       break;
     }
     case 'hundred_posts': {
-      const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM posts WHERE author_id=?', userId);
-      met = (c?.c ?? 0) >= 100;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM posts WHERE author_id = ${userId}`;
+      met = (rows[0]?.c ?? 0) >= 100;
       break;
     }
     case 'thousand_posts': {
-      const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM posts WHERE author_id=?', userId);
-      met = (c?.c ?? 0) >= 500;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM posts WHERE author_id = ${userId}`;
+      met = (rows[0]?.c ?? 0) >= 500;
       break;
     }
 
     // ── 社交互动 ──
     case 'first_comment': {
-      const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM comments WHERE author_id=?', userId);
-      met = (c?.c ?? 0) >= 1;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM comments WHERE author_id = ${userId}`;
+      met = (rows[0]?.c ?? 0) >= 1;
       break;
     }
     case 'fifty_comments': {
-      const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM comments WHERE author_id=?', userId);
-      met = (c?.c ?? 0) >= 50;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM comments WHERE author_id = ${userId}`;
+      met = (rows[0]?.c ?? 0) >= 50;
       break;
     }
     case 'twohundred_comments': {
-      const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM comments WHERE author_id=?', userId);
-      met = (c?.c ?? 0) >= 200;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM comments WHERE author_id = ${userId}`;
+      met = (rows[0]?.c ?? 0) >= 200;
       break;
     }
     case 'fivehundred_comments': {
-      const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM comments WHERE author_id=?', userId);
-      met = (c?.c ?? 0) >= 500;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM comments WHERE author_id = ${userId}`;
+      met = (rows[0]?.c ?? 0) >= 500;
       break;
     }
 
     // ── 点赞 ──
     case 'hundred_likes': {
-      const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM votes WHERE value=1 AND post_id IN (SELECT id FROM posts WHERE author_id=?)', userId);
-      met = (c?.c ?? 0) >= 100;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM votes WHERE value=1 AND post_id IN (SELECT id FROM posts WHERE author_id = ${userId})`;
+      met = (rows[0]?.c ?? 0) >= 100;
       break;
     }
     case 'fivehundred_likes': {
-      const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM votes WHERE value=1 AND post_id IN (SELECT id FROM posts WHERE author_id=?)', userId);
-      met = (c?.c ?? 0) >= 500;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM votes WHERE value=1 AND post_id IN (SELECT id FROM posts WHERE author_id = ${userId})`;
+      met = (rows[0]?.c ?? 0) >= 500;
       break;
     }
     case 'thousand_likes': {
-      const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM votes WHERE value=1 AND post_id IN (SELECT id FROM posts WHERE author_id=?)', userId);
-      met = (c?.c ?? 0) >= 1000;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM votes WHERE value=1 AND post_id IN (SELECT id FROM posts WHERE author_id = ${userId})`;
+      met = (rows[0]?.c ?? 0) >= 1000;
       break;
     }
 
     // ── 收藏 ──
     case 'first_favorite': {
-      const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM favorites WHERE user_id=?', userId);
-      met = (c?.c ?? 0) >= 1;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM favorites WHERE user_id = ${userId}`;
+      met = (rows[0]?.c ?? 0) >= 1;
       break;
     }
 
     // ── 团队 ──
     case 'first_team': {
-      const c = await db.get<{ c: number }>(
-        "SELECT COUNT(*) as c FROM team_members WHERE user_id=? AND status='approved'", userId,
-      );
-      met = (c?.c ?? 0) >= 1;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM team_members WHERE user_id = ${userId} AND status = 'approved'`;
+      met = (rows[0]?.c ?? 0) >= 1;
       break;
     }
     case 'create_team': {
-      const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM teams WHERE creator_id=?', userId);
-      met = (c?.c ?? 0) >= 1;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM teams WHERE creator_id = ${userId}`;
+      met = (rows[0]?.c ?? 0) >= 1;
       break;
     }
     case 'five_teams': {
-      const c = await db.get<{ c: number }>(
-        "SELECT COUNT(*) as c FROM team_members WHERE user_id=? AND status='approved'", userId,
-      );
-      met = (c?.c ?? 0) >= 5;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM team_members WHERE user_id = ${userId} AND status = 'approved'`;
+      met = (rows[0]?.c ?? 0) >= 5;
       break;
     }
 
     // ── 活跃度 ──
     case 'seven_day': {
-      const user = await db.get<{ created_at: string }>('SELECT created_at FROM users WHERE id=?', userId);
+      const userRows = await kdb.sql<{ created_at: string }>`SELECT created_at FROM users WHERE id = ${userId}`;
+      const user = userRows[0];
       if (user) {
         const days = (Date.now() - new Date(user.created_at + 'Z').getTime()) / 86400000;
         met = days >= 7;
@@ -208,7 +201,8 @@ async function checkAndAward(
       break;
     }
     case 'thirty_day': {
-      const user = await db.get<{ created_at: string }>('SELECT created_at FROM users WHERE id=?', userId);
+      const userRows = await kdb.sql<{ created_at: string }>`SELECT created_at FROM users WHERE id = ${userId}`;
+      const user = userRows[0];
       if (user) {
         const days = (Date.now() - new Date(user.created_at + 'Z').getTime()) / 86400000;
         met = days >= 30;
@@ -216,7 +210,8 @@ async function checkAndAward(
       break;
     }
     case 'hundred_day': {
-      const user = await db.get<{ created_at: string }>('SELECT created_at FROM users WHERE id=?', userId);
+      const userRows = await kdb.sql<{ created_at: string }>`SELECT created_at FROM users WHERE id = ${userId}`;
+      const user = userRows[0];
       if (user) {
         const days = (Date.now() - new Date(user.created_at + 'Z').getTime()) / 86400000;
         met = days >= 100;
@@ -224,36 +219,30 @@ async function checkAndAward(
       break;
     }
     case 'thousand_views': {
-      const c = await db.get<{ c: number }>('SELECT COALESCE(SUM(view_count),0) as c FROM posts WHERE author_id=?', userId);
-      met = (c?.c ?? 0) >= 1000;
+      const rows = await kdb.sql<{ c: number }>`SELECT COALESCE(SUM(view_count),0) as c FROM posts WHERE author_id = ${userId}`;
+      met = (rows[0]?.c ?? 0) >= 1000;
       break;
     }
     case 'ten_thousand_views': {
-      const c = await db.get<{ c: number }>('SELECT COALESCE(SUM(view_count),0) as c FROM posts WHERE author_id=?', userId);
-      met = (c?.c ?? 0) >= 10000;
+      const rows = await kdb.sql<{ c: number }>`SELECT COALESCE(SUM(view_count),0) as c FROM posts WHERE author_id = ${userId}`;
+      met = (rows[0]?.c ?? 0) >= 10000;
       break;
     }
 
     // ── 特殊成就 ──
     case 'hot_thread': {
-      const post = await db.get<{ c: number }>(
-        'SELECT COUNT(*) as c FROM posts WHERE author_id=? AND id IN (SELECT post_id FROM comments GROUP BY post_id HAVING COUNT(*)>=10)',
-        userId,
-      );
-      met = (post?.c ?? 0) >= 1;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM posts WHERE author_id = ${userId} AND id IN (SELECT post_id FROM comments GROUP BY post_id HAVING COUNT(*) >= 10)`;
+      met = (rows[0]?.c ?? 0) >= 1;
       break;
     }
     case 'viral_post': {
-      const post = await db.get<{ c: number }>(
-        'SELECT COUNT(*) as c FROM posts WHERE author_id=? AND id IN (SELECT post_id FROM votes WHERE value=1 GROUP BY post_id HAVING COUNT(*)>=50)',
-        userId,
-      );
-      met = (post?.c ?? 0) >= 1;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM posts WHERE author_id = ${userId} AND id IN (SELECT post_id FROM votes WHERE value=1 GROUP BY post_id HAVING COUNT(*) >= 50)`;
+      met = (rows[0]?.c ?? 0) >= 1;
       break;
     }
     case 'first_report': {
-      const c = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM reports WHERE reporter_id=?', userId);
-      met = (c?.c ?? 0) >= 1;
+      const rows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM reports WHERE reporter_id = ${userId}`;
+      met = (rows[0]?.c ?? 0) >= 1;
       break;
     }
   }
@@ -261,13 +250,10 @@ async function checkAndAward(
   if (!met) return { newlyUnlocked: false };
 
   // 授予成就
-  await db.run(
-    'INSERT INTO user_achievements (user_id, achievement_id) VALUES (?, ?)',
-    userId, ach.id,
-  );
+  await q()!.insertInto('user_achievements').values({ user_id: userId, achievement_id: ach.id }).execute();
 
   // 发放积分奖励
-  await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', ach.points, userId);
+  await kdb.sql<unknown>`UPDATE users SET points=COALESCE(points,0)+${ach.points} WHERE id=${userId}`;
 
   // 发送通知
   try {
@@ -285,14 +271,14 @@ async function checkAndAward(
 
 async function checkAllAchievements(ctx: PluginContext, userId: number) {
   const { db } = ctx;
-  const all = await db.all<AchievementRow>('SELECT * FROM achievements ORDER BY sort_order');
+  const kdb = db as KyselyAdapter;
+  const q = kdb.query?.bind(kdb);
+
+  const all = await q()!.selectFrom('achievements').selectAll().orderBy('sort_order').execute() as AchievementRow[];
   const results: { achievement: AchievementRow }[] = [];
 
   for (const ach of all) {
-    const existing = await db.get<UserAchievementRow>(
-      'SELECT id FROM user_achievements WHERE user_id=? AND achievement_id=?',
-      userId, ach.id,
-    );
+    const existing = await q()!.selectFrom('user_achievements').select('id').where('user_id', '=', userId).where('achievement_id', '=', ach.id).executeTakeFirst() as UserAchievementRow | undefined;
     if (existing) continue;
     const result = await checkAndAward(ctx, userId, ach.key);
     if (result.newlyUnlocked && result.achievement) {
@@ -307,53 +293,47 @@ async function checkAllAchievements(ctx: PluginContext, userId: number) {
 
 export function registerAchievementRoutes(ctx: PluginContext) {
   const { app, db } = ctx;
+  const kdb = db as KyselyAdapter;
+  const q = kdb.query?.bind(kdb);
 
   // 获取全部成就列表（含用户解锁状态）
   app.get('/api/achievements', async (req) => {
     const u = uid(req);
-    const all = await db.all<AchievementRow>('SELECT * FROM achievements ORDER BY sort_order');
+    const all = await q()!.selectFrom('achievements').selectAll().orderBy('sort_order').execute() as AchievementRow[];
 
     if (!u) {
       return { achievements: all.map(a => ({ ...a, unlocked: false, unlocked_at: null })) };
     }
 
     // 🛡️ 管理员自动全成就
-    const userRow = await db.get<{ is_admin: number }>('SELECT is_admin FROM users WHERE id=?', u);
+    const userRow = await q()!.selectFrom('users').select('is_admin').where('id', '=', u).executeTakeFirst() as { is_admin: number } | undefined;
     if (userRow?.is_admin) {
       for (const ach of all) {
         if (ach.repeat_interval > 0) {
           // 管理员可重复成就：单行 max_repeats
-          const existing = await db.get<{ id: number }>(
-            'SELECT id FROM user_achievements WHERE user_id=? AND achievement_id=?',
-            u, ach.id,
-          );
+          const existing = await q()!.selectFrom('user_achievements').select('id').where('user_id', '=', u).where('achievement_id', '=', ach.id).executeTakeFirst() as { id: number } | undefined;
           if (existing) {
-            const oldRow = await db.get<{ repeat_count: number }>('SELECT COALESCE(repeat_count,0) AS repeat_count FROM user_achievements WHERE id=?', existing.id);
-            const oldCount = oldRow?.repeat_count || 0;
+            const oldRow = await kdb.sql<{ repeat_count: number }>`SELECT COALESCE(repeat_count,0) AS repeat_count FROM user_achievements WHERE id = ${existing.id}`;
+            const oldCount = oldRow[0]?.repeat_count || 0;
             if (oldCount < ach.max_repeats) {
-              await db.run('UPDATE user_achievements SET repeat_count=? WHERE id=?', ach.max_repeats, existing.id);
-              await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', ach.points * (ach.max_repeats - oldCount), u);
+              await q()!.updateTable('user_achievements').set({ repeat_count: ach.max_repeats }).where('id', '=', existing.id).execute();
+              await kdb.sql<unknown>`UPDATE users SET points=COALESCE(points,0)+${ach.points * (ach.max_repeats - oldCount)} WHERE id=${u}`;
             }
           } else {
-            await db.run('INSERT INTO user_achievements (user_id, achievement_id, repeat_count) VALUES (?,?,?)', u, ach.id, ach.max_repeats);
-            await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', ach.points * ach.max_repeats, u);
+            await q()!.insertInto('user_achievements').values({ user_id: u, achievement_id: ach.id, repeat_count: ach.max_repeats }).execute();
+            await kdb.sql<unknown>`UPDATE users SET points=COALESCE(points,0)+${ach.points * ach.max_repeats} WHERE id=${u}`;
           }
         } else {
-          const existing = await db.get<UserAchievementRow>(
-            'SELECT id FROM user_achievements WHERE user_id=? AND achievement_id=?', u, ach.id,
-          );
+          const existing = await q()!.selectFrom('user_achievements').select('id').where('user_id', '=', u).where('achievement_id', '=', ach.id).executeTakeFirst() as UserAchievementRow | undefined;
           if (!existing) {
-            await db.run('INSERT INTO user_achievements (user_id, achievement_id) VALUES (?, ?)', u, ach.id);
-            await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', ach.points, u);
+            await q()!.insertInto('user_achievements').values({ user_id: u, achievement_id: ach.id }).execute();
+            await kdb.sql<unknown>`UPDATE users SET points=COALESCE(points,0)+${ach.points} WHERE id=${u}`;
           }
         }
       }
     }
 
-    const unlocked = await db.all<any>(
-      `SELECT ua.achievement_id, ua.unlocked_at, ua.repeat_count
-       FROM user_achievements ua WHERE ua.user_id=?`, u,
-    );
+    const unlocked = await kdb.sql<any>`SELECT ua.achievement_id, ua.unlocked_at, ua.repeat_count FROM user_achievements ua WHERE ua.user_id = ${u}`;
     const unlockedMap = new Map<number, { unlocked_at: string; repeat_count: number }>();
     for (const ua of unlocked) {
       const prev = unlockedMap.get(ua.achievement_id);
@@ -381,8 +361,10 @@ export function registerAchievementRoutes(ctx: PluginContext) {
 
   // 获取用户成就统计
   app.get('/api/achievements/stats', async (req) => {
-    const totalRow = await db.get<{ c: number }>('SELECT COUNT(*) as c FROM achievements');
-    const totalPointsRow = await db.get<{ c: number }>('SELECT COALESCE(SUM(points),0) as c FROM achievements');
+    const totalRows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM achievements`;
+    const totalRow = totalRows[0];
+    const totalPointsRows = await kdb.sql<{ c: number }>`SELECT COALESCE(SUM(points),0) as c FROM achievements`;
+    const totalPointsRow = totalPointsRows[0];
 
     const u = uid(req);
     if (!u) {
@@ -396,28 +378,23 @@ export function registerAchievementRoutes(ctx: PluginContext) {
     }
 
     // 🛡️ 管理员自动全成就
-    const userRow = await db.get<{ is_admin: number }>('SELECT is_admin FROM users WHERE id=?', u);
+    const userRow = await q()!.selectFrom('users').select('is_admin').where('id', '=', u).executeTakeFirst() as { is_admin: number } | undefined;
     if (userRow?.is_admin) {
-      const all = await db.all<AchievementRow>('SELECT * FROM achievements');
+      const all = await q()!.selectFrom('achievements').selectAll().execute() as AchievementRow[];
       for (const ach of all) {
-        const existing = await db.get<UserAchievementRow>(
-          'SELECT id FROM user_achievements WHERE user_id=? AND achievement_id=?', u, ach.id,
-        );
+        const existing = await q()!.selectFrom('user_achievements').select('id').where('user_id', '=', u).where('achievement_id', '=', ach.id).executeTakeFirst() as UserAchievementRow | undefined;
         if (!existing) {
-          await db.run('INSERT INTO user_achievements (user_id, achievement_id) VALUES (?, ?)', u, ach.id);
-          await db.run('UPDATE users SET points=COALESCE(points,0)+? WHERE id=?', ach.points, u);
+          await q()!.insertInto('user_achievements').values({ user_id: u, achievement_id: ach.id }).execute();
+          await kdb.sql<unknown>`UPDATE users SET points=COALESCE(points,0)+${ach.points} WHERE id=${u}`;
         }
       }
     }
 
-    const unlockedRow = await db.get<{ c: number }>(
-      'SELECT COUNT(*) as c FROM user_achievements WHERE user_id=?', u,
-    );
-    const pointsRow = await db.get<{ c: number }>(
-      'SELECT COALESCE(SUM(a.points),0) as c FROM user_achievements ua JOIN achievements a ON ua.achievement_id=a.id WHERE ua.user_id=?',
-      u,
-    );
-    const userPointsRow = await db.get<{ points: number }>('SELECT points FROM users WHERE id=?', u);
+    const unlockedRows = await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM user_achievements WHERE user_id = ${u}`;
+    const unlockedRow = unlockedRows[0];
+    const pointsRows = await kdb.sql<{ c: number }>`SELECT COALESCE(SUM(a.points),0) as c FROM user_achievements ua JOIN achievements a ON ua.achievement_id = a.id WHERE ua.user_id = ${u}`;
+    const pointsRow = pointsRows[0];
+    const userPointsRow = await q()!.selectFrom('users').select('points').where('id', '=', u).executeTakeFirst() as { points: number } | undefined;
 
     return {
       total: totalRow?.c ?? 0,
