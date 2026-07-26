@@ -351,10 +351,23 @@ export interface MailService {
 - B2. 注册 `QueueService`（基于 bullmq）→ export 插件导出任务异步化
 - B3. 在 `notifications` 插件中加入邮件摘要订阅（每日/每周）
 
-**阶段 C（长期 · 高投入）**
-- C1. 引入 `kysely` 作为 `DatabaseAdapter` 的新实现 `KyselyAdapter`，与 `LibSQLAdapter` 并存
-- C2. 逐插件迁移到 kysely（从 posts 开始）
-- C3. 用 `@fastify/multipart` 替代 base64 上传，前端 `MarkdownEditor` 改用 FormData
+**阶段 C（长期 · 高投入）** ✅ 2026-07-26 完成
+- ✅ C1. 引入 `kysely` 作为 `DatabaseAdapter` 的新实现 `KyselyAdapter`，与 `LibSQLAdapter` 并存
+  - 新增 `packages/database/src/kysely-adapter.ts`
+  - 实现 DatabaseAdapter 接口 + query() 类型安全 builder + sql 模板标签
+- ✅ C2. 逐插件迁移到 kysely（从 posts 开始）
+  - posts 插件 boards/posts/comments/votes/favorites CRUD 改用 query builder
+  - 复杂查询用 sql 模板标签，保持 DatabaseAdapter 接口兼容
+- ✅ C3. 用 `@fastify/multipart` 替代 base64 上传，前端 `MarkdownEditor` 改用 FormData
+  - server 注册 @fastify/multipart（10MB/文件，9 文件上限）
+  - ImageService 新增 uploadFromBuffer 方法
+  - posts /api/upload + auth /api/users/avatar 支持 multipart + base64 双模式
+  - 前端 NewPost/EditPost/MarkdownEditor/Settings/TeamDetail 改用 FormData
+- ✅ C-verify. 编译测试 + 提交部署 + 云服务器验证
+  - 全量 build:server + build:client 通过
+  - 推送 main 触发 GitHub Actions 部署
+  - 服务器健康检查通过，13 个插件全部 active
+  - 修复 deploy.yml：同步 package.json + npm install --include=optional + 兜底安装 native binding
 
 ### 10.4 移动端适配（Phase 11）
 
@@ -378,7 +391,7 @@ export interface MailService {
 2. ✅ Phase 4：站头三布局 + 真实地支时钟（每境显示）+ 标语轮播（realm.sl）
 3. ✅ Phase 5：Login/Register/Settings 用 react-hook-form + zod + sonner + Radix UI 重写
 4. ✅ Phase 6-7：Masthead/TopBar/RealmSwitcher 整合
-5. ⏸ Phase 10：后端第三方组件集成 → 单独 PR，按阶段 A/B/C 推进
+5. ✅ Phase 10：后端第三方组件集成 → 阶段 A/B/C 全部完成（2026-07-26）
 6. ⏸ Phase 11：移动端 capacitor/harmony 适配 → 单独分支按 11.1/11.2 推进
 
 后端与移动端的重写需要独立 session 充分测试，避免破坏云服务器运行中的服务。
