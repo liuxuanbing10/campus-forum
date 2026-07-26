@@ -100,6 +100,43 @@ export class ImageService {
     return this.uploadToDb(buf, srcMime, options);
   }
 
+  /**
+   * 从 Buffer 上传图片（multipart 文件流场景）
+   * - 跳过 base64 解码，直接用 sharp 处理原始 Buffer
+   * - 与 uploadFromBase64 共享 uploadWithSharp/uploadToDb 实现
+   * @param buf 原始图片字节
+   * @param mimeType 原始 MIME（如 image/png）
+   * @param opts 上传选项
+   */
+  async uploadFromBuffer(
+    buf: Buffer,
+    mimeType: string,
+    opts: ImageUploadOptions,
+  ): Promise<ProcessedImage> {
+    const options = { ...DEFAULT_OPTS, ...opts };
+
+    if (buf.length > options.maxSize) {
+      throw new Error(`图片不能超过 ${Math.floor(options.maxSize / 1024 / 1024)}MB`);
+    }
+
+    // 校验 MIME
+    if (!mimeType.startsWith('image/')) {
+      throw new Error('仅支持图片文件');
+    }
+
+    // sharp 可用 → 优化 + 文件系统存储
+    if (this.sharpAvailable && this.sharpModule) {
+      try {
+        return await this.uploadWithSharp(buf, mimeType, options);
+      } catch (err) {
+        console.warn('[ImageService] sharp 处理失败，降级到 DB:', (err as Error).message);
+      }
+    }
+
+    // 降级路径：原样存 DB base64
+    return this.uploadToDb(buf, mimeType, options);
+  }
+
   private async uploadWithSharp(
     buf: Buffer,
     _srcMime: string,

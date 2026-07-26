@@ -142,3 +142,4 @@ export async function createDatabase(dbPath?: string): Promise<LibSQLAdapter> {
 export { initializeSchema } from './schema.js';
 export { seedData } from './seed.js';
 export { migrateSchema } from './schema.js';
+export { KyselyAdapter, createKyselyDatabase } from './kysely-adapter.js';

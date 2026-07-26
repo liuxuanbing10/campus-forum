@@ -1,4 +1,5 @@
 import { Plugin, PluginContext, uid } from '@campus-forum/core';
+import { KyselyAdapter } from '@campus-forum/database';
 
 // ── 服务接口（与 server/services 实现匹配） ──────────
 interface QueueService {
@@ -34,6 +35,8 @@ export const exportPlugin: Plugin = {
   },
   apply(ctx: PluginContext) {
     const { app, db } = ctx;
+    const kdb = db as KyselyAdapter;
+    const q = kdb.query?.bind(kdb);
 
     // 从服务容器获取 QueueService
     let queueService: QueueService | null = null;
@@ -43,16 +46,18 @@ export const exportPlugin: Plugin = {
     if (queueService) {
       queueService.registerQueue<ExportResult>('user-export', async (_job, data) => {
         const { userId } = data as { userId: number };
-        const posts = await db.all(
-          'SELECT id, title, content, board_id, created_at FROM posts WHERE author_id = ? ORDER BY created_at DESC',
-          userId,
-        );
-        const comments = await db.all(
-          `SELECT c.id, c.content, c.post_id, p.title as post_title, c.created_at
-           FROM comments c JOIN posts p ON c.post_id = p.id
-           WHERE c.author_id = ? ORDER BY c.created_at DESC`,
-          userId,
-        );
+        const posts = await q()!
+          .selectFrom('posts')
+          .select(['id', 'title', 'content', 'board_id', 'created_at'])
+          .where('author_id', '=', userId)
+          .orderBy('created_at', 'desc')
+          .execute();
+        const comments = await kdb.sql<any>`
+          SELECT c.id, c.content, c.post_id, p.title as post_title, c.created_at
+          FROM comments c JOIN posts p ON c.post_id = p.id
+          WHERE c.author_id = ${userId}
+          ORDER BY c.created_at DESC
+        `;
         const result: ExportResult = {
           exportedAt: new Date().toISOString(),
           user: { id: userId },
@@ -75,16 +80,18 @@ export const exportPlugin: Plugin = {
         return { success: true, jobId, message: '导出任务已加入队列' };
       }
       // 降级：直接同步返回（保持向后兼容）
-      const posts = await db.all(
-        'SELECT id, title, content, board_id, created_at FROM posts WHERE author_id = ? ORDER BY created_at DESC',
-        userId,
-      );
-      const comments = await db.all(
-        `SELECT c.id, c.content, c.post_id, p.title as post_title, c.created_at
-         FROM comments c JOIN posts p ON c.post_id = p.id
-         WHERE c.author_id = ? ORDER BY c.created_at DESC`,
-        userId,
-      );
+      const posts = await q()!
+        .selectFrom('posts')
+        .select(['id', 'title', 'content', 'board_id', 'created_at'])
+        .where('author_id', '=', userId)
+        .orderBy('created_at', 'desc')
+        .execute();
+      const comments = await kdb.sql<any>`
+        SELECT c.id, c.content, c.post_id, p.title as post_title, c.created_at
+        FROM comments c JOIN posts p ON c.post_id = p.id
+        WHERE c.author_id = ${userId}
+        ORDER BY c.created_at DESC
+      `;
       const data = JSON.stringify({
         exportedAt: new Date().toISOString(),
         user: { id: userId },

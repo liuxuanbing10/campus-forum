@@ -1,4 +1,5 @@
 import { Plugin, PluginContext, uid } from '@campus-forum/core';
+import { KyselyAdapter } from '@campus-forum/database';
 
 // ── 服务接口（与 server/services 实现匹配） ──────────
 interface EmailService {
@@ -17,13 +18,15 @@ export const notificationsPlugin: Plugin = {
 
   apply(ctx: PluginContext) {
     const { app, db } = ctx;
+    const kdb = db as KyselyAdapter;
+    const q = kdb.query?.bind(kdb);
     // 从服务容器获取 EmailService
     let emailService: EmailService | null = null;
     try { emailService = ctx.getService<EmailService>('emailService'); } catch { /* 未注册时降级 */ }
 
     // 建表（懒执行）
     const ensurePrefTable = async () => {
-      await db.exec(`CREATE TABLE IF NOT EXISTS notification_email_prefs (
+      await kdb.exec(`CREATE TABLE IF NOT EXISTS notification_email_prefs (
         user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
         enabled INTEGER DEFAULT 0,
         frequency TEXT DEFAULT 'daily',
@@ -35,15 +38,16 @@ export const notificationsPlugin: Plugin = {
     app.get('/api/notifications', async (req, rep) => {
       const userId = uid(req);
       if (!userId) return rep.status(401).send({ error: '请先登录' });
-      const q = req.query as { unread?: string; page?: string };
-      const page = Math.min(100, Math.max(1, Number(q.page) || 1));
+      const query = req.query as { unread?: string; page?: string };
+      const page = Math.min(100, Math.max(1, Number(query.page) || 1));
       const limit = 30;
-      const where = q.unread === 'true' ? 'AND n.is_read=0' : '';
+      const where = query.unread === 'true' ? 'AND n.is_read=0' : '';
 
-      const unreadCount = await db.get<{ count: number }>(
-        'SELECT COUNT(*) as count FROM notifications WHERE user_id=? AND is_read=0', userId
-      );
-      const notifications = await db.all<any>(
+      const unreadCount = await kdb.sql<{ count: number }>`
+        SELECT COUNT(*) as count FROM notifications WHERE user_id = ${userId} AND is_read = 0
+      `;
+
+      const notifications = await kdb.all<any>(
         `SELECT n.*, CASE WHEN fu.id IS NOT NULL THEN CASE WHEN nc.is_anonymous=1 THEN '匿名用户' ELSE fu.username END END as from_username,
                 p.title as post_title
          FROM notifications n
@@ -54,30 +58,37 @@ export const notificationsPlugin: Plugin = {
          ORDER BY n.created_at DESC LIMIT ? OFFSET ?`,
         userId, limit, (page - 1) * limit
       );
-      return { notifications, unreadCount: unreadCount?.count || 0, page, limit };
+      return { notifications, unreadCount: unreadCount[0]?.count || 0, page, limit };
     });
 
     app.put('/api/notifications/:id/read', async (req, rep) => {
       const userId = uid(req);
       if (!userId) return rep.status(401).send({ error: '请先登录' });
-      const n = await db.get<{ id: number }>('SELECT id FROM notifications WHERE id=? AND user_id=?', Number((req.params as { id: string }).id), userId);
-      if (!n) return rep.status(404).send({ error: '通知不存在' });
-      await db.run('UPDATE notifications SET is_read=1 WHERE id=?', n.id);
+      const n = await q()!
+        .selectFrom('notifications')
+        .select(['id'])
+        .where('id', '=', Number((req.params as { id: string }).id))
+        .where('user_id', '=', userId)
+        .execute();
+      if (!n.length) return rep.status(404).send({ error: '通知不存在' });
+      await kdb.run('UPDATE notifications SET is_read=1 WHERE id=?', (n[0] as any).id);
       return { success: true };
     });
 
     app.put('/api/notifications/read-all', async (req, rep) => {
       const userId = uid(req);
       if (!userId) return rep.status(401).send({ error: '请先登录' });
-      await db.run('UPDATE notifications SET is_read=1 WHERE user_id=? AND is_read=0', userId);
+      await kdb.run('UPDATE notifications SET is_read=1 WHERE user_id=? AND is_read=0', userId);
       return { success: true, message: '全部标为已读' };
     });
 
     app.get('/api/notifications/unread-count', async (req, rep) => {
       const userId = uid(req);
       if (!userId) return rep.status(401).send({ error: '请先登录' });
-      const r = await db.get<{ count: number }>('SELECT COUNT(*) as count FROM notifications WHERE user_id=? AND is_read=0', userId);
-      return { unreadCount: r?.count || 0 };
+      const r = await kdb.sql<{ count: number }>`
+        SELECT COUNT(*) as count FROM notifications WHERE user_id = ${userId} AND is_read = 0
+      `;
+      return { unreadCount: r[0]?.count || 0 };
     });
 
     // ─── 邮件摘要订阅偏好 ───
@@ -85,14 +96,16 @@ export const notificationsPlugin: Plugin = {
       const userId = uid(req);
       if (!userId) return rep.status(401).send({ error: '请先登录' });
       await ensurePrefTable();
-      const pref = await db.get<EmailDigestPref>(
-        'SELECT enabled, frequency, last_sent_at FROM notification_email_prefs WHERE user_id=?',
-        userId,
-      );
+      const pref = await q()!
+        .selectFrom('notification_email_prefs')
+        .select(['enabled', 'frequency', 'last_sent_at'])
+        .where('user_id', '=', userId)
+        .execute();
+      const prefRow = pref[0] as EmailDigestPref | undefined;
       return {
-        enabled: pref?.enabled === 1,
-        frequency: pref?.frequency || 'daily',
-        lastSentAt: pref?.last_sent_at || null,
+        enabled: prefRow?.enabled === 1,
+        frequency: prefRow?.frequency || 'daily',
+        lastSentAt: prefRow?.last_sent_at || null,
       };
     });
 
@@ -104,7 +117,7 @@ export const notificationsPlugin: Plugin = {
         return rep.status(400).send({ error: '频率无效' });
       }
       await ensurePrefTable();
-      await db.run(
+      await kdb.run(
         `INSERT INTO notification_email_prefs (user_id, enabled, frequency, updated_at)
          VALUES (?, ?, ?, datetime('now'))
          ON CONFLICT(user_id) DO UPDATE SET enabled=excluded.enabled, frequency=excluded.frequency, updated_at=datetime('now')`,
@@ -120,22 +133,24 @@ export const notificationsPlugin: Plugin = {
       if (!emailService) return rep.status(503).send({ error: '邮件服务未启用' });
 
       // 取用户邮箱
-      const user = await db.get<{ email: string; email_verified: number; username: string }>(
-        'SELECT email, email_verified, username FROM users WHERE id=?', userId,
-      );
-      if (!user?.email || !user.email_verified) {
+      const user = await q()!
+        .selectFrom('users')
+        .select(['email', 'email_verified', 'username'])
+        .where('id', '=', userId)
+        .execute();
+      const userRow = user[0] as { email: string; email_verified: number; username: string } | undefined;
+      if (!userRow?.email || !userRow.email_verified) {
         return rep.status(400).send({ error: '邮箱未验证' });
       }
 
       // 取最近 24 小时未读通知
-      const recent = await db.all<{ id: number; message: string; created_at: string; post_title: string | null }>(
-        `SELECT n.id, n.message, n.created_at, p.title as post_title
-         FROM notifications n LEFT JOIN posts p ON n.related_post_id=p.id
-         WHERE n.user_id=? AND n.is_read=0
-           AND n.created_at >= datetime('now', '-1 day')
-         ORDER BY n.created_at DESC LIMIT 20`,
-        userId,
-      );
+      const recent = await kdb.sql<{ id: number; message: string; created_at: string; post_title: string | null }>`
+        SELECT n.id, n.message, n.created_at, p.title as post_title
+        FROM notifications n LEFT JOIN posts p ON n.related_post_id = p.id
+        WHERE n.user_id = ${userId} AND n.is_read = 0
+          AND n.created_at >= datetime('now', '-1 day')
+        ORDER BY n.created_at DESC LIMIT 20
+      `;
 
       if (recent.length === 0) return { success: true, message: '暂无未读通知' };
 
@@ -147,7 +162,7 @@ export const notificationsPlugin: Plugin = {
       const html = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px;">
           <h2 style="color: #2d3142; margin: 0 0 16px;">${subject}</h2>
-          <p style="color: #6b7280; line-height: 1.6;">${user.username}，您好：</p>
+          <p style="color: #6b7280; line-height: 1.6;">${userRow.username}，您好：</p>
           <p style="color: #6b7280; line-height: 1.6;">以下是您最近 24 小时未读的通知：</p>
           <div style="background: #f9fafb; padding: 16px; border-radius: 6px; margin: 16px 0;">
             <pre style="white-space: pre-wrap; font-family: inherit; color: #374151; margin: 0;">${list}</pre>
@@ -157,7 +172,7 @@ export const notificationsPlugin: Plugin = {
       `;
 
       const ok = await emailService.send({
-        to: user.email,
+        to: userRow.email,
         subject,
         text: `${subject}\n\n${list}`,
         html,
@@ -166,7 +181,7 @@ export const notificationsPlugin: Plugin = {
       if (!ok) return rep.status(500).send({ error: '邮件发送失败' });
       // 更新 last_sent_at
       await ensurePrefTable();
-      await db.run(
+      await kdb.run(
         `INSERT INTO notification_email_prefs (user_id, enabled, frequency, last_sent_at, updated_at)
          VALUES (?, 1, 'daily', datetime('now'), datetime('now'))
          ON CONFLICT(user_id) DO UPDATE SET last_sent_at=datetime('now'), updated_at=datetime('now')`,

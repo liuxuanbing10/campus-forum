@@ -66,6 +66,12 @@
 | admin 按钮不显示 | login SQL 未查 role/is_admin，返回短路 | is_admin 优先判断 |
 | CORS 500 | duckdns.org 域名未在白名单 | 已预配置 |
 | gradle-wrapper.properties 被改 | 本地调试改了 URL 提交到 git | CI 里 sed 恢复 |
+| @fastify/multipart 缺失 | deploy.yml 只打包 dist，未同步 package.json | deploy.yml 加 package.json + 服务器 npm install |
+| kysely 缺失 | 同上 | 同上 |
+| nodemailer 缺失 | 同上 | 同上 |
+| lru-cache 版本错（5.1.1 vs 11.5.2） | 服务器残留旧版，API 不兼容（maxAge vs ttl） | 服务器 npm install lru-cache@^11.5.2 |
+| @libsql/linux-x64-gnu native binding 缺失 | npm install 漏装平台特定 optional 依赖 | deploy.yml 加 --include=optional + 兜底显式安装 |
+| ERR_MODULE_NOT_FOUND 周期性出现 | 服务器 plugins/achievements/package.json 用 workspace:* 协议 | sed 替换为 * |
 
 ---
 
@@ -86,6 +92,11 @@ ssh -i ~/.ssh/id_rsa_cloud root@47.121.137.231 \
 #### GitHub Actions 自动部署
 - push to main → deploy.yml 触发
 - 需要在 repo settings 添加 SERVER_HOST 和 SSH_PRIVATE_KEY secrets
+- **deploy.yml 关键改进（2026-07-26 阶段C）**：
+  1. Package dist 步骤额外打包所有 package.json + package-lock.json（防止服务器依赖不同步）
+  2. Restart service 步骤在 PM2 重启前执行 `npm install --include=optional`（同步新增依赖）
+  3. 兜底显式安装 `@libsql/linux-x64-gnu`（防止 npm 漏装平台特定 native binding）
+  4. **不要用 `--omit=dev`**：会误删 native optional 依赖（如 @libsql/linux-x64-gnu）
 
 #### APK 构建
 - Actions → Build APK → workflow_dispatch 手动触发

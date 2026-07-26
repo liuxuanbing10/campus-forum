@@ -40,3 +40,7 @@ pnpm-workspace.yaml
 .vercel
 .env*
 release/
+
+# 运行时生成的数据（图片等）
+packages/data/
+

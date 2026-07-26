@@ -10,7 +10,8 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@campus-forum/core": "*"
+    "@campus-forum/core": "*",
+    "@campus-forum/database": "*"
   },
   "devDependencies": {
     "fastify": "^5.3.0",

@@ -8,6 +8,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@campus-forum/core": "*"
+    "@campus-forum/core": "*",
+    "@campus-forum/database": "*"
   }
 }

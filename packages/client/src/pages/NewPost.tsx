@@ -39,23 +39,16 @@ export default function NewPostPage() {
     }
     setUploading(true);
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = reader.result as string;
-        try {
-          const res = await api.post('/upload', { image: base64, filename: file.name });
-          setImages(prev => [...prev, res.data.url]);
-          toastStore.success('图片上传成功');
-        } catch {
-          toastStore.error('图片上传失败');
-        } finally {
-          setUploading(false);
-        }
-      };
-      reader.readAsDataURL(file);
+      // 改用 FormData 文件流上传（避免 base64 编码 33% 体积膨胀）
+      const form = new FormData();
+      form.append('file', file);
+      const res = await api.post('/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setImages(prev => [...prev, res.data.url]);
+      toastStore.success('图片上传成功');
     } catch {
+      toastStore.error('图片上传失败');
+    } finally {
       setUploading(false);
-      toastStore.error('图片读取失败');
     }
   };
 

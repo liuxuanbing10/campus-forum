@@ -1,4 +1,5 @@
 import type { Plugin } from '@campus-forum/core';
+import { KyselyAdapter } from '@campus-forum/database';
 
 interface Board {
   id: number;
@@ -20,19 +21,23 @@ export const boardsPlugin: Plugin = {
 
   apply(ctx) {
     const { app, db } = ctx;
+    const kdb = db as KyselyAdapter;
+    const q = kdb.query?.bind(kdb);
 
     // List all boards
     app.get('/api/boards', async () => {
-      const boards = await db.all<Board>(
-        `SELECT b.*, (SELECT COUNT(*) FROM posts p WHERE p.board_id = b.id) as post_count
-         FROM boards b ORDER BY b.sort_order ASC`
-      );
+      const boards = await kdb.sql<Board>`SELECT b.*, (SELECT COUNT(*) FROM posts p WHERE p.board_id = b.id) as post_count
+        FROM boards b ORDER BY b.sort_order ASC`;
       return boards;
     });
 
     // Get single board
     app.get<{ Params: { id: string } }>('/api/boards/:id', async (request, reply) => {
-      const board = await db.get<Board>('SELECT * FROM boards WHERE id = ?', Number(request.params.id));
+      const id = Number(request.params.id);
+      const board = await q()!.selectFrom('boards')
+        .selectAll()
+        .where('id', '=', id)
+        .executeTakeFirst() as Board | undefined;
       if (!board) {
         return reply.status(404).send({ error: '板块不存在' });
       }
@@ -41,28 +46,30 @@ export const boardsPlugin: Plugin = {
 
     // Get posts in a board
     app.get<{ Params: { id: string } }>('/api/boards/:id/posts', async (request, reply) => {
-      const board = await db.get<Board>('SELECT id FROM boards WHERE id = ?', Number(request.params.id));
+      const boardId = Number(request.params.id);
+      const board = await q()!.selectFrom('boards')
+        .select('id')
+        .where('id', '=', boardId)
+        .executeTakeFirst() as Board | undefined;
       if (!board) {
         return reply.status(404).send({ error: '板块不存在' });
       }
 
       const page = Math.min(100, Math.max(1, Number((request.query as any).page) || 1));
       const limit = 20;
-      const posts = await db.all<{
+      const offset = (page - 1) * limit;
+      const posts = await kdb.sql<{
         id: number; title: string; author_name: string;
         created_at: string; view_count: number; vote_count: number;
-      }>(
-        `SELECT p.id, p.title,
-                CASE WHEN p.is_anonymous = 1 THEN '匿名' ELSE COALESCE(u.display_name, u.username) END as author_name,
-                p.created_at, p.view_count,
-                (SELECT COALESCE(SUM(v.value), 0) FROM votes v WHERE v.post_id = p.id) as vote_count
-         FROM posts p
-         JOIN users u ON p.author_id = u.id
-         WHERE p.board_id = ?
-         ORDER BY p.created_at DESC
-         LIMIT ? OFFSET ?`,
-        Number(request.params.id), limit, (page - 1) * limit
-      );
+      }>`SELECT p.id, p.title,
+              CASE WHEN p.is_anonymous = 1 THEN '匿名' ELSE COALESCE(u.display_name, u.username) END as author_name,
+              p.created_at, p.view_count,
+              (SELECT COALESCE(SUM(v.value), 0) FROM votes v WHERE v.post_id = p.id) as vote_count
+       FROM posts p
+       JOIN users u ON p.author_id = u.id
+       WHERE p.board_id = ${boardId}
+       ORDER BY p.created_at DESC
+       LIMIT ${limit} OFFSET ${offset}`;
 
       return { posts, page, limit };
     });

@@ -10,9 +10,11 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@campus-forum/core": "*"
+    "@campus-forum/core": "*",
+    "@campus-forum/database": "*"
   },
   "devDependencies": {
+    "@fastify/multipart": "^10.1.0",
     "fastify": "^5.3.0",
     "typescript": "^5.7.0"
   }

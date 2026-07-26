@@ -1,4 +1,5 @@
 import { Plugin, PluginContext } from '@campus-forum/core';
+import { KyselyAdapter } from '@campus-forum/database';
 
 export const searchPlugin: Plugin = {
   manifest: {
@@ -10,6 +11,8 @@ export const searchPlugin: Plugin = {
 
   apply(ctx: PluginContext) {
     const { app, db } = ctx;
+    const kdb = db as KyselyAdapter;
+    const q = kdb.query?.bind(kdb);
 
     // ========================================
     // 搜索帖子（标题 + 内容）
@@ -55,7 +58,7 @@ export const searchPlugin: Plugin = {
         FROM posts p
         WHERE ${likeSql} ${whereBoard}
       `;
-      const countResult = await db.get<{ total: number }>(countSql, ...params);
+      const countResult = await kdb.get<{ total: number }>(countSql, ...params);
       const total = countResult?.total || 0;
 
       // 查询结果
@@ -77,7 +80,7 @@ export const searchPlugin: Plugin = {
       `;
 
       const dataParams = [...params, limit, offset];
-      const posts = await db.all<any>(searchSql, ...dataParams);
+      const posts = await kdb.all<any>(searchSql, ...dataParams);
 
       return {
         posts,
@@ -116,13 +119,13 @@ export const searchPlugin: Plugin = {
       }
 
       const pattern = `%${keyword}%`;
-      const suggestions = await db.all<{ id: number; title: string }>(
-        `SELECT id, title FROM posts
-         WHERE title LIKE ?
-         ORDER BY created_at DESC
-         LIMIT 10`,
-        pattern
-      );
+      const suggestions = await q()!
+        .selectFrom('posts')
+        .select(['id', 'title'])
+        .where('title', 'like', pattern)
+        .orderBy('created_at', 'desc')
+        .limit(10)
+        .execute();
 
       return { suggestions };
     });
