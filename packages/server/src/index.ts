@@ -7,10 +7,11 @@ import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
+import multipart from '@fastify/multipart';
 import { PluginManager, SimpleEventBus, PluginContext, Logger } from '@campus-forum/core';
 import { ZodError } from 'zod';
 import 'dotenv/config';
-import { createDatabase, initializeSchema, migrateSchema, seedData } from '@campus-forum/database';
+import { createKyselyDatabase, initializeSchema, migrateSchema, seedData } from '@campus-forum/database';
 import { TursoSessionStore } from './session-store.js';
 import { WsManager } from './websocket.js';
 import { ImageService, CacheService, EmailService, QueueService } from './services/index.js';
@@ -85,6 +86,16 @@ export async function buildApp(options?: { plugins?: any[] }) {
   // ── Cookie ─────────────────────────
   await app.register(cookie);
 
+  // ── Multipart 文件上传 ─────────────────────
+  // 替代 base64 上传：前端用 FormData，后端用 stream + sharp 直接处理
+  // 限制：单文件 10MB，最多 9 张图（与帖子图片上限一致）
+  await app.register(multipart, {
+    limits: {
+      fileSize: 10 * 1024 * 1024,  // 单文件最大 10MB
+      files: 9,                    // 最多 9 个文件
+    },
+  });
+
   // ── Session (deferred — needs db for TursoSessionStore) ──
   const sessionSecret = process.env.SESSION_SECRET || process.env.JWT_SECRET || 'dev-session-secret-fallback-32chars!!';
   const sessionMaxAge = 7 * 24 * 60 * 60 * 1000;
@@ -141,7 +152,8 @@ export async function buildApp(options?: { plugins?: any[] }) {
   });
 
   // 数据库（支持 DB_PATH 环境变量或 Turso 远程数据库）
-  const db = await createDatabase();
+  // 使用 KyselyAdapter：兼容 DatabaseAdapter 接口，并提供类型安全的 Kysely 链式查询能力
+  const db = await createKyselyDatabase();
   await initializeSchema(db);
   await migrateSchema(db);
   await seedData(db);

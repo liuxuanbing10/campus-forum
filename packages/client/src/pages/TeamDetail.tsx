@@ -240,18 +240,14 @@ export default function TeamDetail() {
     if (file.size > 5 * 1024 * 1024) { toastStore.warning('图片不能超过5MB'); return; }
     setUploading(true);
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = reader.result as string;
-        try {
-          const res = await api.post('/upload', { image: base64, filename: file.name });
-          setPostImages(prev => [...prev, res.data.url]);
-          toastStore.success('图片上传成功');
-        } catch { toastStore.error('图片上传失败'); }
-        finally { setUploading(false); }
-      };
-      reader.readAsDataURL(file);
-    } catch { setUploading(false); toastStore.error('图片读取失败'); }
+      // 改用 FormData 文件流上传（避免 base64 编码 33% 体积膨胀）
+      const form = new FormData();
+      form.append('file', file);
+      const res = await api.post('/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setPostImages(prev => [...prev, res.data.url]);
+      toastStore.success('图片上传成功');
+    } catch { toastStore.error('图片上传失败'); }
+    finally { setUploading(false); }
   };
 
   const removePostImage = (index: number) => {

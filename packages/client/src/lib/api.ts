@@ -88,6 +88,14 @@ export const postsApi = {
   togglePrivacy: (id: number) => api.put<{ success: boolean; isPrivate: boolean; message: string }>(`/posts/${id}/privacy`),
   uploadImage: (image: string, filename?: string) =>
     api.post<{ success: boolean; url: string; filename: string }>('/upload', { image, filename }),
+  // 新增：multipart 文件流上传（推荐用法，避免 base64 编码 33% 体积膨胀）
+  uploadFile: (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post<{ success: boolean; url: string; thumbUrl?: string; filename: string; width?: number; height?: number }>(
+      '/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+  },
 };
 
 export const authApi = {
@@ -185,7 +193,16 @@ export const reportApi = {
 
 // ===== 头像上传 API =====
 export const avatarApi = {
+  // 兼容旧版：base64 字符串上传
   upload: (imageBase64: string) => api.post<{ success: boolean; url: string }>('/users/avatar', { image: imageBase64 }),
+  // 新增：multipart 文件流上传（推荐用法，避免 base64 体积膨胀）
+  uploadFile: (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post<{ success: boolean; url: string; thumbUrl?: string }>(
+      '/users/avatar', form, { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+  },
 };
 
 // ===== OAuth API =====

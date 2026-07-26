@@ -120,21 +120,14 @@ export default function MarkdownEditor({
       }
 
       try {
-        // 读取并上传图片
-        const reader = new FileReader()
-        reader.onload = async () => {
-          const base64 = reader.result as string
-          try {
-            const res = await api.post('/upload', { image: base64, filename: file.name })
-            editor.chain().focus().setImage({ src: res.data.url }).run()
-            toastStore.success('图片上传成功')
-          } catch {
-            toastStore.error('图片上传失败')
-          }
-        }
-        reader.readAsDataURL(file)
+        // 改用 FormData 文件流上传（避免 base64 编码 33% 体积膨胀）
+        const form = new FormData()
+        form.append('file', file)
+        const res = await api.post('/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+        editor.chain().focus().setImage({ src: res.data.url }).run()
+        toastStore.success('图片上传成功')
       } catch {
-        toastStore.error('图片读取失败')
+        toastStore.error('图片上传失败')
       }
     }
 

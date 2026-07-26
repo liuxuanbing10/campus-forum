@@ -102,6 +102,8 @@ function ProfileTab() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  // 保存 File 对象用于 multipart 上传（替代 base64）
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
   useEffect(() => { loadUser(); }, []);
@@ -129,19 +131,23 @@ function ProfileTab() {
       toast.error('图片大小不能超过 5MB');
       return;
     }
+    // 保存 File 对象供 multipart 上传使用，同时生成 base64 预览
+    setAvatarFile(file);
     const reader = new FileReader();
     reader.onload = () => setAvatarPreview(reader.result as string);
     reader.readAsDataURL(file);
   };
 
   const handleAvatarUpload = async () => {
-    if (!avatarPreview) return;
+    if (!avatarFile) return;
     setAvatarUploading(true);
     try {
-      const { data } = await avatarApi.upload(avatarPreview);
+      // 改用 FormData 文件流上传（避免 base64 编码 33% 体积膨胀）
+      const { data } = await avatarApi.uploadFile(avatarFile);
       if (data.success) {
         toast.success('头像更新成功');
         setAvatarPreview(null);
+        setAvatarFile(null);
         loadUser();
       }
     } catch {

@@ -1,4 +1,7 @@
 import type { Redis as RedisType } from 'ioredis';
+// ESM 下 require 不可用，用 createRequire 同步加载 CommonJS 依赖
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 
 /**
  * 缓存服务 · 基于 ioredis + lru-cache 双层缓存
@@ -7,7 +10,7 @@ import type { Redis as RedisType } from 'ioredis';
  * - 提供 get/set/del/invalidate 等 API
  * - 支持 JSON 序列化、TTL、批量删除
  * 
- * 注：lru-cache 以动态 import 方式加载，兼容 v10/v11
+ * 注：lru-cache 以 require 方式同步加载，兼容 v10/v11
  */
 export class CacheService {
   private redis: RedisType | null = null;
@@ -66,10 +69,6 @@ export class CacheService {
     }
   }
 
-  private get lru(): any {
-    return this._lru;
-  }
-
   private key(k: string): string {
     return `${this.prefix}${k}`;
   }
@@ -86,7 +85,8 @@ export class CacheService {
         // Redis 出错，降级 LRU
       }
     }
-    return this.lru.get(k) ?? null;
+    // LRU 不可用时降级为 null（缓存未命中）
+    return this._lru?.get(k) ?? null;
   }
 
   /**
@@ -117,7 +117,8 @@ export class CacheService {
         // 降级 LRU
       }
     }
-    this.lru.set(k, value, { ttl: t * 1000 });
+    // LRU 不可用时任其自然丢失（缓存只是优化，非必需）
+    this._lru?.set(k, value, { ttl: t * 1000 });
   }
 
   /**
@@ -137,7 +138,7 @@ export class CacheService {
         await this.redis.del(k);
       } catch {}
     }
-    this.lru.delete(k);
+    this._lru?.delete(k);
   }
 
   /**
@@ -158,16 +159,18 @@ export class CacheService {
       } catch {}
     }
 
+    // LRU 不可用时跳过
+    if (!this._lru) return count;
     // LRU 也清掉匹配的
     const lruPattern = fullPattern.replace(/\*/g, '');
-    for (const k of this.lru.keys()) {
+    for (const k of this._lru.keys()) {
       if (pattern.endsWith('*')) {
         if (k.startsWith(lruPattern)) {
-          this.lru.delete(k);
+          this._lru.delete(k);
           count++;
         }
       } else if (k === fullPattern) {
-        this.lru.delete(k);
+        this._lru.delete(k);
         count++;
       }
     }
@@ -194,7 +197,7 @@ export class CacheService {
       await this.redis.quit();
       this.redis = null;
     }
-    this.lru.clear();
+    this._lru?.clear();
   }
 
   /**

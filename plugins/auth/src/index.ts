@@ -6,11 +6,22 @@ import path from 'path';
 import https from 'https';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+// 引入 @fastify/multipart 类型扩展，让 req.file() 方法在 TS 中可用
+import type {} from '@fastify/multipart';
 
 // ── 服务接口（与 server/services 实现匹配，运行时由 ctx.getService 注入） ──
 interface ImageService {
   uploadFromBase64(
     base64Data: string,
+    opts: { userId: number; filename?: string; maxSize?: number; generateThumb?: boolean },
+  ): Promise<{
+    id: number; url: string; thumbUrl: string;
+    width: number; height: number; size: number; mimeType: string;
+  }>;
+  // 新增：从 Buffer 上传（multipart 文件流场景）
+  uploadFromBuffer(
+    buf: Buffer,
+    mimeType: string,
     opts: { userId: number; filename?: string; maxSize?: number; generateThumb?: boolean },
   ): Promise<{
     id: number; url: string; thumbUrl: string;
@@ -701,10 +712,61 @@ export const authPlugin: Plugin = {
     });
 
     // ========================================
-    // 头像上传 · 优先用 ImageService（sharp 裁剪 + WebP + 缩略图）
+    // 头像上传 · 优先 multipart 文件流，降级支持 base64 JSON
+    // 前端 FormData 上传：Content-Type 自动为 multipart/form-data
     // ========================================
     app.post('/api/users/avatar', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+
+      // ─── multipart 文件流路径（推荐）───
+      const contentType = req.headers['content-type'] || '';
+      if (contentType.startsWith('multipart/form-data')) {
+        try {
+          const file = await req.file();
+          if (!file) return rep.status(400).send({ error: '未收到文件' });
+          const chunks: Buffer[] = [];
+          for await (const chunk of file.file) {
+            chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+          }
+          const buf = Buffer.concat(chunks);
+          const mimeType = file.mimetype || 'image/png';
+
+          if (imageService) {
+            const result = await imageService.uploadFromBuffer(buf, mimeType, {
+              userId,
+              filename: `avatar_${userId}`,
+              maxSize: 2 * 1024 * 1024,
+              generateThumb: true,
+            });
+            // 删除旧头像文件
+            const currentUser = await db.get<{ avatar_url: string | null }>('SELECT avatar_url FROM users WHERE id=?', userId);
+            if (currentUser?.avatar_url?.startsWith('/api/images/')) {
+              const oldId = Number(currentUser.avatar_url.match(/\/api\/images\/(\d+)/)?.[1]);
+              if (oldId) try { await imageService.deleteById(oldId); } catch { /* 忽略 */ }
+            }
+            await db.run('UPDATE users SET avatar_url=? WHERE id=?', result.url, userId);
+            return { success: true, url: result.url, thumbUrl: result.thumbUrl };
+          }
+          // 降级：写文件系统
+          if (buf.length > 2 * 1024 * 1024) return rep.status(400).send({ error: '图片不能超过 2MB' });
+          const ext = (mimeType.split('/')[1] || 'png').replace('jpeg', 'jpg');
+          const uploadsDir = path.resolve(__dirname, '../../../uploads');
+          if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+          const currentUser = await db.get<{ avatar_url: string | null }>('SELECT avatar_url FROM users WHERE id=?', userId);
+          if (currentUser?.avatar_url) {
+            const oldPath = path.join(__dirname, '../../..', currentUser.avatar_url);
+            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+          }
+          const name = `avatar_${userId}_${Date.now()}.${ext}`;
+          fs.writeFileSync(path.join(uploadsDir, name), buf);
+          await db.run('UPDATE users SET avatar_url=? WHERE id=?', `/uploads/${name}`, userId);
+          return { success: true, url: `/uploads/${name}` };
+        } catch (err) {
+          return rep.status(400).send({ error: (err as Error).message });
+        }
+      }
+
+      // ─── 兼容旧版 base64 JSON 路径 ───
       const { image } = req.body as { image: string };
       if (!image) return rep.status(400).send({ error: '请提供图片数据' });
 
