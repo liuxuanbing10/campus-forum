@@ -2,11 +2,15 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "校园论坛鸿蒙客户端"
+      "value": "十三境论坛鸿蒙客户端"
     },
     {
       "name": "app_name",
-      "value": "校园论坛"
+      "value": "十三境论坛"
+    },
+    {
+      "name": "reason_internet",
+      "value": "用于访问云端论坛内容与图片资源"
     }
   ]
 }

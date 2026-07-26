@@ -12,5 +12,41 @@
     "tablet"
   ],
   "deliveryWithInstall": true,
-  "pages": "$profile:main_pages"
+  "pages": "$profile:main_pages",
+  "module": {
+    "name": "entry",
+    "type": "entry",
+    "deviceTypes": [
+      "phone",
+      "tablet"
+    ],
+    "abilities": [
+      {
+        "name": "EntryAbility",
+        "srcEntry": "./ets/pages/Index.ets",
+        "description": "十三境论坛主入口",
+        "label": "$string:app_name",
+        "icon": "$media:app_icon",
+        "startWindowIcon": "$media:app_icon",
+        "startWindowBackground": "$color:start_window_background",
+        "exported": true,
+        "skills": [
+          {
+            "entities": ["entity.system.home"],
+            "actions": ["action.system.home"]
+          }
+        ]
+      }
+    ],
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.INTERNET",
+        "reason": "$string:reason_internet",
+        "usedScene": {
+          "abilities": ["EntryAbility"],
+          "when": "always"
+        }
+      }
+    ]
+  }
 }
