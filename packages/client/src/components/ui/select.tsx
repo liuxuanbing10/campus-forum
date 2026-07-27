@@ -40,7 +40,7 @@ const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
           type="button"
           onClick={() => setOpen(!open)}
           className={cn(
-            'flex h-10 w-full items-center justify-between rounded-lg border border-input bg-card px-3 py-2 text-sm',
+            'flex h-6 w-full items-center justify-between rounded border border-input bg-card px-2 py-0.5 text-[11px]',
             'text-foreground placeholder:text-muted-foreground',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             'disabled:cursor-not-allowed disabled:opacity-50',

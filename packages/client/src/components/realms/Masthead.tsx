@@ -74,22 +74,18 @@ function LayoutB() {
 }
 
 function LayoutC() {
-  // 左品牌 + 中装饰（罗盘/藻井）+ 右标语
-  // r1 等带 dial deco 的境，时钟作为主装饰居中
-  // r11 等带 zaojing 的境，藻井居中 + 时钟放右侧
-  // 其他境在中间放山景，时钟放右侧
   const { realm } = useRealm();
   return (
     <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] gap-8 items-center">
       <BrandPlaque />
       <div className="flex justify-center">
-        {realm.deco === 'dial' && <CompassDial size={136} />}
+        {realm.deco === 'dial' && realm.id !== 'r1' && <CompassDial size={136} />}
         {realm.deco === 'zaojing' && <CaissonDecoration />}
-        {!realm.deco && <MountainScene />}
+        {!realm.deco && realm.id !== 'r1' && <MountainScene />}
       </div>
       <div className="md:border-l md:border-[var(--line)] md:pl-8 flex flex-col gap-4 items-start">
         <SloganRotator />
-        {(realm.deco === 'zaojing' || !realm.deco) && (
+        {(realm.deco === 'zaojing' || (!realm.deco && realm.id !== 'r1')) && (
           <div className="hidden md:block">
             <CompassDial size={112} />
           </div>

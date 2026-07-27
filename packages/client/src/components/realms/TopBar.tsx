@@ -39,12 +39,12 @@ export default function TopBar({ onlineCount = 0 }: { onlineCount?: number }) {
 
   return (
     <div className="sticky top-0 z-30 backdrop-blur-md bg-[var(--g1)]/70 border-b border-[var(--line)]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-7 flex items-center justify-between gap-2">
         {/* 左：境名 + 副标 */}
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={prevRealm}
-            className="text-[var(--soft)] hover:text-[var(--acc)] hover:-translate-y-0.5 transition-all px-2 text-lg"
+            className="text-[var(--soft)] hover:text-[var(--acc)] hover:-translate-y-0.5 transition-all px-1 text-sm"
             aria-label="上一境"
             title="上一境 (Ctrl + ←)"
           >
@@ -53,26 +53,26 @@ export default function TopBar({ onlineCount = 0 }: { onlineCount?: number }) {
           <AnimatePresence mode="wait">
             <motion.div
               key={realm.id}
-              initial={{ opacity: 0, y: -8 }}
+              initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8 }}
-              transition={{ duration: 0.35 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.3 }}
               className="flex items-baseline gap-2 min-w-0"
             >
               <span
-                className="text-xl font-bold text-[var(--ink)] font-display truncate"
+                className="text-sm font-bold text-[var(--ink)] font-display truncate"
                 style={{ fontFamily: 'var(--disp)' }}
               >
                 {realm.name}
               </span>
-              <span className="text-xs tracking-[0.2em] text-[var(--soft)] uppercase hidden sm:inline">
+              <span className="text-[10px] tracking-[0.2em] text-[var(--soft)] uppercase hidden sm:inline">
                 {en}
               </span>
             </motion.div>
           </AnimatePresence>
           <button
             onClick={nextRealm}
-            className="text-[var(--soft)] hover:text-[var(--acc)] hover:-translate-y-0.5 transition-all px-1.5"
+            className="text-[var(--soft)] hover:text-[var(--acc)] hover:-translate-y-0.5 transition-all px-1"
             aria-label="下一境"
             title="下一境 (Ctrl + →)"
           >
@@ -81,14 +81,14 @@ export default function TopBar({ onlineCount = 0 }: { onlineCount?: number }) {
         </div>
 
         {/* 右：时辰 + 在线 + 时间 */}
-        <div className="flex items-center gap-4 sm:gap-6 text-xs text-[var(--soft)]">
-          <div className="hidden md:flex items-center gap-1.5">
+        <div className="flex items-center gap-3 sm:gap-4 text-[10px] text-[var(--soft)]">
+          <div className="hidden md:flex items-center gap-1">
             <span className="text-[var(--acc)] font-medium" title="当前时辰">{branch}</span>
             <span>时</span>
           </div>
-          <div className="hidden sm:flex items-center gap-1.5">
+          <div className="hidden sm:flex items-center gap-1">
             <span
-              className="w-2 h-2 rounded-full bg-[var(--acc)] animate-pulse"
+              className="w-1.5 h-1.5 rounded-full bg-[var(--acc)] animate-pulse"
               aria-hidden
             />
             <span className="text-[var(--ink)] font-semibold tabular-nums">
@@ -96,7 +96,7 @@ export default function TopBar({ onlineCount = 0 }: { onlineCount?: number }) {
             </span>
             <span>在线</span>
           </div>
-          <div className="tabular-nums font-mono text-[var(--ink)]/80 text-sm" title={shichen}>
+          <div className="tabular-nums font-mono text-[var(--ink)]/80 text-xs" title={shichen}>
             {timeStr}
           </div>
         </div>

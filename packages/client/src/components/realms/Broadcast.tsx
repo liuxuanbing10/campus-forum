@@ -24,27 +24,27 @@ export default function Broadcast() {
 
   return (
     <div
-      className="relative overflow-hidden border-y border-[var(--line)] bg-[var(--card)]/70 backdrop-blur-sm"
+      className="relative overflow-hidden bg-[var(--card)]/40 backdrop-blur-sm max-w-2xl mx-auto"
       role="marquee"
       aria-label="公告与标语"
     >
       {/* 左右淡入淡出遮罩，让滚动更柔和 */}
       <div
-        className="pointer-events-none absolute inset-y-0 left-0 w-12 z-10"
+        className="pointer-events-none absolute inset-y-0 left-0 w-8 z-10"
         style={{ background: 'linear-gradient(90deg, var(--card), transparent)' }}
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute inset-y-0 right-0 w-12 z-10"
+        className="pointer-events-none absolute inset-y-0 right-0 w-8 z-10"
         style={{ background: 'linear-gradient(-90deg, var(--card), transparent)' }}
         aria-hidden
       />
 
       <motion.div
-        className="flex whitespace-nowrap py-2.5 text-sm"
+        className="flex whitespace-nowrap py-0 text-[9px]"
         animate={{ x: ['100%', '-100%'] }}
         transition={{
-          duration: 60, // 略慢一点，让标语可读
+          duration: 180,
           repeat: Infinity,
           ease: 'linear',
         }}
@@ -55,7 +55,7 @@ export default function Broadcast() {
           <span
             key={i}
             className={
-              'px-6 inline-flex items-center gap-2 ' +
+              'px-4 inline-flex items-center gap-1 ' +
               (it.kind === 'bc'
                 ? 'text-[var(--hot)] font-medium'
                 : 'text-[var(--soft)]')

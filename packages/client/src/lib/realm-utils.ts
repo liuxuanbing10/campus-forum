@@ -42,12 +42,12 @@ export function currentShichen(date: Date = new Date()): string {
 
 /** 时辰对应的诗句 */
 export const SHICHEN_POETRY: Record<string, string> = {
-  '子': '夜半钟声到客船',
+  '子': '子夜星河淡',
   '丑': '鸡鸣茅店月',
   '寅': '平明寻白帝',
   '卯': '日出江花红胜火',
   '辰': '食时万物苏',
-  '巳': '隅中 conductrice 处',
+  '巳': '隅中晴光好',
   '午': '日中为市',
   '未': '日昳方丈寂',
   '申': '晡时人未还',

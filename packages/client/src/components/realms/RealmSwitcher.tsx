@@ -1,136 +1,217 @@
-import { useRef, useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp } from 'lucide-react';
+import { useRef, useEffect, useState, useCallback } from 'react';
+import gsap from 'gsap';
 import { useRealm } from './RealmProvider';
 import { REALMS } from '../../stores/theme';
 
 /**
- * 渡船 - 底部境切换导航
- * 显示当前境全名，鼠标悬停弹出全部 13 境选择
- * 选中后自动滚动到该境
+ * 渡船 · 十三境 GSAP 径向菜单
+ * 右下角四分之一圆：正上(270°)→正左(180°)
+ * 点击触发，hover 推挤展开
  */
+const RADIUS = 220;
+const DOT = 18;
+
 export default function RealmSwitcher() {
   const { realm, setRealm } = useRealm();
-  const activeRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  const popoverRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const itemsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const [hovered, setHovered] = useState<string | null>(null);
 
-  // 自动滚动到当前境
-  useEffect(() => {
-    if (activeRef.current && open) {
-      activeRef.current.scrollIntoView({
-        behavior: 'smooth',
-        inline: 'center',
-        block: 'nearest',
-      });
+  const getCenter = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el) return { x: window.innerWidth - 35, y: window.innerHeight - 35 };
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }, []);
+
+  // 弧上位置 + 推挤偏移
+  const getPos = useCallback((idx: number, total: number, c: { x: number; y: number }, hoverIdx: number | null) => {
+    const baseAngle = Math.PI * (1.5 - (idx / (total - 1)) * 0.5);
+    let angleOff = 0;
+    if (hoverIdx !== null && idx !== hoverIdx) {
+      const dist = Math.abs(idx - hoverIdx);
+      if (dist < 5) {
+        const strength = (1 - dist / 5) * (1 - dist / 5);
+        angleOff = Math.sign(hoverIdx - idx) * strength * 0.07;
+      }
     }
-  }, [realm.id, open]);
+    const angle = baseAngle + angleOff;
+    const r = hoverIdx === idx ? RADIUS + 18 : RADIUS;
+    const tx = Math.cos(angle) * r;
+    const ty = Math.sin(angle) * r;
+    return { left: c.x + tx - DOT / 2, top: c.y + ty - DOT / 2 };
+  }, []);
 
-  // 点击外部关闭
+  // hover 缩放
+  const getScale = useCallback((idx: number, hoverIdx: number | null) => {
+    if (hoverIdx === null) return 1;
+    if (idx === hoverIdx) return 3.0;
+    const dist = Math.abs(idx - hoverIdx);
+    if (dist === 1) return 0.7;
+    if (dist === 2) return 0.85;
+    if (dist === 3) return 0.95;
+    return 1;
+  }, []);
+
+  const animateOpen = useCallback(() => {
+    const c = getCenter();
+    const others = REALMS.filter(r => r.id !== realm.id);
+    others.forEach((r, idx) => {
+      const el = itemsRef.current.get(r.id);
+      if (!el) return;
+      const pos = getPos(idx, others.length, c, null);
+      el.style.left = (c.x - DOT / 2) + 'px';
+      el.style.top = (c.y - DOT / 2) + 'px';
+      el.style.position = 'fixed';
+      el.style.zIndex = '50';
+      el.style.pointerEvents = 'none';
+      el.style.opacity = '0';
+      gsap.fromTo(el,
+        { scale: 0.1, opacity: 0 },
+        { left: pos.left, top: pos.top, scale: 1, opacity: 1,
+          duration: 0.5, ease: 'elastic.out(1, 0.35)',
+          delay: idx * 0.03,
+          onComplete: () => { el.style.pointerEvents = 'auto'; },
+        }
+      );
+    });
+  }, [getCenter, realm.id, getPos]);
+
+  // hover 推挤
+  useEffect(() => {
+    if (!open) return;
+    const c = getCenter();
+    const others = REALMS.filter(r => r.id !== realm.id);
+    const hIdx = hovered ? others.findIndex(r => r.id === hovered) : -1;
+    others.forEach((r, idx) => {
+      const el = itemsRef.current.get(r.id);
+      if (!el) return;
+      const isHov = r.id === hovered;
+      const hi = isHov ? idx : (hIdx >= 0 ? hIdx : null);
+      const scale = getScale(idx, hi);
+      const pos = getPos(idx, others.length, c, hi);
+      gsap.to(el, {
+        left: pos.left, top: pos.top,
+        scale,
+        duration: 0.35, ease: 'elastic.out(1, 0.3)',
+      });
+      el.style.zIndex = isHov ? '60' : '50';
+    });
+  }, [hovered, open, getCenter, realm.id, getPos, getScale]);
+
+  const animateClose = useCallback(() => {
+    const c = getCenter();
+    REALMS.forEach(r => {
+      const el = itemsRef.current.get(r.id);
+      if (!el || r.id === realm.id) return;
+      gsap.to(el, {
+        left: c.x - DOT / 2, top: c.y - DOT / 2,
+        scale: 0.05, opacity: 0,
+        duration: 0.2, ease: 'power2.in',
+      });
+    });
+    setTimeout(() => setOpen(false), 250);
+  }, [getCenter, realm.id]);
+
+  const toggle = () => {
+    if (open) animateClose();
+    else setOpen(true);
+  };
+
+  useEffect(() => {
+    if (open) requestAnimationFrame(() => requestAnimationFrame(() => animateOpen()));
+  }, [open, animateOpen]);
+
+  const selectRealm = (id: string) => {
+    animateClose();
+    setTimeout(() => setRealm(id as any), 300);
+  };
+
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (triggerRef.current?.contains(e.target as Node)) return;
+      let isItem = false;
+      itemsRef.current.forEach(el => { if (el.contains(e.target as Node)) isItem = true; });
+      if (!isItem) animateClose();
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  }, [open, animateClose]);
 
   return (
-    <div className="sticky bottom-0 z-30 backdrop-blur-md bg-[var(--g1)]/80 border-t border-[var(--line)]">
-      <div className="max-w-7xl mx-auto px-3 py-2.5">
-        <div className="flex items-center justify-center gap-3">
-          {/* 当前境显示 + 展开按钮 */}
-          <motion.button
-            onClick={() => setOpen(!open)}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-[var(--line)] hover:-translate-y-0.5 hover:shadow-lg hover:border-[var(--acc)] transition-all bg-[var(--card)]/80"
+    <div className="fixed bottom-5 right-5 z-30 select-none">
+      <style>{`@keyframes fyPulseGlow { 0%,100% { opacity:0.4; transform:scale(1); } 50% { opacity:0.8; transform:scale(1.08); } }`}</style>
+
+      {open && REALMS.filter(r => r.id !== realm.id).map((r) => {
+        const idx = REALMS.indexOf(r);
+        const hue = (idx / REALMS.length) * 360;
+        const isHov = hovered === r.id;
+        return (
+          <button
+            key={r.id}
+            ref={(el) => { if (el) itemsRef.current.set(r.id, el); }}
+            onMouseEnter={() => setHovered(r.id)}
+            onMouseLeave={() => setHovered(null)}
+            onClick={() => selectRealm(r.id)}
+            className="fixed rounded-full border-0 cursor-pointer"
+            style={{
+              width: DOT, height: DOT,
+              left: 0, top: 0,
+              opacity: 0,
+              pointerEvents: 'none',
+              background: `radial-gradient(circle at 35% 30%, hsl(${hue}, 65%, 78%), hsl(${hue}, 50%, 58%))`,
+              boxShadow: isHov
+                ? `0 0 24px hsla(${hue}, 60%, 70%, 0.6), 0 0 60px hsla(${hue}, 60%, 70%, 0.25), inset 0 -2px 4px hsla(0,0%,0%,0.2)`
+                : `0 2px 6px hsla(0,0%,0%,0.25), inset 0 -1px 2px hsla(0,0%,0%,0.15)`,
+              border: 'none',
+            }}
           >
             <span
-              className="block w-3.5 h-3.5 rounded-full shrink-0"
+              className="absolute inset-0 flex items-center justify-center text-white font-bold"
               style={{
-                background: 'linear-gradient(135deg, var(--acc), var(--acc2))',
-                boxShadow: '0 0 8px var(--glow)',
+                fontFamily: 'var(--disp)',
+                fontSize: '9px',
+                lineHeight: '1.1',
+                textShadow: '0 1px 4px rgba(0,0,0,0.6)',
+                opacity: isHov ? 1 : 0,
+                transition: 'opacity 0.2s ease 0.08s',
               }}
-            />
-            <span
-              className="text-[16px] font-bold text-[var(--ink)]"
-              style={{ fontFamily: 'var(--disp)' }}
             >
-              {realm.name}
+              {r.name.replace(/[·•]/g, '').slice(0, 3)}
             </span>
-            <motion.span
-              animate={{ rotate: open ? 180 : 0 }}
-              transition={{ duration: 0.25 }}
-            >
-              <ChevronUp className="w-4 h-4 text-[var(--soft)]" />
-            </motion.span>
-          </motion.button>
+          </button>
+        );
+      })}
 
-          {/* 页码 */}
-          <span className="text-[12px] text-[var(--soft)] tabular-nums">
-            {String(realm.idx).padStart(2, '0')} / 13
-          </span>
-        </div>
-
-        {/* 弹出选择面板 */}
-        <AnimatePresence>
-          {open && (
-            <motion.div
-              ref={popoverRef}
-              initial={{ opacity: 0, y: 8, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8, scale: 0.96 }}
-              transition={{ duration: 0.2, ease: [0.22, 0.8, 0.28, 1] }}
-              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[90vw] max-w-lg"
-            >
-              <div className="rounded-xl border border-[var(--line)] bg-[var(--card)]/95 backdrop-blur-xl p-3 shadow-float">
-                <div className="grid grid-cols-5 sm:grid-cols-7 gap-1.5 max-h-[50vh] overflow-y-auto">
-                  {REALMS.map((r) => {
-                    const active = r.id === realm.id;
-                    return (
-                      <motion.button
-                        key={r.id}
-                        ref={active ? activeRef : undefined}
-                        onClick={() => { setRealm(r.id); setOpen(false); }}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className={`relative flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${
-                          active
-                            ? 'bg-[var(--acc)]/15 border border-[var(--acc)]/40'
-                            : 'hover:-translate-y-0.5 hover:shadow-lg hover:bg-[var(--line)] border border-transparent'
-                        }`}
-                      >
-                        <span
-                          className="block w-4 h-4 rounded-full shrink-0"
-                          style={{
-                            background: active
-                              ? 'linear-gradient(135deg, var(--acc), var(--acc2))'
-                              : 'var(--line)',
-                            boxShadow: active ? '0 0 8px var(--glow)' : 'none',
-                          }}
-                        />
-                        <span
-                          className="text-[11px] font-medium text-[var(--ink)] leading-tight text-center"
-                          style={{ fontFamily: 'var(--disp)' }}
-                        >
-                          {r.name}
-                        </span>
-                        <span className="text-[8px] text-[var(--soft)] tracking-wider">
-                          {r.desc?.split('·')[0] || ''}
-                        </span>
-                      </motion.button>
-                    );
-                  })}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      {/* 触发按钮 */}
+      <button
+        ref={triggerRef}
+        onClick={toggle}
+        className="flex items-center justify-center rounded-full border-0 bg-[var(--card)]/90 backdrop-blur-sm shadow-float hover:scale-105 active:scale-95 transition-all cursor-pointer"
+        style={{ width: 52, height: 52 }}
+        title={`${realm.name} · 第 ${realm.idx} 境`}
+      >
+        <span
+          className="block rounded-full"
+          style={{
+            width: 22, height: 22,
+            background: 'linear-gradient(135deg, var(--acc), var(--acc2))',
+            boxShadow: '0 0 20px var(--glow), 0 0 50px var(--glow)',
+          }}
+        />
+        <span
+          className="absolute rounded-full pointer-events-none"
+          style={{
+            width: 48, height: 48,
+            border: '2px solid var(--acc)',
+            boxShadow: '0 0 20px var(--glow), inset 0 0 20px var(--glow)',
+            opacity: 0.6,
+            animation: 'fyPulseGlow 2.5s ease-in-out infinite',
+          }}
+        />
+      </button>
     </div>
   );
 }

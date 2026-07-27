@@ -34,7 +34,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         onClick={handleClick}
         className={cn(
-          'relative overflow-hidden inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-200',
+          'relative overflow-hidden inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-200',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
           'disabled:pointer-events-none disabled:opacity-50',
           // ripple 涟漪：伪元素 + scale 动画
@@ -56,10 +56,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             'bg-accent text-white hover:bg-accent-hover focus-visible:ring-accent': variant === 'accent',
           },
           {
-            'h-10 px-4': size === 'default',
-            'h-9 rounded-md px-3 text-xs': size === 'sm',
-            'h-12 rounded-lg px-8': size === 'lg',
-            'h-10 w-10': size === 'icon',
+            'h-6 px-2 text-[11px]': size === 'default',
+            'h-5 rounded px-1.5 text-[10px]': size === 'sm',
+            'h-8 rounded-lg px-3.5 text-xs': size === 'lg',
+            'h-6 w-6': size === 'icon',
           },
           className
         )}

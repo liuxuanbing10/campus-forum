@@ -231,16 +231,6 @@ export default function LoginPage() {
                 <OAuthButton provider="github" label="GitHub" color="#24292f" onClick={handleOAuth('github')} />
               </div>
 
-              {/* 注册引导 */}
-              <p className="text-center text-xs text-[var(--soft)] mt-4">
-                还没有账号？{' '}
-                <Link
-                  to="/register"
-                  className="text-[var(--acc)] font-medium hover:underline"
-                >
-                  立即注册
-                </Link>
-              </p>
             </form>
 
             {/* 页脚题跋 */}

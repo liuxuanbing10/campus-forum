@@ -29,7 +29,7 @@ export const REALMS: RealmInfo[] = [
     id: 'r1', idx: 1, name: '流年拾光', cat: '自度·时', seal: '拾光',
     sub: '罗盘管时辰，光脊管流年——日子不必大声，也会被轻轻记住。',
     sl: ['拾光不语，流年自知。', '檐下流年，指尖拾光。', '于无声处，拾流年微光。', '拾一段流年，留给后来的你。', '流年拾光，落笔成暖。', '不惊动时光，只轻轻拾起。'],
-    amb: 'firefly', feed: 'timeline', mh: 'mhC', deco: 'dial',
+    amb: 'none', feed: 'timeline', mh: 'mhC', deco: 'dial',
     emoji: '✦', desc: '暗绿金·萤火·马善政',
   },
   {

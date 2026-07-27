@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRealm } from './RealmProvider';
+import FlowingYearsScene from './FlowingYearsScene';
 
 /**
  * 十三境 · 信物层
  * 每境一个标志性视觉元素，作为背景层渲染，强化主题意象
- * - r1 流年拾光：罗盘（由 CompassDial 处理，此处不重复）
+ * - r1 流年拾光：罗盘量一日 + 光脊量四年 + 电路纹理 + 萤火拾光（FlowingYearsScene）
  * - r2 如梦令：散落梦笺纹理
  * - r3 参商：双星 + 永不相连的虚线 + 北辰
  * - r4 千里江山：横向手卷轴头
@@ -36,6 +37,7 @@ export default function RealmSignature() {
           transition={{ duration: 0.8 }}
           className="absolute inset-0"
         >
+          {realm.id === 'r1' && <FlowingYearsScene />}
           {realm.id === 'r2' && <ScatterDreams />}
           {realm.id === 'r3' && <ChenShangStars />}
           {realm.id === 'r4' && <ScrollAxis />}

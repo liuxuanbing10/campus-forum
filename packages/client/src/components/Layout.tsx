@@ -8,6 +8,7 @@ import TopBar from './realms/TopBar';
 import RealmSwitcher from './realms/RealmSwitcher';
 import BottomNav from './BottomNav';
 import NotificationBell from './NotificationBell';
+import FlowingYearsHero from './realms/FlowingYearsHero';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -102,12 +103,19 @@ function LayoutInner() {
       <div className="mist ma" aria-hidden />
       <div className="mist mb" aria-hidden />
 
+      {/* 流年拾光境 · 沉浸场景（absolute 定位，跟随页面滚动，不占流） */}
+      {realm.id === 'r1' && (
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', zIndex: 15, pointerEvents: 'none' }}>
+          <FlowingYearsHero />
+        </div>
+      )}
+
       {/* 顶栏：境名 + 时辰 + 在线 + 导航 */}
       <TopBar />
 
       {/* 二级工具栏：搜索 + 用户菜单（境信息下方） */}
-      <header className="sticky top-14 z-20 backdrop-blur-md bg-[var(--g2)]/60 border-b border-[var(--line)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+      <header className="sticky top-7 z-20 backdrop-blur-md bg-[var(--g2)]/60 border-b border-[var(--line)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-7 flex items-center justify-between gap-2">
           {/* 左：返回首页 + 板块入口 */}
           <div className="flex items-center gap-3 min-w-0">
             <Link
@@ -139,13 +147,13 @@ function LayoutInner() {
           {/* 中：搜索框（桌面端） */}
           <form onSubmit={handleSearch} className="flex-1 max-w-sm hidden md:block">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--soft)]" />
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[var(--soft)]" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="搜索帖子..."
-                className="w-full pl-10 pr-4 py-2 bg-[var(--card)] border border-[var(--line)] rounded-full text-sm text-[var(--ink)] placeholder:text-[var(--soft)] focus:outline-none focus:border-[var(--acc)] transition-colors"
+                className="w-full pl-8 pr-3 h-6 bg-[var(--card)] border border-[var(--line)] rounded-full text-[11px] text-[var(--ink)] placeholder:text-[var(--soft)] focus:outline-none focus:border-[var(--acc)] transition-colors"
               />
             </div>
           </form>
