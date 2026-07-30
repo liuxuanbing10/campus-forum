@@ -1,6 +1,71 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@plugin "daisyui";
+
+/* 十三境主题映射 */
+@theme {
+  --color-realm-ink: var(--ink);
+  --color-realm-soft: var(--soft);
+  --color-realm-acc: var(--acc);
+  --color-realm-acc2: var(--acc2);
+  --color-realm-hot: var(--hot);
+  --color-realm-card: var(--card);
+  --color-realm-line: var(--line);
+  --color-realm-slogc: var(--slogc);
+  --color-realm-g1: var(--g1);
+  --color-realm-g2: var(--g2);
+  --color-realm-g3: var(--g3);
+  --color-background: var(--g1);
+  --color-surface: var(--card);
+  --color-page-bg: var(--g1);
+  --color-border: var(--line);
+  --color-accent: var(--acc2);
+  --color-destructive: var(--color-destructive);
+  --color-success: var(--color-success);
+  --color-warning: var(--acc);
+  --color-primary: var(--acc);
+  --color-primary-light: rgba(240, 189, 94, 0.12);
+  --font-display: var(--disp);
+  --font-body: var(--body);
+  --font-handwrite: var(--disp);
+  --font-slogan: var(--disp);
+  --shadow-card: var(--shadow-card);
+  --shadow-card-hover: var(--shadow-card-hover);
+  --shadow-float: var(--shadow-float);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --ease-theme-fast: cubic-bezier(0.22, 0.8, 0.28, 1);
+  --ease-theme-normal: cubic-bezier(0.22, 0.8, 0.28, 1);
+  --ease-theme-slow: cubic-bezier(0.22, 0.8, 0.28, 1);
+  --ease-ease: cubic-bezier(0.22, 0.8, 0.28, 1);
+}
+
+@keyframes realm-in {
+  from { opacity: 0; transform: translateY(24px); }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(12px); }
+}
+@keyframes bump {
+  40% { transform: scale(1.4); }
+}
+@keyframes blink {
+  50% { opacity: 0.25; }
+}
+@keyframes marquee {
+  to { transform: translateX(-50%); }
+}
+@keyframes mist-drift {
+  to { transform: translateX(9%); }
+}
+@keyframes shimmer {
+  to { background-position: -200% 0; }
+}
+@keyframes zaojing-spin {
+  to { transform: rotate(360deg); }
+}
 
 /* ════════════════════════════════════════════════════════════════
    十三境 · 校园论坛 — 全局样式

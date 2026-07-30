@@ -92,15 +92,11 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         // 将大型 vendor 库分割为独立 chunk，优化首屏加载和长期缓存
-        manualChunks: {
-          // React 核心（react / react-dom / react-router-dom）
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          // 图标库（lucide-react 体积较大，单独分包）
-          'icons': ['lucide-react'],
-          // 状态管理 + HTTP 客户端
-          'utils-vendor': ['zustand', 'axios'],
-          // 语法高亮（lowlight 体积较大，仅在 MarkdownEditor 中使用）
-          'highlight-vendor': ['lowlight'],
+        manualChunks(id: string) {
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/react-router-dom/')) return 'react-vendor';
+          if (id.includes('node_modules/lucide-react/')) return 'icons';
+          if (id.includes('node_modules/zustand/') || id.includes('node_modules/axios/')) return 'utils-vendor';
+          if (id.includes('node_modules/lowlight/')) return 'highlight-vendor';
         },
       },
     },
