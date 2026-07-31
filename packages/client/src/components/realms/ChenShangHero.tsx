@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { motion } from 'framer-motion';
+import './ChenShangHero.css';
 
 /**
  * 参商 · 沉浸式星夜场景
@@ -1003,71 +1004,7 @@ export default function ChenShangHero() {
 
   return (
     <section ref={containerRef} className="cs-root">
-      <style>{`
-        .cs-root{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;font-family:'Noto Serif SC',serif;color:#EAE6F4;background:linear-gradient(160deg,#0e1640 0%,#1a1452 38%,#241658 64%,#0c1238 100%)}
-        .cs-canvas{position:absolute;inset:0;display:block}
-        .cs-glow{position:absolute;inset:0;pointer-events:none;z-index:1;mix-blend-mode:screen;background:radial-gradient(1000px 700px at 72% 18%,rgba(70,96,180,.5),transparent 60%),radial-gradient(820px 520px at 14% 82%,rgba(150,52,120,.34),transparent 64%),radial-gradient(760px 480px at 88% 78%,rgba(44,128,150,.30),transparent 64%),radial-gradient(700px 460px at 30% 20%,rgba(96,72,180,.34),transparent 64%)}
-        .cs-vignette{position:absolute;inset:0;pointer-events:none;z-index:2;box-shadow:inset 0 0 130px rgba(4,8,20,.34);background:linear-gradient(180deg,rgba(6,10,24,.26),transparent 16%)}
-        .cs-grain{position:absolute;inset:-60%;pointer-events:none;opacity:.05;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)'/%3E%3C/svg%3E");animation:cs-grain 1.1s steps(4) infinite}
-        @keyframes cs-grain{0%{transform:translate(0,0)}25%{transform:translate(-2%,1%)}50%{transform:translate(1%,-2%)}75%{transform:translate(-1%,2%)}100%{transform:translate(2%,-1%)}}
-        .cs-thread{position:absolute;inset:0;pointer-events:none;opacity:0}
-        .cs-mtns{position:absolute;left:0;right:0;bottom:0;width:100%;height:22vh;pointer-events:none}
-        .cs-star{position:absolute;left:0;top:0;will-change:transform,opacity;opacity:0}
-        .cs-anchor{position:relative;transform:translate(-50%,-50%) scale(calc(.85 + var(--el,0)*.3))}
-        .cs-halo{position:absolute;left:50%;top:50%;width:172px;height:172px;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;filter:url(#cs-inkEdge)}
-        .cs-shen .cs-halo{background:radial-gradient(circle,rgba(236,120,160,.5) 0%,rgba(200,60,110,.15) 34%,transparent 68%)}
-        .cs-shang .cs-halo{background:radial-gradient(circle,rgba(110,180,245,.5) 0%,rgba(50,110,190,.15) 34%,transparent 68%)}
-        .cs-core{position:absolute;left:50%;top:50%;width:11px;height:11px;transform:translate(-50%,-50%);border-radius:50%;background:#fff}
-        .cs-shen .cs-core{box-shadow:0 0 9px 3px rgba(255,224,236,.92),0 0 26px 9px rgba(236,108,150,.5),0 0 60px 22px rgba(200,60,110,.2)}
-        .cs-shang .cs-core{box-shadow:0 0 9px 3px rgba(220,238,255,.92),0 0 26px 9px rgba(108,176,242,.5),0 0 60px 22px rgba(50,110,190,.2)}
-        .cs-flare{position:absolute;left:50%;top:50%;width:200px;height:2px;transform:translate(-50%,-50%);pointer-events:none;filter:url(#cs-inkLine)}
-        .cs-flare.cs-vert{width:2px;height:124px}
-        .cs-shen .cs-flare{background:linear-gradient(90deg,transparent,rgba(255,220,234,.78),transparent)}
-        .cs-shen .cs-flare.cs-vert{background:linear-gradient(180deg,transparent,rgba(255,220,234,.62),transparent)}
-        .cs-shang .cs-flare{background:linear-gradient(90deg,transparent,rgba(216,234,255,.78),transparent)}
-        .cs-shang .cs-flare.cs-vert{background:linear-gradient(180deg,transparent,rgba(216,234,255,.6),transparent)}
-        .cs-slabel{position:absolute;left:50%;top:calc(50% + 38px);transform:translateX(-50%);writing-mode:vertical-rl;text-orientation:upright;font-size:12px;letter-spacing:.36em;white-space:nowrap;pointer-events:none}
-        .cs-shen .cs-slabel{color:rgba(244,150,180,.84)}
-        .cs-shang .cs-slabel{color:rgba(150,200,250,.84)}
-        .cs-bei{position:absolute;left:0;top:0}
-        .cs-bring{position:absolute;left:50%;top:50%;width:48px;height:48px;transform:translate(-50%,-50%);border:1px solid rgba(244,224,150,.22);border-radius:50%;filter:url(#cs-inkLine)}
-        .cs-bring::before{content:"";position:absolute;top:-3px;left:50%;width:1px;height:7px;background:rgba(244,224,150,.46)}
-        .cs-bcore{position:absolute;left:50%;top:50%;width:5px;height:5px;transform:translate(-50%,-50%);border-radius:50%;background:rgba(244,236,210,.92);box-shadow:0 0 8px 2px rgba(244,224,150,.5),0 0 26px 8px rgba(232,196,96,.2)}
-        .cs-blabel{position:absolute;left:calc(50% + 18px);top:50%;transform:translateY(-50%);writing-mode:vertical-rl;text-orientation:upright;font-size:11px;letter-spacing:.36em;color:rgba(232,224,196,.55)}
-        .cs-title-block{position:absolute;left:clamp(30px,5.5vw,86px);top:50%;transform:translateY(-50%);display:flex;flex-direction:row;align-items:flex-start;gap:clamp(14px,2vw,26px)}
-        .cs-v{writing-mode:vertical-rl;text-orientation:upright}
-        .cs-title{font-family:'Ma Shan Zheng',cursive;font-weight:400;font-size:clamp(84px,15vh,150px);line-height:1.08;letter-spacing:.05em;color:#F0ECFA;margin:0}
-        .cs-ziwrap{position:relative;display:inline-block}
-        .cs-zi{display:inline-block}
-        .cs-zi.cs-shen{text-shadow:0 0 26px rgba(236,84,128,.55),0 0 76px rgba(236,84,128,.28)}
-        .cs-zi.cs-shang{color:#E2ECFA;text-shadow:0 0 26px rgba(96,168,240,.52),0 0 76px rgba(96,168,240,.26)}
-        .cs-poem{font-weight:300;font-size:clamp(14px,1.9vh,18px);color:rgba(214,222,238,.74);letter-spacing:.36em;line-height:2.15}
-        .cs-poem span{display:block}
-        .cs-poem .cs-src{font-size:.7em;color:rgba(230,192,98,.62);letter-spacing:.3em;margin-top:14px}
-        .cs-seal{writing-mode:vertical-rl;text-orientation:upright;font-family:'Ma Shan Zheng',cursive;background:linear-gradient(160deg,#C03048,#861E30);color:#F6E6DC;font-size:20px;letter-spacing:.2em;padding:11px 8px;border-radius:5px;align-self:flex-end;transform:rotate(-4deg);box-shadow:0 5px 20px rgba(0,0,0,.55),inset 0 0 0 1px rgba(246,230,220,.3),inset 0 0 14px rgba(0,0,0,.28);filter:url(#cs-inkEdge)}
-        .cs-side-note{position:absolute;right:clamp(28px,4.5vw,72px);top:50%;transform:translateY(-50%);display:flex;gap:20px}
-        .cs-phrase{font-weight:300;font-size:12.5px;color:rgba(196,206,224,.52);letter-spacing:.42em;line-height:2.3}
-        .cs-phrase span{display:block}
-        .cs-jing{font-family:'ZCOOL XiaoWei',serif;font-size:clamp(19px,2.6vh,25px);color:rgba(244,224,150,.92);letter-spacing:.52em}
-        .cs-meta{position:absolute;right:clamp(28px,4.5vw,72px);top:30px;writing-mode:vertical-rl;text-orientation:upright;font-size:11px;letter-spacing:.44em;color:rgba(230,192,98,.5)}
-        .cs-hint{position:absolute;left:clamp(30px,5.5vw,86px);bottom:28px;font-size:11px;letter-spacing:.3em;line-height:2.1;color:rgba(170,184,206,.46)}
-        .cs-frame{position:absolute;inset:14px;border:1px solid rgba(230,192,98,.16);pointer-events:none}
-        .cs-corner{position:absolute;width:30px;height:30px;color:rgba(230,192,98,.55)}
-        .cs-corner.cs-tl{top:-2px;left:-2px}
-        .cs-corner.cs-tr{top:-2px;right:-2px;transform:rotate(90deg)}
-        .cs-corner.cs-br{bottom:-2px;right:-2px;transform:rotate(180deg)}
-        .cs-corner.cs-bl{bottom:-2px;left:-2px;transform:rotate(270deg)}
-        @media (max-width:760px){
-          .cs-title-block{left:16px;gap:10px}
-          .cs-title{font-size:clamp(58px,12vh,88px)}
-          .cs-poem{font-size:11px;letter-spacing:.24em}
-          .cs-seal{font-size:15px;padding:8px 6px}
-          .cs-phrase,.cs-hint,.cs-meta{display:none}
-          .cs-side-note{right:14px}
-          .cs-frame{inset:8px}
-          .cs-slabel{font-size:10px}
-        }
-      `}</style>
+
 
       {/* SVG 滤镜定义（水墨边缘 + 水墨线条） */}
       <svg width="0" height="0" style={{ position: 'absolute' }}>

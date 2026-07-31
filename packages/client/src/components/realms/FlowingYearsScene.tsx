@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
+import './FlowingYearsScene.css';
 
 /**
  * 流年拾光 · 视觉信物层
@@ -55,85 +56,7 @@ function trigramPath(CX: number, CY: number, th: number, bits: number[], rBase: 
 export default function FlowingYearsScene() {
   return (
     <div className="absolute inset-0 overflow-hidden" aria-hidden style={{ pointerEvents: 'none' }}>
-      <style>{`
-        /* ── 罗盘样式 ── */
-        .fy-arc { fill: none; stroke: rgba(232,197,107,.65); stroke-width: .9; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 2s cubic-bezier(.65,0,.25,1); }
-        .fy-arc.fy-strong { stroke: rgba(232,197,107,.9); stroke-width: 1.2; }
-        .fy-arc.fy-faint { stroke: rgba(159,181,163,.4); stroke-width: .8; }
-        .fy-arc.fy-pool { stroke: rgba(232,197,107,.75); stroke-width: .9; }
-        .fy-ringw { fill: none; stroke: rgba(232,197,107,.5); stroke-width: .8; stroke-dasharray: 1 3 4 2 2 5; }
-        .fy-ringd { fill: none; stroke: rgba(127,191,154,.42); stroke-width: .7; stroke-dasharray: .5 5; }
-        .fy-ring-dash { fill: none; stroke: rgba(127,191,154,.36); stroke-width: .8; stroke-dasharray: 1 7; }
-        .fy-fadein { opacity: 0; transition: opacity 1.3s ease; }
-        .fy-tick { fill: none; stroke: rgba(232,197,107,.48); stroke-width: .7; opacity: 0; transition: opacity .6s ease; }
-        .fy-tick.fy-tick-mid { stroke-width: .9; stroke: rgba(232,197,107,.62); }
-        .fy-tick.fy-tick-major { stroke-width: 1.3; stroke: rgba(255,217,126,.88); }
-        .fy-tick.fy-tick-hour { stroke: rgba(127,191,154,.58); stroke-width: .8; }
-        .fy-dot { fill: rgba(232,197,107,.58); opacity: 0; transition: opacity .6s ease; }
-        .fy-hatch { fill: none; stroke: rgba(232,197,107,.18); stroke-width: .5; }
-        .fy-spoke { fill: none; stroke: rgba(159,181,163,.09); stroke-width: .5; }
-        .fy-esc { fill: none; stroke: rgba(232,197,107,.4); stroke-width: .6; }
-        .fy-iray { fill: none; stroke: rgba(159,181,163,.11); stroke-width: .5; }
-        .fy-fine2 { fill: none; stroke: rgba(159,181,163,.18); stroke-width: .5; }
-        .fy-micro { fill: none; stroke: rgba(232,197,107,.22); stroke-width: .5; }
-        .fy-trig { fill: none; stroke: rgba(232,197,107,.7); stroke-width: 1.3; stroke-linecap: round; }
-        .fy-char { font-family: 'ZCOOL XiaoWei', serif; fill: rgba(159,181,163,.9); opacity: 0; transition: opacity .8s ease; }
-        .fy-char.fy-char-card { fill: #ffd97e; }
-        .fy-char.fy-mtn { font-size: 15px; fill: rgba(159,181,163,.72); }
-        .fy-char.fy-dir { font-size: 11px; fill: rgba(232,197,107,.68); }
-        .fy-char.fy-yuan { font-size: 13px; fill: rgba(232,197,107,.75); }
-        .fy-char.fy-wuxing { font-size: 12px; fill: rgba(127,191,154,.72); }
-        .fy-curvetext { font-family: 'ZCOOL XiaoWei', serif; font-size: 13px; letter-spacing: 10px; fill: rgba(232,197,107,.58); }
-        .fy-guide { fill: none; stroke: rgba(159,181,163,.2); stroke-width: .7; stroke-dasharray: 2 5; }
-        .fy-pivot { fill: #ffd97e; filter: drop-shadow(0 0 8px rgba(255,217,126,1)); }
-        .fy-pivot-ring { fill: none; stroke: rgba(232,197,107,.7); stroke-width: 1; }
-        .fy-needle { transition: transform 1s linear; transform-box: view-box; transform-origin: 0px 520px; }
-        .fy-needle-sway { animation: fyNdSway 6s ease-in-out infinite alternate; transform-box: view-box; transform-origin: 0px 520px; }
-        @keyframes fyNdSway { from { transform: rotate(-.5deg); } to { transform: rotate(.5deg); } }
-        .fy-needle-hair { stroke: rgba(255,217,126,.95); stroke-width: .8; fill: none; }
-        .fy-needle-tip { fill: #ffd97e; filter: drop-shadow(0 0 8px rgba(255,217,126,1)); }
-        .fy-sec-bead { fill: #ffe9a8; filter: drop-shadow(0 0 10px rgba(255,217,126,1)); }
-        .fy-spin { transform-box: view-box; transform-origin: 0px 520px; animation: fySpin 150s linear infinite; }
-        @keyframes fySpin { to { transform: rotate(360deg); } }
-        .fy-grown .fy-arc { stroke-dashoffset: 0; }
-        .fy-grown .fy-tick, .fy-grown .fy-dot, .fy-grown .fy-char, .fy-grown .fy-fadein { opacity: 1; }
-        .fy-grown .fy-needle, .fy-grown .fy-sec-bead { opacity: 1 !important; }
 
-        /* ── 电路纹理样式 ── */
-        .fy-ctrace { fill: none; stroke: rgba(232,197,107,.22); stroke-width: .8; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1.7s cubic-bezier(.5,0,.2,1); }
-        .fy-ctrace.fy-cm { stroke: rgba(232,197,107,.42); stroke-width: 1.3; }
-        .fy-ctrace.fy-cj { stroke: rgba(127,191,154,.25); }
-        .fy-ctrace.fy-cg { stroke: rgba(232,197,107,.12); stroke-width: .7; }
-        .fy-ctrace-d { fill: none; stroke: rgba(159,181,163,.28); stroke-width: .8; stroke-dasharray: 2 6; opacity: 0; transition: opacity 1.2s ease; }
-        .fy-ctick { fill: none; stroke: rgba(232,197,107,.38); stroke-width: .7; opacity: 0; transition: opacity .5s ease; }
-        .fy-ctick.fy-cj { stroke: rgba(127,191,154,.38); }
-        .fy-cpad { fill: none; stroke: rgba(232,197,107,.55); stroke-width: 1; opacity: 0; transition: opacity .6s ease; }
-        .fy-cpad.fy-cj { stroke: rgba(127,191,154,.55); }
-        .fy-cpaddot { fill: rgba(255,217,126,.85); opacity: 0; transition: opacity .6s ease; }
-        .fy-ctp { fill: none; stroke: rgba(255,217,126,.7); stroke-width: 1; opacity: 0; transition: opacity .7s ease; }
-        .fy-cchip { fill: rgba(14,32,22,.92); stroke: rgba(232,197,107,.5); stroke-width: .9; opacity: 0; transition: opacity .8s ease; }
-        .fy-cvia { fill: none; stroke: rgba(159,181,163,.36); stroke-width: .9; opacity: 0; transition: opacity .8s ease; }
-        .fy-circuit-grown .fy-ctrace { stroke-dashoffset: 0; }
-        .fy-circuit-grown .fy-ctrace-d, .fy-circuit-grown .fy-ctick, .fy-circuit-grown .fy-cpad, .fy-circuit-grown .fy-cpaddot,
-        .fy-circuit-grown .fy-ctp, .fy-circuit-grown .fy-cchip, .fy-circuit-grown .fy-cvia { opacity: 1; }
-
-        /* ── 光脊样式 ── */
-        .fy-spine-line { position: absolute; right: 5px; top: 0; bottom: 0; width: 1px; background: linear-gradient(180deg, transparent, rgba(232,197,107,.55) 16%, rgba(232,197,107,.55) 88%, rgba(232,197,107,.2)); transform: scaleY(0); transform-origin: bottom; transition: transform 1.7s cubic-bezier(.6,0,.2,1) .9s; }
-        .fy-loaded .fy-spine-line { transform: scaleY(1); }
-        .fy-spine-pulse { position: absolute; right: 3px; bottom: 0; width: 5px; height: 5px; border-radius: 50%; background: #ffe9a8; opacity: 0; box-shadow: 0 0 12px rgba(255,217,126,.95); animation: fySpRise 7s cubic-bezier(.45,0,.3,1) infinite 2.6s; }
-        @keyframes fySpRise { 0% { transform: translateY(0); opacity: 0; } 8% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(-70vh); opacity: 0; } }
-        .fy-node { display: flex; flex-direction: row-reverse; align-items: center; gap: 12px; opacity: 0; transform: translateY(14px); transition: opacity .7s ease, transform .7s ease; }
-        .fy-loaded .fy-node { opacity: 1; transform: none; }
-        .fy-node i { flex: none; width: 11px; height: 11px; border-radius: 50%; border: 1px solid #e8c56b; background: #0d1f15; box-shadow: 0 0 6px rgba(232,197,107,.3); transition: .35s; }
-        .fy-node:hover i { background: #ffd97e; box-shadow: 0 0 18px rgba(255,217,126,.9); transform: scale(1.3); }
-        .fy-node em { font-style: normal; font-family: 'ZCOOL XiaoWei', serif; font-size: 15px; letter-spacing: .3em; color: #f1e9d6; transition: .35s; }
-        .fy-node:hover em { color: #ffd97e; }
-        .fy-node small { font-size: 11px; letter-spacing: .34em; color: #9db4a3; opacity: 0; transform: translateX(8px); transition: .4s; }
-        .fy-node:hover small { opacity: 1; transform: none; }
-
-        .fy-glow-pulse { animation: fyGlowPulse 8s ease-in-out infinite; }
-        @keyframes fyGlowPulse { 0%,100% { opacity:.75; } 50% { opacity:1.15; } }
-      `}</style>
 
       {/* 时序竖柱 · 电路纹理（背景层，不跟随滚动） */}
       <CircuitTraces />
