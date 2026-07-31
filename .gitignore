@@ -59,3 +59,7 @@ tmp-screenshot.png
 reference.html
 流年拾光-视觉示意.design/
 
+# 第三方组件参考与备份
+references/
+*.bak
+

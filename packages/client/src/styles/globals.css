@@ -168,18 +168,18 @@
   --disp: 'ZCOOL XiaoWei', serif; --body: 'Noto Sans SC', sans-serif;
 }
 
-/* r3 参商 · 深夜蓝 · 星辰 · 志莽行 */
+/* r3 参商 · 深紫蓝星夜 · 玫红参星 · 靛蓝商星 · 志莽行 */
 [data-theme="r3"] {
-  --g1: #0a1220; --g2: #101c30; --g3: #0a1424;
-  --ink: #cfe0f0; --soft: rgba(207, 224, 240, 0.55);
-  --acc: #d9c9a0; --acc2: #7a9ab0; --hot: #c05a4a;
-  --card: rgba(14, 24, 42, 0.62); --line: rgba(207, 224, 240, 0.13);
-  --slogc: #e8dcc0; --glow: rgba(207, 224, 240, 0.2);
-  --sealc: #c05a4a; --mistc: rgba(122, 154, 176, 0.1);
-  --sc1: #101c30; --sc2: #0a1220; --sc3: #0e1826;
-  --phsky: linear-gradient(180deg, #0a1220, #16263e 50%, #2a4058 72%, #0a1220 73%);
-  --phsun: #e8dcc0; --phglow: rgba(232, 220, 192, 0.4);
-  --phh1: #101c30; --phh2: #0a1424; --phw: #081020;
+  --g1: #0e1640; --g2: #1a1452; --g3: #0c1238;
+  --ink: #eae6f4; --soft: rgba(234, 230, 244, 0.55);
+  --acc: #e6c062; --acc2: #5fa0f0; --hot: #ec5480;
+  --card: rgba(20, 24, 56, 0.62); --line: rgba(234, 230, 244, 0.13);
+  --slogc: #f4d884; --glow: rgba(150, 180, 255, 0.2);
+  --sealc: #c03048; --mistc: rgba(96, 96, 210, 0.12);
+  --sc1: #1a1452; --sc2: #0e1640; --sc3: #241658;
+  --phsky: linear-gradient(180deg, #0e1640, #1a1452 50%, #2a3a6e 72%, #0c1238 73%);
+  --phsun: #f4d884; --phglow: rgba(244, 216, 132, 0.4);
+  --phh1: #1a1452; --phh2: #0c1238; --phw: #0a1028;
   --disp: 'Zhi Mang Xing', cursive; --body: 'Noto Sans SC', sans-serif;
 }
 

@@ -39,7 +39,7 @@ export default function RealmSignature() {
         >
           {realm.id === 'r1' && <FlowingYearsScene />}
           {realm.id === 'r2' && <ScatterDreams />}
-          {realm.id === 'r3' && <ChenShangStars />}
+          {/* r3 参商：由 ChenShangHero 沉浸场景接管，此处不再渲染信物层 */}
           {realm.id === 'r4' && <ScrollAxis />}
           {realm.id === 'r5' && <EightWindows />}
           {realm.id === 'r6' && <ThunderBolt />}
@@ -89,50 +89,6 @@ function ScatterDreams() {
         </motion.div>
       ))}
     </>
-  );
-}
-
-// ── r3 参商 · 双星 + 永不相连的虚线 + 北辰 ─────────
-function ChenShangStars() {
-  return (
-    <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-      {/* 参星（西，左上） */}
-      <motion.circle
-        cx="12%" cy="22%" r="4"
-        fill="var(--acc)"
-        animate={{ opacity: [0.6, 1, 0.6], scale: [1, 1.3, 1] }}
-        transition={{ duration: 4, repeat: Infinity }}
-        style={{ filter: 'drop-shadow(0 0 8px var(--acc))' }}
-      />
-      {/* 商星（东，右下） */}
-      <motion.circle
-        cx="88%" cy="78%" r="4"
-        fill="var(--hot)"
-        animate={{ opacity: [0.6, 1, 0.6], scale: [1, 1.3, 1] }}
-        transition={{ duration: 4, repeat: Infinity, delay: 2 }}
-        style={{ filter: 'drop-shadow(0 0 8px var(--hot))' }}
-      />
-      {/* 永远接不上的虚线（中间断开） */}
-      <line x1="12%" y1="22%" x2="45%" y2="48%"
-        stroke="var(--soft)" strokeWidth="0.6" strokeDasharray="3 5" opacity="0.4" />
-      <line x1="55%" y1="52%" x2="88%" y2="78%"
-        stroke="var(--soft)" strokeWidth="0.6" strokeDasharray="3 5" opacity="0.4" />
-      {/* 中间断开处：永远的距离 */}
-      <text x="50%" y="51%" textAnchor="middle"
-        fill="var(--soft)" fontSize="9" opacity="0.5"
-        style={{ fontFamily: 'var(--disp)', letterSpacing: '0.3em' }}>
-        ⋯
-      </text>
-      {/* 北辰（深处的淡星，不动） */}
-      <circle cx="50%" cy="14%" r="2"
-        fill="var(--slogc)" opacity="0.5"
-        style={{ filter: 'drop-shadow(0 0 4px var(--slogc))' }} />
-      <text x="50%" y="11%" textAnchor="middle"
-        fill="var(--soft)" fontSize="8" opacity="0.35"
-        style={{ fontFamily: 'var(--disp)', letterSpacing: '0.4em' }}>
-        北辰
-      </text>
-    </svg>
   );
 }
 

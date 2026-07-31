@@ -9,6 +9,7 @@ import RealmSwitcher from './realms/RealmSwitcher';
 import BottomNav from './BottomNav';
 import NotificationBell from './NotificationBell';
 import FlowingYearsHero from './realms/FlowingYearsHero';
+import ChenShangHero from './realms/ChenShangHero';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -107,6 +108,13 @@ function LayoutInner() {
       {realm.id === 'r1' && (
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', zIndex: 15, pointerEvents: 'none' }}>
           <FlowingYearsHero />
+        </div>
+      )}
+
+      {/* 参商境 · 沉浸星夜场景（fixed 背景，不跟随滚动，不占流，不遮挡论坛内容） */}
+      {realm.id === 'r3' && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, pointerEvents: 'none' }}>
+          <ChenShangHero />
         </div>
       )}
 

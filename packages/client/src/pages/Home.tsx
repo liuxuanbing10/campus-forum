@@ -149,8 +149,8 @@ export default function Home() {
       {/* 公告跑马灯 */}
       <Broadcast />
 
-      {/* 站头（品牌 + 标语 + 罗盘/山景/藻井）- r1 由场景覆盖 */}
-      {realm.id !== 'r1' && <Masthead />}
+      {/* 站头（品牌 + 标语 + 罗盘/山景/藻井）- r1/r3 由沉浸场景覆盖 */}
+      {realm.id !== 'r1' && realm.id !== 'r3' && <Masthead />}
 
       {/* 主体内容 */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8">
