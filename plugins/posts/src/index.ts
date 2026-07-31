@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, uid, isAdmin, paginate, addPoints, checkSensitive, logAction, notify } from '@campus-forum/core';
+import { Plugin, PluginContext, uid, isAdmin, paginate, addPoints, checkSensitive, logAction, notify, BoardRow, PostRow, UserRow, CommentRow } from '@campus-forum/core';
 import { KyselyAdapter } from '@campus-forum/database';
 import { z } from 'zod';
 // 引入 @fastify/multipart 类型扩展，让 req.file() 方法在 TS 中可用
@@ -32,10 +32,6 @@ interface CacheService {
 }
 
 // ── 类型定义 ──────────────────────────────────
-interface BoardRow { id: number; name: string; description: string; icon: string; }
-interface PostRow { id: number; title: string; content: string; author_id: number; board_id: number; is_anonymous: number; created_at: string; }
-interface UserRow { id: number; username: string; display_name: string; is_admin: number; }
-interface CommentRow { id: number; content: string; author_id: number; post_id: number; parent_id: number | null; }
 export interface PostListItem {
   id: number; title: string; content: string; board_id: number; is_anonymous: number; is_pinned: number; is_private: number;
   images: string | null; created_at: string; author_name: string; board_name: string;
@@ -627,7 +623,7 @@ export const postsPlugin: Plugin = {
         withContent: true,
         extraFields: ['COALESCE((SELECT 1 FROM favorites WHERE post_id=p.id AND user_id=?),0) as is_favorited'],
         fromOverride: 'favorites f JOIN posts p ON f.post_id=p.id',
-        where: 'WHERE f.user_id=?',
+        where: 'WHERE f.user_id=? AND p.is_pending=0',
         orderBy: 'ORDER BY f.created_at DESC',
         limit: true,
       });

@@ -1,8 +1,7 @@
 import { z } from 'zod';
+import type { TeamRow, MemberRow, AnnouncementRow } from '@campus-forum/core';
 
-export interface TeamRow { id: number; name: string; description: string; avatar: string | null; is_public: number; creator_id: number; max_members: number; category_id: number | null; invite_code: string | null; hide_members: number; created_at: string; updated_at: string; }
-export interface MemberRow { id: number; team_id: number; user_id: number; role: string; status: string; username?: string; display_name?: string; avatar_url?: string; joined_at?: string; }
-export interface AnnouncementRow { id: number; team_id: number; title: string; content: string; author_id: number; is_pinned: number; created_at: string; updated_at: string; }
+export type { TeamRow, MemberRow, AnnouncementRow };
 
 export const createTeamSchema = z.object({
   name: z.string().min(2, '团队名至少 2 个字符').max(30, '团队名最多 30 个字符'),

@@ -404,7 +404,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     if (!team) return rep.status(404).send({ error: '团队不存在' });
     const u = uid(req);
     if (!team.is_public && !(await memberRole(id, u || 0))) return rep.status(403).send({ error: '这是私密团队' });
-    const posts = await kdb.sql<any>`SELECT p.*, u.username, u.display_name, u.avatar_url FROM team_posts tp JOIN posts p ON tp.post_id=p.id JOIN users u ON p.author_id=u.id WHERE tp.team_id=${id} ORDER BY p.is_pinned DESC, p.created_at DESC LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
+    const posts = await kdb.sql<any>`SELECT p.*, u.username, u.display_name, u.avatar_url FROM team_posts tp JOIN posts p ON tp.post_id=p.id JOIN users u ON p.author_id=u.id WHERE tp.team_id=${id} AND p.is_pending=0 ORDER BY p.is_pinned DESC, p.created_at DESC LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
     return { posts, page, limit };
   });
 

@@ -1,15 +1,5 @@
-import type { Plugin } from '@campus-forum/core';
+import type { Plugin, BoardRow } from '@campus-forum/core';
 import { KyselyAdapter } from '@campus-forum/database';
-
-interface Board {
-  id: number;
-  name: string;
-  description: string;
-  icon: string;
-  sort_order: number;
-  is_private: number;
-  post_count: number;
-}
 
 export const boardsPlugin: Plugin = {
   manifest: {
@@ -26,7 +16,7 @@ export const boardsPlugin: Plugin = {
 
     // List all boards
     app.get('/api/boards', async () => {
-      const boards = await kdb.sql<Board>`SELECT b.*, (SELECT COUNT(*) FROM posts p WHERE p.board_id = b.id) as post_count
+      const boards = await kdb.sql<BoardRow>`SELECT b.*, (SELECT COUNT(*) FROM posts p WHERE p.board_id = b.id) as post_count
         FROM boards b ORDER BY b.sort_order ASC`;
       return boards;
     });
@@ -37,7 +27,7 @@ export const boardsPlugin: Plugin = {
       const board = await q()!.selectFrom('boards')
         .selectAll()
         .where('id', '=', id)
-        .executeTakeFirst() as Board | undefined;
+        .executeTakeFirst() as BoardRow | undefined;
       if (!board) {
         return reply.status(404).send({ error: '板块不存在' });
       }
@@ -50,7 +40,7 @@ export const boardsPlugin: Plugin = {
       const board = await q()!.selectFrom('boards')
         .select('id')
         .where('id', '=', boardId)
-        .executeTakeFirst() as Board | undefined;
+        .executeTakeFirst() as BoardRow | undefined;
       if (!board) {
         return reply.status(404).send({ error: '板块不存在' });
       }

@@ -51,6 +51,13 @@ export type {
   UserDevice,
   Achievement,
   UserAchievement,
+  BoardRow,
+  PostRow,
+  UserRow,
+  CommentRow,
+  TeamRow,
+  MemberRow,
+  AnnouncementRow,
 } from './types.js';
 export {
   ROLES,

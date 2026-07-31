@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { Plugin, PluginContext, uid, isAdmin, signJwt } from '@campus-forum/core';
+import { Plugin, PluginContext, uid, isAdmin, signJwt, UserRow } from '@campus-forum/core';
 import { KyselyAdapter } from '@campus-forum/database';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
@@ -91,24 +91,6 @@ function now(): string {
   return new Date().toISOString().slice(0, 19).replace('T', ' ');
 }
 
-// 用户行类型
-interface UserRow {
-  id: number;
-  username: string;
-  password_hash: string;
-  display_name: string;
-  device_code: string | null;
-  is_admin: number;
-  email: string | null;
-  avatar_url: string | null;
-  role: string;
-  is_banned: number;
-  banned_until: string | null;
-  ban_reason: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
 export const authPlugin: Plugin = {
   manifest: {
     name: 'auth',
@@ -132,7 +114,7 @@ export const authPlugin: Plugin = {
     // ========================================
     app.post('/api/auth/register', {
       config: {
-        rateLimit: { max: 5, timeWindow: '1 minute' },
+        rateLimit: { max: 3, timeWindow: '1 minute' },
       },
     }, async (request, reply) => {
       const { username, password, confirmPassword, email } =
@@ -219,7 +201,7 @@ export const authPlugin: Plugin = {
     // ========================================
     app.post('/api/auth/login', {
       config: {
-        rateLimit: { max: 10, timeWindow: '1 minute' },
+        rateLimit: { max: 5, timeWindow: '1 minute' },
       },
     }, async (request, reply) => {
       const { username, password } = request.body as LoginBody;

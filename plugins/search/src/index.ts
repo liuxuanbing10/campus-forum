@@ -56,7 +56,7 @@ export const searchPlugin: Plugin = {
       const countSql = `
         SELECT COUNT(*) as total
         FROM posts p
-        WHERE ${likeSql} ${whereBoard}
+        WHERE ${likeSql} AND p.is_pending = 0 ${whereBoard}
       `;
       const countResult = await kdb.get<{ total: number }>(countSql, ...params);
       const total = countResult?.total || 0;
@@ -74,7 +74,7 @@ export const searchPlugin: Plugin = {
         JOIN boards b ON p.board_id = b.id
         LEFT JOIN (SELECT post_id, COUNT(*) as like_count FROM votes WHERE value = 1 GROUP BY post_id) v ON v.post_id = p.id
         LEFT JOIN (SELECT post_id, COUNT(*) as comment_count FROM comments GROUP BY post_id) c ON c.post_id = p.id
-        WHERE ${likeSql} ${whereBoard}
+        WHERE ${likeSql} AND p.is_pending = 0 ${whereBoard}
         ORDER BY p.created_at DESC
         LIMIT ? OFFSET ?
       `;
@@ -123,6 +123,7 @@ export const searchPlugin: Plugin = {
         .selectFrom('posts')
         .select(['id', 'title'])
         .where('title', 'like', pattern)
+        .where('is_pending', '=', 0)
         .orderBy('created_at', 'desc')
         .limit(10)
         .execute();

@@ -574,6 +574,7 @@ export interface BoardRow {
   description: string;
   icon: string;
   sort_order: number;
+  is_private?: number;
   post_count?: number;
 }
 
@@ -625,4 +626,27 @@ export interface TeamRow {
   hide_members: number;
   member_count?: number;
   post_count?: number;
+}
+
+export interface MemberRow {
+  id: number;
+  team_id: number;
+  user_id: number;
+  role: string;
+  status: string;
+  username?: string;
+  display_name?: string;
+  avatar_url?: string;
+  joined_at?: string;
+}
+
+export interface AnnouncementRow {
+  id: number;
+  team_id: number;
+  title: string;
+  content: string;
+  author_id: number;
+  is_pinned: number;
+  created_at: string;
+  updated_at: string;
 }
