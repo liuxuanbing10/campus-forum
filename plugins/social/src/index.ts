@@ -1,12 +1,11 @@
 import { Plugin, PluginContext, uid, isAdmin, addPoints, logAction } from '@campus-forum/core';
-import { KyselyAdapter } from '@campus-forum/database';
+import { kyselyQuery } from '@campus-forum/database';
 
 export const socialPlugin: Plugin = {
   manifest: { name: 'social', version: '0.1.0', description: '社交功能: 关注/举报/积分/日志', author: 'campus-forum' },
   apply(_ctx: PluginContext) {
     const { app, db } = _ctx;
-    const kdb = db as KyselyAdapter;
-    const q = kdb.query?.bind(kdb);
+    const { kdb, q } = kyselyQuery(db);
 
     // ─── 关注/取消 ───
     app.post('/api/follow', async (req, rep) => {

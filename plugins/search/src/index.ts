@@ -1,5 +1,5 @@
 import { Plugin, PluginContext } from '@campus-forum/core';
-import { KyselyAdapter } from '@campus-forum/database';
+import { kyselyQuery } from '@campus-forum/database';
 
 export const searchPlugin: Plugin = {
   manifest: {
@@ -11,8 +11,7 @@ export const searchPlugin: Plugin = {
 
   apply(ctx: PluginContext) {
     const { app, db } = ctx;
-    const kdb = db as KyselyAdapter;
-    const q = kdb.query?.bind(kdb);
+    const { kdb, q } = kyselyQuery(db);
 
     // ========================================
     // 搜索帖子（标题 + 内容）

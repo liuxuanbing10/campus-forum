@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
+import { toastStore } from '../../../App';
 
 /**
  * 电子木鱼 - 点击敲击，功德 +1
- * 使用 sonner toast 显示功德
+ * 使用 toast 显示功德
  */
 export default function WoodenFish() {
   const [count, setCount] = useState(0);
@@ -25,10 +25,7 @@ export default function WoodenFish() {
 
     // 每敲 10 下提示一次
     if ((count + 1) % 10 === 0) {
-      toast.success(`功德 +10`, {
-        description: `已累计 ${count + 1} 击`,
-        duration: 1500,
-      });
+      toastStore.success(`功德 +10 · 已累计 ${count + 1} 击`, 1500);
     }
   }, [count]);
 

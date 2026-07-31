@@ -1,6 +1,5 @@
 import { useEffect, lazy, Suspense, useState, useCallback } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { Toaster } from 'sonner';
 import { useAuthStore } from './stores/auth';
 import { useThemeStore } from './stores/theme';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -145,20 +144,6 @@ export default function App() {
         <Route path="/oauth/setup" element={<Suspense fallback={<PageSkeleton />}><OAuthSetup /></Suspense>} />
       </Routes>
       <ToastContainer toasts={toastList} onClose={toastStore.remove} />
-      <Toaster
-        position="top-center"
-        richColors
-        closeButton
-        toastOptions={{
-          style: {
-            fontFamily: 'var(--body, inherit)',
-            borderRadius: '10px',
-            border: '1px solid var(--line, rgba(0,0,0,0.08))',
-            background: 'var(--card, #fff)',
-            color: 'var(--ink, #1a1a1a)',
-          },
-        }}
-      />
     </ErrorBoundary>
   );
 }

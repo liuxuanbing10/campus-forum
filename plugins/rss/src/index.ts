@@ -1,5 +1,5 @@
 import { Plugin, PluginContext } from '@campus-forum/core';
-import { KyselyAdapter } from '@campus-forum/database';
+import { kyselyQuery } from '@campus-forum/database';
 
 function escapeXml(s: string): string {
   return s.replace(/&/g, '&amp;')
@@ -17,8 +17,7 @@ export const rssPlugin: Plugin = {
   },
   apply(ctx: PluginContext) {
     const { app, db } = ctx;
-    const kdb = db as KyselyAdapter;
-    const q = kdb.query?.bind(kdb);
+    const { kdb, q } = kyselyQuery(db);
 
     app.get('/api/rss/boards/:id', async (req, rep) => {
       const boardId = Number((req.params as { id: string }).id);

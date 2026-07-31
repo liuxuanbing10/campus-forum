@@ -1,5 +1,5 @@
 import { Plugin, PluginContext, uid } from '@campus-forum/core';
-import { KyselyAdapter } from '@campus-forum/database';
+import { kyselyQuery } from '@campus-forum/database';
 
 // ── 服务接口（与 server/services 实现匹配） ──────────
 interface QueueService {
@@ -35,8 +35,7 @@ export const exportPlugin: Plugin = {
   },
   apply(ctx: PluginContext) {
     const { app, db } = ctx;
-    const kdb = db as KyselyAdapter;
-    const q = kdb.query?.bind(kdb);
+    const { kdb, q } = kyselyQuery(db);
 
     // 从服务容器获取 QueueService
     let queueService: QueueService | null = null;

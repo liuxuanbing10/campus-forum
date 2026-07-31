@@ -1,4 +1,5 @@
 export * from './utils.js';
+export type { ImageService } from './image-service.js';
 export { PluginManager } from './plugin-manager.js';
 export { SimpleEventBus } from './event-bus.js';
 export type {

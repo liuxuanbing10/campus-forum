@@ -1,5 +1,5 @@
 import { Plugin, PluginContext, uid } from '@campus-forum/core';
-import { KyselyAdapter } from '@campus-forum/database';
+import { kyselyQuery } from '@campus-forum/database';
 
 interface AchievementRow {
   id: number;
@@ -31,8 +31,7 @@ async function checkAndAward(
   achievementKey: string,
 ): Promise<{ newlyUnlocked: boolean; achievement?: AchievementRow }> {
   const { db } = ctx;
-  const kdb = db as KyselyAdapter;
-  const q = kdb.query?.bind(kdb);
+  const { kdb, q } = kyselyQuery(db);
 
   // 找到成就定义
   const ach = await q()!.selectFrom('achievements').selectAll().where('key', '=', achievementKey).executeTakeFirst() as AchievementRow | undefined;
@@ -271,8 +270,7 @@ async function checkAndAward(
 
 async function checkAllAchievements(ctx: PluginContext, userId: number) {
   const { db } = ctx;
-  const kdb = db as KyselyAdapter;
-  const q = kdb.query?.bind(kdb);
+  const { kdb, q } = kyselyQuery(db);
 
   const all = await q()!.selectFrom('achievements').selectAll().orderBy('sort_order').execute() as AchievementRow[];
   const results: { achievement: AchievementRow }[] = [];
@@ -293,8 +291,7 @@ async function checkAllAchievements(ctx: PluginContext, userId: number) {
 
 export function registerAchievementRoutes(ctx: PluginContext) {
   const { app, db } = ctx;
-  const kdb = db as KyselyAdapter;
-  const q = kdb.query?.bind(kdb);
+  const { kdb, q } = kyselyQuery(db);
 
   // 获取全部成就列表（含用户解锁状态）
   app.get('/api/achievements', async (req) => {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
+import { toastStore } from '../App';
 import * as Tabs from '@radix-ui/react-tabs';
 import * as Label from '@radix-ui/react-label';
 import * as Avatar from '@radix-ui/react-avatar';
@@ -118,7 +118,7 @@ function ProfileTab() {
         setProfileForm({ display_name: data.displayName, email: data.email || '' });
       }
     } catch {
-      toast.error('加载用户信息失败');
+      toastStore.error('加载用户信息失败');
     } finally {
       setLoading(false);
     }
@@ -128,7 +128,7 @@ function ProfileTab() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('图片大小不能超过 5MB');
+      toastStore.error('图片大小不能超过 5MB');
       return;
     }
     // 保存 File 对象供 multipart 上传使用，同时生成 base64 预览
@@ -145,13 +145,13 @@ function ProfileTab() {
       // 改用 FormData 文件流上传（避免 base64 编码 33% 体积膨胀）
       const { data } = await avatarApi.uploadFile(avatarFile);
       if (data.success) {
-        toast.success('头像更新成功');
+        toastStore.success('头像更新成功');
         setAvatarPreview(null);
         setAvatarFile(null);
         loadUser();
       }
     } catch {
-      toast.error('头像上传失败');
+      toastStore.error('头像上传失败');
     } finally {
       setAvatarUploading(false);
     }
@@ -161,11 +161,11 @@ function ProfileTab() {
     setSaving(true);
     try {
       await authApi.updateProfile(profileForm);
-      toast.success('保存成功');
+      toastStore.success('保存成功');
       setEditing(false);
       loadUser();
     } catch {
-      toast.error('保存失败');
+      toastStore.error('保存失败');
     } finally {
       setSaving(false);
     }
@@ -314,11 +314,11 @@ function PasswordTab() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (form.newPassword !== form.confirmPassword) {
-      toast.error('两次输入的新密码不一致');
+      toastStore.error('两次输入的新密码不一致');
       return;
     }
     if (form.newPassword.length < 6) {
-      toast.error('新密码至少 6 位');
+      toastStore.error('新密码至少 6 位');
       return;
     }
     setLoading(true);
@@ -328,10 +328,10 @@ function PasswordTab() {
         newPassword: form.newPassword,
         confirmPassword: form.confirmPassword,
       });
-      toast.success('密码修改成功');
+      toastStore.success('密码修改成功');
       setForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err: any) {
-      toast.error(err.response?.data?.error || '密码修改失败');
+      toastStore.error(err.response?.data?.error || '密码修改失败');
     } finally {
       setLoading(false);
     }
@@ -388,7 +388,7 @@ function OAuthTab() {
       const { data } = await oauthApi.getAccounts();
       setAccounts(data.accounts || []);
     } catch {
-      toast.error('加载绑定信息失败');
+      toastStore.error('加载绑定信息失败');
     } finally {
       setLoading(false);
     }
@@ -399,7 +399,7 @@ function OAuthTab() {
       const { data } = await api.get(`/auth/oauth/${provider}/bind-url`);
       window.location.href = data.url;
     } catch (err: any) {
-      toast.error(err.response?.data?.error || '获取授权链接失败');
+      toastStore.error(err.response?.data?.error || '获取授权链接失败');
     }
   };
 
@@ -407,10 +407,10 @@ function OAuthTab() {
     if (!confirm(`确定解绑 ${provider} 账号？`)) return;
     try {
       await oauthApi.unbind(provider);
-      toast.success('解绑成功');
+      toastStore.success('解绑成功');
       loadAccounts();
     } catch {
-      toast.error('解绑失败');
+      toastStore.error('解绑失败');
     }
   };
 
@@ -565,7 +565,7 @@ function DevicesTab() {
       const { data } = await userDeviceApi.getMyDevices();
       setDevices(data.devices || []);
     } catch {
-      toast.error('加载设备失败');
+      toastStore.error('加载设备失败');
     } finally {
       setLoading(false);
     }
@@ -575,10 +575,10 @@ function DevicesTab() {
     if (!confirm('确定退出该设备的登录状态？')) return;
     try {
       await userDeviceApi.revokeDevice(id);
-      toast.success('已退出该设备');
+      toastStore.success('已退出该设备');
       loadDevices();
     } catch {
-      toast.error('操作失败');
+      toastStore.error('操作失败');
     }
   };
 
@@ -650,12 +650,12 @@ function ExportTab() {
       const { data } = await exportApi.exportData();
       if (data.url) {
         window.open(data.url, '_blank');
-        toast.success('数据导出成功');
+        toastStore.success('数据导出成功');
       } else {
-        toast.success('数据导出请求已提交，请稍后查看');
+        toastStore.success('数据导出请求已提交，请稍后查看');
       }
     } catch {
-      toast.error('导出失败');
+      toastStore.error('导出失败');
     } finally {
       setExporting(false);
     }

@@ -1,5 +1,5 @@
 import type { Plugin, BoardRow } from '@campus-forum/core';
-import { KyselyAdapter } from '@campus-forum/database';
+import { kyselyQuery } from '@campus-forum/database';
 
 export const boardsPlugin: Plugin = {
   manifest: {
@@ -11,8 +11,7 @@ export const boardsPlugin: Plugin = {
 
   apply(ctx) {
     const { app, db } = ctx;
-    const kdb = db as KyselyAdapter;
-    const q = kdb.query?.bind(kdb);
+    const { kdb, q } = kyselyQuery(db);
 
     // List all boards
     app.get('/api/boards', async () => {
@@ -57,7 +56,7 @@ export const boardsPlugin: Plugin = {
               (SELECT COALESCE(SUM(v.value), 0) FROM votes v WHERE v.post_id = p.id) as vote_count
        FROM posts p
        JOIN users u ON p.author_id = u.id
-       WHERE p.board_id = ${boardId}
+       WHERE p.board_id = ${boardId} AND p.is_pending = 0
        ORDER BY p.created_at DESC
        LIMIT ${limit} OFFSET ${offset}`;
 

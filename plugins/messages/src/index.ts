@@ -1,12 +1,11 @@
 import { Plugin, PluginContext, uid } from '@campus-forum/core';
-import { KyselyAdapter } from '@campus-forum/database';
+import { kyselyQuery } from '@campus-forum/database';
 
 export const messagesPlugin: Plugin = {
   manifest: { name: 'messages', version: '0.1.0', description: '私信系统', author: 'campus-forum' },
   apply(ctx: PluginContext) {
     const { app, db } = ctx;
-    const kdb = db as KyselyAdapter;
-    const q = kdb.query?.bind(kdb);
+    const { kdb, q } = kyselyQuery(db);
 
     // ─── 发送私信 ───
     app.post('/api/messages', async (req, rep) => {

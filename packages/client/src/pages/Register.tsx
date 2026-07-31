@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { toast } from 'sonner';
+import { toastStore } from '../App';
 import {
   Eye, EyeOff, User, Lock, Loader2, ArrowRight, Sparkles, ShieldCheck, KeyRound,
 } from 'lucide-react';
@@ -53,7 +53,7 @@ function passwordStrength(pwd: string): { score: 0 | 1 | 2 | 3 | 4; label: strin
  * 注册页 - 十三境主题
  * - react-hook-form + zod 校验
  * - 密码强度指示器（Radix Progress）
- * - sonner toast
+ * - toast
  * - framer-motion 入场动画
  */
 export default function RegisterPage() {
@@ -81,11 +81,11 @@ export default function RegisterPage() {
   const onSubmit = async (values: RegisterFormValues) => {
     try {
       await register(values.username, values.password, values.confirmPassword);
-      toast.success('注册成功，欢迎加入十三境', { duration: 2200 });
+      toastStore.success('注册成功，欢迎加入十三境', 2200);
       navigate('/', { replace: true });
     } catch (err: any) {
       const msg = err.response?.data?.error || err.message || '注册失败';
-      toast.error(msg, { duration: 3000 });
+      toastStore.error(msg, 3000);
     }
   };
 

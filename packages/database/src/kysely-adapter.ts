@@ -202,3 +202,15 @@ export class KyselyAdapter implements DatabaseAdapter {
 export async function createKyselyDatabase(dbPath?: string): Promise<KyselyAdapter> {
   return KyselyAdapter.create(dbPath);
 }
+
+/**
+ * 从 DatabaseAdapter 取出 KyselyAdapter 并绑定 query 方法。
+ * 替代插件中的 `const kdb = db as KyselyAdapter; const q = kdb.query?.bind(kdb);` 样板。
+ * 返回的 kdb 保留 sql/exec/all/run 等兼容接口，q 是绑定的 Kysely 链式查询构造器。
+ */
+export function kyselyQuery(db: DatabaseAdapter): { kdb: KyselyAdapter; q: (() => Kysely<AnyDB>) | undefined } {
+  const kdb = db as KyselyAdapter;
+  return { kdb, q: kdb.query?.bind(kdb) };
+}
+
+

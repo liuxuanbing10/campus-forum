@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { toast } from 'sonner';
+import { toastStore } from '../App';
 import { Eye, EyeOff, User, Lock, Loader2, ArrowRight, Sparkles } from 'lucide-react';
 import * as Label from '@radix-ui/react-label';
 import { useAuthStore } from '../stores/auth';
@@ -30,7 +30,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 /**
  * 登录页 - 十三境主题
  * - react-hook-form + zod 校验
- * - sonner 替代旧 toastStore
+ * - toast
  * - Radix Label + 自定义输入框
  * - framer-motion 入场动画
  */
@@ -54,11 +54,11 @@ export default function LoginPage() {
   const onSubmit = async (values: LoginFormValues) => {
     try {
       await login(values.username, values.password);
-      toast.success('登录成功，欢迎回来', { duration: 2000 });
+      toastStore.success('登录成功，欢迎回来', 2000);
       navigate('/', { replace: true });
     } catch (err: any) {
       const msg = err.response?.data?.error || err.message || '登录失败';
-      toast.error(msg, { duration: 3000 });
+      toastStore.error(msg, 3000);
     }
   };
 
@@ -67,7 +67,7 @@ export default function LoginPage() {
       const { data } = await api.get(`/auth/oauth/${provider}/url`);
       window.location.href = data.url;
     } catch (err: any) {
-      toast.error(err.response?.data?.error || '获取授权链接失败');
+      toastStore.error(err.response?.data?.error || '获取授权链接失败');
     }
   };
 

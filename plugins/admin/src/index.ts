@@ -1,5 +1,6 @@
 import { Plugin, PluginContext, uid } from '@campus-forum/core';
-import { KyselyAdapter } from '@campus-forum/database';
+import { kyselyQuery } from '@campus-forum/database';
+import { z } from 'zod/v4';
 
 interface AdminUser {
   id: number;
@@ -20,6 +21,31 @@ function now(): string {
   return new Date().toISOString().slice(0, 19).replace('T', ' ');
 }
 
+// ── Zod Schemas ────────────────────────────────
+const banSchema = z.object({
+  reason: z.string().max(500).optional(),
+  duration: z.number().int().min(0).max(365).optional(),
+});
+
+const roleSchema = z.object({
+  role: z.enum(['user', 'admin', 'superadmin']),
+});
+
+const batchIdsSchema = z.object({
+  ids: z.array(z.number().int().positive()).min(1, '请选择用户'),
+});
+
+const batchBanSchema = z.object({
+  ids: z.array(z.number().int().positive()).min(1, '请选择用户'),
+  reason: z.string().max(500).optional(),
+  duration: z.number().int().min(0).max(365).optional(),
+});
+
+const batchRoleSchema = z.object({
+  ids: z.array(z.number().int().positive()).min(1, '请选择用户'),
+  role: z.enum(['user', 'admin']),
+});
+
 export const adminPlugin: Plugin = {
   manifest: {
     name: 'admin',
@@ -30,8 +56,7 @@ export const adminPlugin: Plugin = {
 
   apply(ctx: PluginContext) {
     const { app, db } = ctx;
-    const kdb = db as KyselyAdapter;
-    const q = kdb.query?.bind(kdb);
+    const { kdb, q } = kyselyQuery(db);
 
     const requireAdmin = async (request: any, reply: any, done: any) => {
       const userId = uid(request);
@@ -94,7 +119,7 @@ export const adminPlugin: Plugin = {
       const user = await q()!.selectFrom('users')
         .select(['id', 'username', 'display_name', 'email', 'avatar_url', 'role', 'is_admin', 'is_banned', 'banned_until', 'ban_reason', 'created_at', 'bio', 'points'])
         .where('id', '=', id)
-        .executeTakeFirst() as any;
+        .executeTakeFirst() as { id: number; username: string; display_name: string | null; email: string; avatar_url: string | null; role: string; is_admin: number; is_banned: number; banned_until: string | null; ban_reason: string | null; created_at: string; bio: string | null; points: number } | undefined;
       if (!user) return rep.status(404).send({ error: '用户不存在' });
 
       const postCount = (await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM posts WHERE author_id = ${id}`)[0].c;
@@ -114,7 +139,8 @@ export const adminPlugin: Plugin = {
     // ========================================
     app.post('/api/admin/users/:id/ban', { preHandler: requireAdmin }, async (req, rep) => {
       const id = Number((req.params as { id: string }).id);
-      const { reason, duration } = req.body as { reason: string; duration: number };
+      const body = banSchema.parse(req.body);
+      const { reason, duration } = body;
       const user = await q()!.selectFrom('users')
         .select('id')
         .where('id', '=', id)
@@ -179,10 +205,7 @@ export const adminPlugin: Plugin = {
     // ========================================
     app.post('/api/admin/users/:id/role', { preHandler: requireSuperAdmin }, async (req, rep) => {
       const id = Number((req.params as { id: string }).id);
-      const { role } = req.body as { role: string };
-      if (!['user', 'admin', 'superadmin'].includes(role)) {
-        return rep.status(400).send({ error: '无效的角色' });
-      }
+      const { role } = roleSchema.parse(req.body);
 
       await q()!.updateTable('users')
         .set({ role, is_admin: role === 'admin' || role === 'superadmin' ? 1 : 0 })
@@ -307,8 +330,7 @@ export const adminPlugin: Plugin = {
     // 批量操作：批量封禁
     // ========================================
     app.post('/api/admin/batch/ban', { preHandler: requireAdmin }, async (req, rep) => {
-      const { ids, reason, duration } = req.body as { ids: number[]; reason: string; duration: number };
-      if (!ids || ids.length === 0) return rep.status(400).send({ error: '请选择用户' });
+      const { ids, reason, duration } = batchBanSchema.parse(req.body);
 
       const bannedUntil = duration && duration > 0
         ? new Date(Date.now() + duration * 86400000).toISOString().slice(0, 19).replace('T', ' ')
@@ -331,8 +353,7 @@ export const adminPlugin: Plugin = {
     // 批量操作：批量解封
     // ========================================
     app.post('/api/admin/batch/unban', { preHandler: requireAdmin }, async (req, rep) => {
-      const { ids } = req.body as { ids: number[] };
-      if (!ids || ids.length === 0) return rep.status(400).send({ error: '请选择用户' });
+      const { ids } = batchIdsSchema.parse(req.body);
 
       await q()!.updateTable('users')
         .set({ is_banned: 0, banned_until: null, ban_reason: null })
@@ -346,8 +367,7 @@ export const adminPlugin: Plugin = {
     // 批量操作：批量删除
     // ========================================
     app.post('/api/admin/batch/delete', { preHandler: requireSuperAdmin }, async (req, rep) => {
-      const { ids } = req.body as { ids: number[] };
-      if (!ids || ids.length === 0) return rep.status(400).send({ error: '请选择用户' });
+      const { ids } = batchIdsSchema.parse(req.body);
 
       const filtered = (await q()!.selectFrom('users')
         .select('id')
@@ -368,9 +388,7 @@ export const adminPlugin: Plugin = {
     // 批量操作：批量设为管理员
     // ========================================
     app.post('/api/admin/batch/role', { preHandler: requireSuperAdmin }, async (req, rep) => {
-      const { ids, role } = req.body as { ids: number[]; role: string };
-      if (!ids || ids.length === 0) return rep.status(400).send({ error: '请选择用户' });
-      if (!['user', 'admin'].includes(role)) return rep.status(400).send({ error: '无效的角色' });
+      const { ids, role } = batchRoleSchema.parse(req.body);
 
       await q()!.updateTable('users')
         .set({ role, is_admin: role === 'admin' ? 1 : 0 })

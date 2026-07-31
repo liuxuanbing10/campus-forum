@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as Tabs from '@radix-ui/react-tabs';
-import { toast } from 'sonner';
+import { toastStore } from '../App';
 import { Users, UserPlus, BookOpen, Download, Loader2 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import api from '../lib/api';
@@ -115,7 +115,7 @@ export default function Home() {
         const res = await api.get('/boards');
         setBoards(res.data);
       } catch {}
-      toast.success('已刷新', { duration: 1500 });
+      toastStore.success('已刷新', 1500);
     },
   });
 

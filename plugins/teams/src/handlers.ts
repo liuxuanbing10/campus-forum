@@ -1,12 +1,11 @@
-import { PluginContext, uid, isAdmin, notify } from '@campus-forum/core';
-import { KyselyAdapter } from '@campus-forum/database';
+import { PluginContext, uid, isAdmin, requireAuth, notify } from '@campus-forum/core';
+import { kyselyQuery } from '@campus-forum/database';
 import { createTeamSchema, updateTeamSchema, announcementSchema, TeamRow, MemberRow, AnnouncementRow, genInviteCode } from './schemas.js';
 import { generateOssKey, getUploadUrl, getDownloadUrl, deleteObject } from './oss.js';
 
 export function registerTeamRoutes(ctx: PluginContext) {
   const { app, db } = ctx;
-  const kdb = db as KyselyAdapter;
-  const q = kdb.query?.bind(kdb);
+  const { kdb, q } = kyselyQuery(db);
 
   async function memberRole(teamId: number, userId: number): Promise<string | null> {
     const row = await q()!.selectFrom('team_members')
@@ -180,7 +179,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     await q()!.insertInto('team_members')
       .values({ team_id: team.id, user_id: userId, role: 'member', status: 'approved' })
       .execute();
-    await notify(ctx, team.creator_id, 'team_joined', `${(req as any).session?.username || '用户'}通过邀请码加入了「${team.name}」`, team.id, userId);
+    await notify(ctx, team.creator_id, 'team_joined', `${(req as any).session?.username || '用户'}通过邀请码加入了「${team.name}」`, undefined, undefined, userId, team.id);
     return { success: true, teamId: team.id, message: '已加入团队' };
   });
 
@@ -219,8 +218,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
   // 更新团队
   // ══════════════════════════════════════════
 
-  app.put('/api/teams/:id', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.put('/api/teams/:id', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = (req as any).userId as number;
     const id = Number((req.params as { id: string }).id);
     const team = await q()!.selectFrom('teams').selectAll().where('id', '=', id).executeTakeFirst() as TeamRow | undefined;
     if (!team) return rep.status(404).send({ error: '团队不存在' });
@@ -244,8 +243,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
   // 重置邀请码
   // ══════════════════════════════════════════
 
-  app.post('/api/teams/:id/reset-invite', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/teams/:id/reset-invite', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = (req as any).userId as number;
     const id = Number((req.params as { id: string }).id);
     const team = await q()!.selectFrom('teams').selectAll().where('id', '=', id).executeTakeFirst() as TeamRow | undefined;
     if (!team) return rep.status(404).send({ error: '团队不存在' });
@@ -263,8 +262,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
   // 删除团队
   // ══════════════════════════════════════════
 
-  app.delete('/api/teams/:id', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.delete('/api/teams/:id', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = (req as any).userId as number;
     const id = Number((req.params as { id: string }).id);
     const team = await q()!.selectFrom('teams').selectAll().where('id', '=', id).executeTakeFirst() as TeamRow | undefined;
     if (!team) return rep.status(404).send({ error: '团队不存在' });
@@ -281,8 +280,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
   // 转让所有权
   // ══════════════════════════════════════════
 
-  app.post('/api/teams/:id/transfer', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/teams/:id/transfer', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = (req as any).userId as number;
     const id = Number((req.params as { id: string }).id);
     if (!(await isTeamOwner(id, userId))) return rep.status(403).send({ error: '仅创建者可转让' });
     const { newOwnerId } = req.body as { newOwnerId?: number };
@@ -298,7 +297,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     await q()!.updateTable('team_members').set({ role: 'owner' }).where('team_id', '=', id).where('user_id', '=', newOwnerId).execute();
     await q()!.updateTable('teams').set({ creator_id: newOwnerId, updated_at: new Date().toISOString() }).where('id', '=', id).execute();
     const team = await q()!.selectFrom('teams').select('name').where('id', '=', id).executeTakeFirst() as TeamRow | undefined;
-    await notify(ctx, newOwnerId, 'team_owner_transfer', `你已成为「${team!.name}」的创建者`, id, userId);
+    await notify(ctx, newOwnerId, 'team_owner_transfer', `你已成为「${team!.name}」的创建者`, undefined, undefined, userId, id);
     return { success: true, message: '已转让所有权' };
   });
 
@@ -306,8 +305,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
   // 设置/取消管理员
   // ══════════════════════════════════════════
 
-  app.post('/api/teams/:id/members/:userId/role', async (req, rep) => {
-    const adminId = uid(req); if (!adminId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/teams/:id/members/:userId/role', { preHandler: [requireAuth] }, async (req, rep) => {
+    const adminId = (req as any).userId as number;
     const teamId = Number((req.params as { id: string }).id);
     const targetId = Number((req.params as any).userId);
     if (!(await isTeamOwner(teamId, adminId))) return rep.status(403).send({ error: '仅创建者可设置管理员' });
@@ -323,7 +322,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     if (target.role === 'owner') return rep.status(400).send({ error: '不能修改创建者角色' });
     await q()!.updateTable('team_members').set({ role }).where('team_id', '=', teamId).where('user_id', '=', targetId).execute();
     const team = await q()!.selectFrom('teams').select('name').where('id', '=', teamId).executeTakeFirst() as TeamRow | undefined;
-    await notify(ctx, targetId, 'team_role_changed', `你在「${team!.name}」的角色已变更为${role === 'admin' ? '管理员' : '成员'}`, teamId, adminId);
+    await notify(ctx, targetId, 'team_role_changed', `你在「${team!.name}」的角色已变更为${role === 'admin' ? '管理员' : '成员'}`, undefined, undefined, adminId, teamId);
     return { success: true, message: '角色已更新' };
   });
 
@@ -331,8 +330,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
   // 收藏/取消收藏
   // ══════════════════════════════════════════
 
-  app.post('/api/teams/:id/favorite', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/teams/:id/favorite', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = (req as any).userId as number;
     const id = Number((req.params as { id: string }).id);
     const team = await q()!.selectFrom('teams').select(['id', 'is_public']).where('id', '=', id).executeTakeFirst() as TeamRow | undefined;
     if (!team) return rep.status(404).send({ error: '团队不存在' });
@@ -365,8 +364,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
     return { announcements };
   });
 
-  app.post('/api/teams/:id/announcements', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/teams/:id/announcements', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = (req as any).userId as number;
     const id = Number((req.params as { id: string }).id);
     if (!(await isTeamAdmin(id, userId))) return rep.status(403).send({ error: '仅管理员可发布公告' });
     const { title, content, isPinned } = announcementSchema.parse(req.body);
@@ -376,13 +375,13 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const members = await kdb.sql<{ user_id: number }>`SELECT user_id FROM team_members WHERE team_id=${id} AND status='approved'`;
     const team = await q()!.selectFrom('teams').select('name').where('id', '=', id).executeTakeFirst() as TeamRow | undefined;
     for (const m of members) {
-      if (m.user_id !== userId) await notify(ctx, m.user_id, 'team_announcement', `「${team!.name}」发布了新公告：${title}`, id, userId);
+      if (m.user_id !== userId) await notify(ctx, m.user_id, 'team_announcement', `「${team!.name}」发布了新公告：${title}`, undefined, undefined, userId, id);
     }
     return { success: true, message: '公告已发布' };
   });
 
-  app.delete('/api/teams/:id/announcements/:aid', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.delete('/api/teams/:id/announcements/:aid', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = (req as any).userId as number;
     const id = Number((req.params as { id: string }).id);
     const aid = Number((req.params as { aid: string }).aid);
     const ann = await q()!.selectFrom('team_announcements').selectAll().where('id', '=', aid).where('team_id', '=', id).executeTakeFirst() as AnnouncementRow | undefined;
@@ -408,8 +407,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
     return { posts, page, limit };
   });
 
-  app.post('/api/teams/:id/posts', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/teams/:id/posts', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = (req as any).userId as number;
     const id = Number((req.params as { id: string }).id);
     if (!(await memberRole(id, userId))) return rep.status(403).send({ error: '仅成员可发帖' });
     const { postId } = req.body as { postId?: number };
@@ -424,8 +423,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
     return { success: true, message: '已添加到团队' };
   });
 
-  app.delete('/api/teams/:id/posts/:postId', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.delete('/api/teams/:id/posts/:postId', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = (req as any).userId as number;
     const id = Number((req.params as { id: string }).id);
     const postId = Number((req.params as { postId: string }).postId);
     const post = await q()!.selectFrom('posts').select('author_id').where('id', '=', postId).executeTakeFirst() as { author_id: number } | undefined;
@@ -458,8 +457,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
     return { posts, page, limit };
   });
 
-  app.post('/api/teams/:id/content-posts', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/teams/:id/content-posts', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = (req as any).userId as number;
     const id = Number((req.params as { id: string }).id);
     const role = await memberRole(id, userId);
     if (!role) return rep.status(403).send({ error: '仅成员可发帖' });
@@ -496,8 +495,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
     return post[0];
   });
 
-  app.put('/api/teams/:id/content-posts/:postId', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.put('/api/teams/:id/content-posts/:postId', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = (req as any).userId as number;
     const id = Number((req.params as { id: string }).id);
     const postId = Number((req.params as { postId: string }).postId);
     const post = await q()!.selectFrom('team_content_posts')
@@ -519,8 +518,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
     return { success: true, message: '已更新' };
   });
 
-  app.delete('/api/teams/:id/content-posts/:postId', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.delete('/api/teams/:id/content-posts/:postId', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = (req as any).userId as number;
     const id = Number((req.params as { id: string }).id);
     const postId = Number((req.params as { postId: string }).postId);
     const post = await q()!.selectFrom('team_content_posts')
@@ -554,8 +553,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
     return { comments };
   });
 
-  app.post('/api/teams/:id/content-posts/:postId/comments', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/teams/:id/content-posts/:postId/comments', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = (req as any).userId as number;
     const id = Number((req.params as { id: string }).id);
     const postId = Number((req.params as { postId: string }).postId);
     const role = await memberRole(id, userId);
@@ -573,8 +572,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
     return { success: true, comment: comment[0] };
   });
 
-  app.delete('/api/teams/:id/content-posts/:postId/comments/:commentId', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.delete('/api/teams/:id/content-posts/:postId/comments/:commentId', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = (req as any).userId as number;
     const id = Number((req.params as { id: string }).id);
     const commentId = Number((req.params as { commentId: string }).commentId);
     const comment = await q()!.selectFrom('team_content_comments').select('author_id').where('id', '=', commentId).executeTakeFirst() as { author_id: number } | undefined;
@@ -735,14 +734,14 @@ export function registerTeamRoutes(ctx: PluginContext) {
       await q()!.insertInto('team_members')
         .values({ team_id: id, user_id: userId, role: 'member', status: 'approved' })
         .execute();
-      await notify(ctx, team.creator_id, 'team_joined', `${(req as any).session?.username || '用户'}加入了你的团队「${team.name}」`, id, userId);
+      await notify(ctx, team.creator_id, 'team_joined', `${(req as any).session?.username || '用户'}加入了你的团队「${team.name}」`, undefined, undefined, userId, id);
       return { success: true, message: '已加入团队' };
     } else {
       await q()!.insertInto('team_members')
         .values({ team_id: id, user_id: userId, role: 'member', status: 'pending' })
         .execute();
       const admins = await kdb.sql<{ user_id: number }>`SELECT user_id FROM team_members WHERE team_id=${id} AND role IN ('owner','admin') AND status='approved'`;
-      for (const a of admins) await notify(ctx, a.user_id, 'team_join_request', `${(req as any).session?.username || '用户'}申请加入「${team.name}」`, id, userId);
+      for (const a of admins) await notify(ctx, a.user_id, 'team_join_request', `${(req as any).session?.username || '用户'}申请加入「${team.name}」`, undefined, undefined, userId, id);
       return { success: true, message: '已提交申请，等待审批' };
     }
   });
@@ -760,7 +759,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     if (member.role === 'owner') return rep.status(400).send({ error: '创建者不能退出，请先转让或删除团队' });
     await q()!.deleteFrom('team_members').where('id', '=', member.id).execute();
     const team = await q()!.selectFrom('teams').select('name').where('id', '=', id).executeTakeFirst() as TeamRow | undefined;
-    await notify(ctx, team!.creator_id, 'team_member_left', `${(req as any).session?.username || '用户'}退出了「${team!.name}」`, id, userId);
+    await notify(ctx, team!.creator_id, 'team_member_left', `${(req as any).session?.username || '用户'}退出了「${team!.name}」`, undefined, undefined, userId, id);
     return { success: true, message: '已退出团队' };
   });
 
@@ -800,7 +799,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
         .where('status', '=', 'pending')
         .execute();
       const team = await q()!.selectFrom('teams').select('name').where('id', '=', teamId).executeTakeFirst() as TeamRow | undefined;
-      await notify(ctx, targetId, 'team_join_approved', `你加入「${team!.name}」的申请已通过`, teamId);
+      await notify(ctx, targetId, 'team_join_approved', `你加入「${team!.name}」的申请已通过`, undefined, undefined, undefined, teamId);
       return { success: true, message: '已批准' };
     } else if (action === 'reject') {
       await q()!.deleteFrom('team_members')

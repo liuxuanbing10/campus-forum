@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
+import { toastStore } from '../../App';
 import { Copy, RefreshCw } from 'lucide-react';
 import { useRealm } from './RealmProvider';
 
 /**
- * 标语轮播 + 复制 toast（用 sonner 替代自研 Toast）
+ * 标语轮播 + 复制 toast
  * 标语数据来自当前 realm.sl 数组（theme.ts 中定义）
  */
 export default function SloganRotator() {
@@ -32,12 +32,9 @@ export default function SloganRotator() {
   const copy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(current);
-      toast.success('已抄录', {
-        description: current,
-        duration: 2200,
-      });
+      toastStore.success(`已抄录 · ${current}`, 2200);
     } catch {
-      toast.error('抄录失败');
+      toastStore.error('抄录失败');
     }
   }, [current]);
 

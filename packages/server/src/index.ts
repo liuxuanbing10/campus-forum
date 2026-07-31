@@ -9,7 +9,7 @@ import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import multipart from '@fastify/multipart';
 import { PluginManager, SimpleEventBus, PluginContext, Logger } from '@campus-forum/core';
-import { ZodError } from 'zod';
+import { ZodError } from 'zod/v4';
 import 'dotenv/config';
 import { createKyselyDatabase, initializeSchema, migrateSchema, seedData } from '@campus-forum/database';
 import { TursoSessionStore } from './session-store.js';
@@ -97,7 +97,11 @@ export async function buildApp(options?: { plugins?: any[] }) {
   });
 
   // ── Session (deferred — needs db for TursoSessionStore) ──
-  const sessionSecret = process.env.SESSION_SECRET || process.env.JWT_SECRET || 'dev-session-secret-fallback-32chars!!';
+  const DEFAULT_SESSION_SECRET = 'dev-session-secret-fallback-32chars!!';
+  if (process.env.NODE_ENV === 'production' && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === DEFAULT_SESSION_SECRET)) {
+    throw new Error('SESSION_SECRET 未设置，生产环境拒绝启动');
+  }
+  const sessionSecret = process.env.SESSION_SECRET || process.env.JWT_SECRET || DEFAULT_SESSION_SECRET;
   const sessionMaxAge = 7 * 24 * 60 * 60 * 1000;
   if (sessionSecret.length < 32) {
   console.warn('⚠️ SESSION_SECRET 长度不足 32 字符，使用默认值');

@@ -1,4 +1,4 @@
-import type { FastifyRequest } from 'fastify';
+import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { DatabaseAdapter } from './types.js';
 import crypto from 'crypto';
 
@@ -74,6 +74,16 @@ export function uid(req: FastifyRequest): number | null {
   const payload = verifyJwt(token);
   if (!payload || typeof payload.userId !== 'number') return null;
   return payload.userId;
+}
+
+// Fastify preHandler: extracts userId, returns 401 if missing
+export async function requireAuth(req: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const userId = uid(req);
+  if (!userId) {
+    reply.code(401).send({ error: '请先登录' });
+    return;
+  }
+  (req as any).userId = userId;
 }
 
 // 检查用户是否是管理员
