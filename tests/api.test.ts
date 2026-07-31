@@ -266,7 +266,7 @@ describe('teams', () => {
       payload: { name: 'x', description: 'too short' },
       headers: { authorization: `Bearer ${token}` },
     });
-    expect(res.statusCode).toBe(500);
+    expect(res.statusCode).toBe(400);
   });
 
   it('GET /api/teams lists public teams', async () => {

@@ -111,9 +111,10 @@ export async function buildApp(options?: { plugins?: any[] }) {
   const isProduction = process.env.NODE_ENV === 'production';
 
   // ── 限流 ─────────────────────────────────────
+  const isTest = process.env.NODE_ENV === 'test';
   await app.register(rateLimit, {
-    global: true,
-    max: 100,           // 全局：每 IP 每分钟 100 次
+    global: !isTest,
+    max: isTest ? 10000 : 100,  // 测试环境不限流
     timeWindow: '1 minute',
     // 错误响应
     errorResponseBuilder: (request, context) => ({

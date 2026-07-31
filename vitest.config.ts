@@ -10,6 +10,7 @@ export default defineConfig({
     env: {
       // Prevent buildApp from auto-starting the server on import
       VERCEL: '1',
+      NODE_ENV: 'test',
       SESSION_SECRET: 'test-session-secret-at-least-32-chars!!',
     },
   },

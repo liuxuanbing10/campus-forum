@@ -22,6 +22,7 @@
 import { Kysely, sql, SqliteDialect } from 'kysely';
 import type { DatabaseAdapter, PreparedStatement, RunResult } from '@campus-forum/core';
 import { createClient } from '@libsql/client';
+import BetterSqlite3 from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -76,10 +77,12 @@ function splitSql(sqlText: string): string[] {
 export class KyselyAdapter implements DatabaseAdapter {
   private kysely: Kysely<AnyDB>;
   private libsqlClient: any;
+  private bs3: any;
 
-  private constructor(kysely: Kysely<AnyDB>, libsqlClient: any) {
+  private constructor(kysely: Kysely<AnyDB>, libsqlClient: any, bs3?: any) {
     this.kysely = kysely;
     this.libsqlClient = libsqlClient;
+    this.bs3 = bs3;
   }
 
   /**
@@ -91,20 +94,20 @@ export class KyselyAdapter implements DatabaseAdapter {
     const tursoUrl = process.env.TURSO_DATABASE_URL;
     const tursoToken = process.env.TURSO_AUTH_TOKEN;
 
-    let libsqlClient: any;
-    if (tursoUrl) {
-      libsqlClient = createClient({ url: tursoUrl, authToken: tursoToken });
-    } else {
-      const resolvedPath = dbPath || process.env.DATABASE_PATH || path.join(__dirname, '../../data/forum.db');
-      const dir = path.dirname(resolvedPath);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      libsqlClient = createClient({ url: `file:${resolvedPath}` });
-    }
+    const resolvedPath = dbPath || process.env.DATABASE_PATH || path.join(__dirname, '../../data/forum.db');
+    const dir = path.dirname(resolvedPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-    // 用 kysely 的 SqliteDialect 包装 libsql/client
-    const dialect = new SqliteDialect({ database: libsqlClient as any });
+    // ponytail: better-sqlite3 for Kysely dialect (sync API it requires),
+    // @libsql/client for DatabaseAdapter methods (async, supports both local + Turso)
+    const libsqlClient = tursoUrl
+      ? createClient({ url: tursoUrl, authToken: tursoToken })
+      : createClient({ url: `file:${resolvedPath}` });
+
+    const bs3 = new BetterSqlite3(resolvedPath);
+    const dialect = new SqliteDialect({ database: bs3 });
     const kysely = new Kysely<AnyDB>({ dialect });
-    return new KyselyAdapter(kysely, libsqlClient);
+    return new KyselyAdapter(kysely, libsqlClient, bs3);
   }
 
   // ── DatabaseAdapter 兼容接口（走 libsql/client，与 LibSQLAdapter 行为一致） ──
@@ -192,6 +195,7 @@ export class KyselyAdapter implements DatabaseAdapter {
 
   async close(): Promise<void> {
     await this.kysely.destroy();
+    this.bs3?.close();
     this.libsqlClient.close?.();
   }
 }

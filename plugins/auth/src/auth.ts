@@ -8,6 +8,7 @@ import { EmailService, RegisterBody, LoginBody, UpdateProfileBody, ChangePasswor
 export function registerAuthRoutes(ctx: PluginContext) {
   const { app, db } = ctx;
   const { kdb, q } = kyselyQuery(db);
+  const isTest = process.env.NODE_ENV === 'test';
   let emailService: EmailService | null = null;
   try { emailService = ctx.getService<EmailService>('emailService'); } catch { /* 未注册时降级 */ }
 
@@ -16,7 +17,7 @@ export function registerAuthRoutes(ctx: PluginContext) {
   // ========================================
   app.post('/api/auth/register', {
     config: {
-      rateLimit: { max: 3, timeWindow: '1 minute' },
+      rateLimit: isTest ? false : { max: 3, timeWindow: '1 minute' },
     },
   }, async (request, reply) => {
     const { username, password, confirmPassword, email } =
@@ -103,7 +104,7 @@ export function registerAuthRoutes(ctx: PluginContext) {
   // ========================================
   app.post('/api/auth/login', {
     config: {
-      rateLimit: { max: 5, timeWindow: '1 minute' },
+      rateLimit: isTest ? false : { max: 5, timeWindow: '1 minute' },
     },
   }, async (request, reply) => {
     const { username, password } = request.body as LoginBody;
