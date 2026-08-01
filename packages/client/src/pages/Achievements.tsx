@@ -7,6 +7,9 @@ import type { Achievement } from '@campus-forum/core';
 interface AchievementWithStatus extends Achievement {
   unlocked: boolean;
   unlocked_at: string | null;
+  repeat_interval?: number;
+  max_repeats?: number;
+  repeat_count?: number;
 }
 
 interface AchievementStats {
@@ -230,11 +233,11 @@ export default function Achievements() {
                     <span className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-1">
                       <Star className="w-3 h-3" />
                       +{ach.points}
-                      {(ach as any).repeat_interval > 0 && <span className="text-[10px] opacity-70">×{(ach as any).max_repeats || '∞'}</span>}
+                      {ach.repeat_interval && ach.repeat_interval > 0 && <span className="text-[10px] opacity-70">×{ach.max_repeats || '∞'}</span>}
                     </span>
                     <span className="text-[11px] text-campus-text-tertiary">
                       {ach.condition_desc}
-                      {(ach as any).repeat_interval > 0 && ` · 已获 ${(ach as any).repeat_count || 0}/${(ach as any).max_repeats || '∞'}`}
+                      {ach.repeat_interval && ach.repeat_interval > 0 && ` · 已获 ${ach.repeat_count || 0}/${ach.max_repeats || '∞'}`}
                     </span>
                   </div>
                   {ach.unlocked && ach.unlocked_at && (

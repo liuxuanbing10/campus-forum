@@ -137,7 +137,7 @@ export default function TeamModals({
         data: '',
         ossKey,
         size: file.size,
-      } as any);
+      });
       toastStore.success('上传成功');
       setShowFileUploadModal(false);
       loadData();

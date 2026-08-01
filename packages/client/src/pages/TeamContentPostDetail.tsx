@@ -38,7 +38,7 @@ export default function TeamContentPostDetail() {
           teamsApi.getComments(teamId, postIdNum),
         ]);
         setPost(postRes.data);
-        const imagesRaw = (postRes.data as any).images;
+        const imagesRaw: string | string[] = postRes.data.images;
         if (imagesRaw && typeof imagesRaw === 'string') {
           try { postRes.data.images = JSON.parse(imagesRaw); } catch { postRes.data.images = []; }
         }

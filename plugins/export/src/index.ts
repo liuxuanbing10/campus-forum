@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, uid } from '@campus-forum/core';
+import { Plugin, PluginContext, requireAuth } from '@campus-forum/core';
 import { kyselyQuery } from '@campus-forum/database';
 
 // ── 服务接口（与 server/services 实现匹配） ──────────
@@ -70,9 +70,8 @@ export const exportPlugin: Plugin = {
     }
 
     // ─── 触发异步导出任务 ───
-    app.post('/api/user/export', async (req, rep) => {
-      const userId = uid(req);
-      if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.post('/api/user/export', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
 
       if (queueService) {
         const jobId = await queueService.addJob('user-export', { userId });
@@ -103,9 +102,8 @@ export const exportPlugin: Plugin = {
     });
 
     // ─── 查询导出任务状态 ───
-    app.get('/api/user/export/status/:jobId', async (req, rep) => {
-      const userId = uid(req);
-      if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.get('/api/user/export/status/:jobId', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const jobId = (req.params as { jobId: string }).jobId;
       if (!queueService) return rep.status(400).send({ error: '队列服务未启用' });
       const job = await queueService.getJob<ExportResult>('user-export', jobId);
@@ -121,9 +119,8 @@ export const exportPlugin: Plugin = {
     });
 
     // ─── 下载已完成的导出 ───
-    app.get('/api/user/export/download/:jobId', async (req, rep) => {
-      const userId = uid(req);
-      if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.get('/api/user/export/download/:jobId', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const jobId = (req.params as { jobId: string }).jobId;
       if (!queueService) return rep.status(400).send({ error: '队列服务未启用' });
       const job = await queueService.getJob<ExportResult>('user-export', jobId);
@@ -140,9 +137,8 @@ export const exportPlugin: Plugin = {
     });
 
     // ─── 取消导出任务 ───
-    app.delete('/api/user/export/:jobId', async (req, rep) => {
-      const userId = uid(req);
-      if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.delete('/api/user/export/:jobId', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const jobId = (req.params as { jobId: string }).jobId;
       if (!queueService) return rep.status(400).send({ error: '队列服务未启用' });
       const job = await queueService.getJob<ExportResult>('user-export', jobId);

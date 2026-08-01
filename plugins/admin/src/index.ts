@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, uid } from '@campus-forum/core';
+import { Plugin, PluginContext } from '@campus-forum/core';
 import { kyselyQuery } from '@campus-forum/database';
 import { z } from 'zod/v4';
 
@@ -59,7 +59,7 @@ export const adminPlugin: Plugin = {
     const { kdb, q } = kyselyQuery(db);
 
     const requireAdmin = async (request: any, reply: any, done: any) => {
-      const userId = uid(request);
+      const userId = request.userId as number | undefined;
       if (!userId) {
         return reply.status(401).send({ error: '未登录' });
       }
@@ -74,7 +74,7 @@ export const adminPlugin: Plugin = {
     };
 
     const requireSuperAdmin = async (request: any, reply: any, done: any) => {
-      const userId = uid(request);
+      const userId = request.userId as number | undefined;
       if (!userId) {
         return reply.status(401).send({ error: '未登录' });
       }
@@ -163,7 +163,7 @@ export const adminPlugin: Plugin = {
 
       await q()!.insertInto('admin_logs')
         .values({
-          admin_id: uid(req)!,
+          admin_id: req.userId!,
           action: 'ban_user',
           target_id: id,
           reason: reason || '',
@@ -190,7 +190,7 @@ export const adminPlugin: Plugin = {
 
       await q()!.insertInto('admin_logs')
         .values({
-          admin_id: uid(req)!,
+          admin_id: req.userId!,
           action: 'unban_user',
           target_id: id,
           reason: '',

@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, uid } from '@campus-forum/core';
+import { Plugin, PluginContext, requireAuth } from '@campus-forum/core';
 import { kyselyQuery } from '@campus-forum/database';
 
 // ── 服务接口（与 server/services 实现匹配） ──────────
@@ -34,9 +34,8 @@ export const notificationsPlugin: Plugin = {
       )`).catch(() => { /* 已存在 */ });
     };
 
-    app.get('/api/notifications', async (req, rep) => {
-      const userId = uid(req);
-      if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.get('/api/notifications', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const query = req.query as { unread?: string; page?: string };
       const page = Math.min(100, Math.max(1, Number(query.page) || 1));
       const limit = 30;
@@ -60,9 +59,8 @@ export const notificationsPlugin: Plugin = {
       return { notifications, unreadCount: unreadCount[0]?.count || 0, page, limit };
     });
 
-    app.put('/api/notifications/:id/read', async (req, rep) => {
-      const userId = uid(req);
-      if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.put('/api/notifications/:id/read', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const n = await q()!
         .selectFrom('notifications')
         .select(['id'])
@@ -74,16 +72,14 @@ export const notificationsPlugin: Plugin = {
       return { success: true };
     });
 
-    app.put('/api/notifications/read-all', async (req, rep) => {
-      const userId = uid(req);
-      if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.put('/api/notifications/read-all', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       await kdb.run('UPDATE notifications SET is_read=1 WHERE user_id=? AND is_read=0', userId);
       return { success: true, message: '全部标为已读' };
     });
 
-    app.get('/api/notifications/unread-count', async (req, rep) => {
-      const userId = uid(req);
-      if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.get('/api/notifications/unread-count', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const r = await kdb.sql<{ count: number }>`
         SELECT COUNT(*) as count FROM notifications WHERE user_id = ${userId} AND is_read = 0
       `;
@@ -91,9 +87,8 @@ export const notificationsPlugin: Plugin = {
     });
 
     // ─── 邮件摘要订阅偏好 ───
-    app.get('/api/notifications/email-prefs', async (req, rep) => {
-      const userId = uid(req);
-      if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.get('/api/notifications/email-prefs', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       await ensurePrefTable();
       const pref = await q()!
         .selectFrom('notification_email_prefs')
@@ -108,9 +103,8 @@ export const notificationsPlugin: Plugin = {
       };
     });
 
-    app.put('/api/notifications/email-prefs', async (req, rep) => {
-      const userId = uid(req);
-      if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.put('/api/notifications/email-prefs', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const { enabled, frequency } = req.body as { enabled: boolean; frequency: 'instant' | 'daily' | 'weekly' };
       if (!['instant', 'daily', 'weekly'].includes(frequency)) {
         return rep.status(400).send({ error: '频率无效' });
@@ -126,9 +120,8 @@ export const notificationsPlugin: Plugin = {
     });
 
     // ─── 立即发送摘要（用户主动触发 / cron 调用） ───
-    app.post('/api/notifications/send-digest', async (req, rep) => {
-      const userId = uid(req);
-      if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.post('/api/notifications/send-digest', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       if (!emailService) return rep.status(503).send({ error: '邮件服务未启用' });
 
       // 取用户邮箱

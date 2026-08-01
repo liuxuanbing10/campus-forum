@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, uid, isAdmin, logAction } from '@campus-forum/core';
+import { Plugin, PluginContext, isAdmin, logAction, requireAuth } from '@campus-forum/core';
 import { kyselyQuery } from '@campus-forum/database';
 
 export const socialPlugin: Plugin = {
@@ -8,8 +8,8 @@ export const socialPlugin: Plugin = {
     const { kdb, q } = kyselyQuery(db);
 
     // ─── 关注/取消 ───
-    app.post('/api/follow', async (req, rep) => {
-      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.post('/api/follow', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const { followedId } = req.body as { followedId: number };
       if (!followedId) return rep.status(400).send({ error: '缺少 followedId' });
       if (followedId === userId) return rep.status(400).send({ error: '不能关注自己' });
@@ -21,8 +21,8 @@ export const socialPlugin: Plugin = {
       return { success: true, message: '关注成功' };
     });
 
-    app.delete('/api/follow', async (req, rep) => {
-      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.delete('/api/follow', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const { followedId } = req.body as { followedId: number };
       if (!followedId) return rep.status(400).send({ error: '缺少 followedId' });
       await q()!.deleteFrom('follows').where('user_id', '=', userId).where('followed_id', '=', followedId).execute();
@@ -42,8 +42,8 @@ export const socialPlugin: Plugin = {
     });
 
     // 检查是否已关注
-    app.get('/api/follow/check', async (req, rep) => {
-      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.get('/api/follow/check', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const targetId = Number((req.query as Record<string, string>).userId);
       if (!targetId) return rep.status(400).send({ error: '缺少 userId' });
       const f = await q()!.selectFrom('follows').select('id').where('user_id', '=', userId).where('followed_id', '=', targetId).executeTakeFirst();
@@ -51,8 +51,8 @@ export const socialPlugin: Plugin = {
     });
 
     // ─── 举报 ───
-    app.post('/api/reports', async (req, rep) => {
-      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.post('/api/reports', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const { targetType, targetId, reason } = req.body as { targetType: string; targetId: number; reason: string };
       if (!['post','comment'].includes(targetType)) return rep.status(400).send({ error: 'targetType 需为 post 或 comment' });
       if (!reason || reason.trim().length < 2) return rep.status(400).send({ error: '请填写举报原因' });
@@ -64,13 +64,13 @@ export const socialPlugin: Plugin = {
 
     // ─── 管理员审核举报 ───
     app.get('/api/admin/reports', async (req, rep) => {
-      const u = uid(req); if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可查看' });
+      const u = req.userId; if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可查看' });
       const page = Math.min(100, Math.max(1, Number((req.query as Record<string, string>).page) || 1));
       return { reports: await kdb.sql<any>`SELECT r.*,ru.username as reporter_name FROM reports r JOIN users ru ON r.reporter_id=ru.id ORDER BY r.created_at DESC LIMIT 20 OFFSET ${(page - 1) * 20}`, page };
     });
 
     app.put('/api/admin/reports/:id', async (req, rep) => {
-      const u = uid(req); if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可操作' });
+      const u = req.userId; if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可操作' });
       const id = Number((req.params as { id: string }).id);
       const { action } = req.body as { action: string };
       if (!['resolve','dismiss'].includes(action)) return rep.status(400).send({ error: 'action 需为 resolve 或 dismiss' });
@@ -91,8 +91,8 @@ export const socialPlugin: Plugin = {
     });
 
     // ─── 更新简介 ───
-    app.put('/api/users/profile', async (req, rep) => {
-      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.put('/api/users/profile', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const { bio, displayName } = req.body as { bio?: string; displayName?: string };
       const updates: Record<string, unknown> = {};
       if (bio !== undefined) { updates.bio = bio; }
@@ -128,7 +128,7 @@ export const socialPlugin: Plugin = {
 
     // ─── 操作日志（管理员） ───
     app.get('/api/admin/audit-logs', async (req, rep) => {
-      const u = uid(req); if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可查看' });
+      const u = req.userId; if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可查看' });
       const page = Math.min(100, Math.max(1, Number((req.query as Record<string, string>).page) || 1));
       return { logs: await kdb.sql<any>`SELECT l.*,a.username as admin_name FROM audit_logs l JOIN users a ON l.admin_id=a.id ORDER BY l.created_at DESC LIMIT 30 OFFSET ${(page - 1) * 30}`, page };
     });

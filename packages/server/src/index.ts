@@ -85,6 +85,15 @@ export async function buildApp(options?: { plugins?: any[] }) {
   // ── Cookie ─────────────────────────
   await app.register(cookie);
 
+  // ── Optional JWT/session userId resolution ──
+  // Sets req.userId for all /api/ requests when a valid token/session exists.
+  // requireAuth then just enforces the 401 if userId is missing.
+  app.addHook('onRequest', async (request: FastifyRequest) => {
+    if (!request.url.startsWith('/api/')) return;
+    const id = uid(request);
+    if (id) request.userId = id;
+  });
+
   // ── Multipart 文件上传 ─────────────────────
   // 替代 base64 上传：前端用 FormData，后端用 stream + sharp 直接处理
   // 限制：单文件 10MB，最多 9 张图（与帖子图片上限一致）

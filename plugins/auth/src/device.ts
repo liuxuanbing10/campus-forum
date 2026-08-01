@@ -1,6 +1,6 @@
 // ── Device management routes ──
 
-import { PluginContext, uid } from '@campus-forum/core';
+import { PluginContext, requireAuth } from '@campus-forum/core';
 import { kyselyQuery } from '@campus-forum/database';
 
 export function registerDeviceRoutes(ctx: PluginContext) {
@@ -10,9 +10,8 @@ export function registerDeviceRoutes(ctx: PluginContext) {
   // ========================================
   // 我的设备管理
   // ========================================
-  app.get('/api/my-devices', async (req, rep) => {
-    const userId = uid(req);
-    if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.get('/api/my-devices', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
     const devices = await kdb.sql<Record<string, unknown>>`SELECT id, user_id, device_id, device_name, device_info, is_active, last_login_at, created_at
         FROM user_devices WHERE user_id = ${userId} ORDER BY last_login_at DESC`;
     const currentDeviceCode = req.session?.deviceCode;
@@ -24,9 +23,8 @@ export function registerDeviceRoutes(ctx: PluginContext) {
     };
   });
 
-  app.delete('/api/my-devices/:id', async (req, rep) => {
-    const userId = uid(req);
-    if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.delete('/api/my-devices/:id', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
     const id = Number((req.params as { id: string }).id);
     const device = await q()!.selectFrom('user_devices')
       .select(['id', 'user_id'])

@@ -14,9 +14,15 @@ export class WsManager {
     this.wss = new WebSocketServer({ server, path: '/ws' });
 
     this.wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
-      // 从 URL 参数解析 userId（token）
-      const url = new URL(req.url || '/', `http://${req.headers.host}`);
-      const token = url.searchParams.get('token');
+      // ponytail: prefer Sec-WebSocket-Protocol header (not in URL logs/referer), fallback to query for compat
+      let token: string | null = null;
+      const proto = req.headers['sec-websocket-protocol'];
+      if (typeof proto === 'string' && proto.startsWith('token.')) {
+        token = proto.slice(6); // strip "token." prefix
+      } else {
+        const url = new URL(req.url || '/', `http://${req.headers.host}`);
+        token = url.searchParams.get('token');
+      }
       if (!token) {
         ws.close(4001, '未提供 token');
         return;

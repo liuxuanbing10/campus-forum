@@ -1,4 +1,4 @@
-import { PluginContext, uid, isAdmin, requireAuth, notify } from '@campus-forum/core';
+import { PluginContext, isAdmin, requireAuth, notify } from '@campus-forum/core';
 import { kyselyQuery } from '@campus-forum/database';
 import { createTeamSchema, updateTeamSchema, announcementSchema, TeamRow, MemberRow, AnnouncementRow, genInviteCode } from './schemas.js';
 import { generateOssKey, getUploadUrl, getDownloadUrl, deleteObject } from './oss.js';
@@ -46,8 +46,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
     return { categories };
   });
 
-  app.post('/api/team-categories', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/team-categories', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
     if (!(await isAdmin(db, userId))) return rep.status(403).send({ error: '仅管理员可操作' });
     const { name, icon, sortOrder } = req.body as { name?: string; icon?: string; sortOrder?: number };
     if (!name?.trim()) return rep.status(400).send({ error: '分类名不能为空' });
@@ -66,7 +66,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
   // ══════════════════════════════════════════
 
   app.get('/api/teams/my', async (req) => {
-    const u = uid(req); if (!u) return { teams: [], owned: [], adminOf: [], memberOf: [] };
+    const u = req.userId; if (!u) return { teams: [], owned: [], adminOf: [], memberOf: [] };
     const all = await kdb.sql<Record<string, unknown>>`SELECT t.*, tm.role FROM teams t JOIN team_members tm ON t.id=tm.team_id WHERE tm.user_id=${u} AND tm.status='approved' ORDER BY t.created_at DESC`;
     const teams = await Promise.all(all.map(withMemberCount));
     return {
@@ -82,7 +82,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
   // ══════════════════════════════════════════
 
   app.get('/api/teams/favorites', async (req) => {
-    const u = uid(req); if (!u) return { teams: [] };
+    const u = req.userId; if (!u) return { teams: [] };
     const all = await kdb.sql<Record<string, unknown>>`SELECT t.* FROM teams t JOIN team_favorites tf ON t.id=tf.team_id WHERE tf.user_id=${u} ORDER BY tf.created_at DESC`;
     const teams = await Promise.all(all.map(withMemberCount));
     return { teams };
@@ -131,8 +131,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
   // 创建团队
   // ══════════════════════════════════════════
 
-  app.post('/api/teams', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/teams', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
     const { name, description, avatar, isPublic, maxMembers, categoryId, hideMembers } = createTeamSchema.parse(req.body);
     const existing = await q()!.selectFrom('teams').select('id').where('name', '=', name).executeTakeFirst();
     if (existing) return rep.status(409).send({ error: '团队名已存在' });
@@ -161,8 +161,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
   // 通过邀请码加入
   // ══════════════════════════════════════════
 
-  app.post('/api/teams/join-by-code', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/teams/join-by-code', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
     const { code } = req.body as { code?: string };
     if (!code?.trim()) return rep.status(400).send({ error: '请输入邀请码' });
     const team = await q()!.selectFrom('teams').selectAll().where('invite_code', '=', code.trim()).executeTakeFirst() as TeamRow | undefined;
@@ -192,7 +192,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const team = await kdb.sql<Record<string, unknown>>`SELECT t.*, (SELECT COUNT(*) FROM team_members WHERE team_id=t.id AND status='approved') as member_count, (SELECT COUNT(*) FROM team_content_posts WHERE team_id=t.id) as post_count FROM teams t WHERE t.id=${id}`;
     const t = team[0];
     if (!t) return rep.status(404).send({ error: '团队不存在' });
-    const u = uid(req);
+    const u = req.userId;
     if (!t.is_public && !(await memberRole(id, u || 0))) return rep.status(403).send({ error: '这是私密团队' });
     const myRole = u ? await memberRole(id, u) : null;
     const myStatus = u ? await q()!.selectFrom('team_members')
@@ -358,7 +358,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const id = Number((req.params as { id: string }).id);
     const team = await q()!.selectFrom('teams').select(['id', 'is_public']).where('id', '=', id).executeTakeFirst() as TeamRow | undefined;
     if (!team) return rep.status(404).send({ error: '团队不存在' });
-    const u = uid(req);
+    const u = req.userId;
     if (!team.is_public && !(await memberRole(id, u || 0))) return rep.status(403).send({ error: '这是私密团队' });
     const announcements = await kdb.sql<Record<string, unknown>>`SELECT a.*, u.username, u.display_name FROM team_announcements a JOIN users u ON a.author_id=u.id WHERE a.team_id=${id} ORDER BY a.is_pinned DESC, a.created_at DESC`;
     return { announcements };
@@ -401,7 +401,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const limit = 20;
     const team = await q()!.selectFrom('teams').select(['id', 'is_public']).where('id', '=', id).executeTakeFirst() as TeamRow | undefined;
     if (!team) return rep.status(404).send({ error: '团队不存在' });
-    const u = uid(req);
+    const u = req.userId;
     if (!team.is_public && !(await memberRole(id, u || 0))) return rep.status(403).send({ error: '这是私密团队' });
     const posts = await kdb.sql<Record<string, unknown>>`SELECT p.*, u.username, u.display_name, u.avatar_url FROM team_posts tp JOIN posts p ON tp.post_id=p.id JOIN users u ON p.author_id=u.id WHERE tp.team_id=${id} AND p.is_pending=0 ORDER BY p.is_pinned DESC, p.created_at DESC LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
     return { posts, page, limit };
@@ -444,7 +444,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const limit = 20;
     const team = await q()!.selectFrom('teams').select(['id', 'is_public']).where('id', '=', id).executeTakeFirst() as TeamRow | undefined;
     if (!team) return rep.status(404).send({ error: '团队不存在' });
-    const u = uid(req);
+    const u = req.userId;
     const role = u ? await memberRole(id, u) : null;
     if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
     const posts = await kdb.sql<Record<string, unknown>>`
@@ -484,7 +484,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const postId = Number((req.params as { postId: string }).postId);
     const team = await q()!.selectFrom('teams').select(['id', 'is_public']).where('id', '=', id).executeTakeFirst() as TeamRow | undefined;
     if (!team) return rep.status(404).send({ error: '团队不存在' });
-    const u = uid(req);
+    const u = req.userId;
     const role = u ? await memberRole(id, u) : null;
     if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
     const post = await kdb.sql<Record<string, unknown>>`
@@ -542,7 +542,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const postId = Number((req.params as { postId: string }).postId);
     const team = await q()!.selectFrom('teams').select(['id', 'is_public']).where('id', '=', id).executeTakeFirst() as TeamRow | undefined;
     if (!team) return rep.status(404).send({ error: '团队不存在' });
-    const u = uid(req);
+    const u = req.userId;
     const role = u ? await memberRole(id, u) : null;
     if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
     const comments = await kdb.sql<Record<string, unknown>>`
@@ -587,8 +587,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
   // OSS 签名 URL（前端直传用）
   // ══════════════════════════════════════════
 
-  app.post('/api/oss/upload-url', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/oss/upload-url', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
     const { teamId, name } = req.body as { teamId?: number; name?: string };
     if (!teamId || !name) return rep.status(400).send({ error: '参数不足' });
     const role = await memberRole(teamId, userId);
@@ -598,8 +598,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
     return { uploadUrl, ossKey };
   });
 
-  app.get('/api/oss/sign-url', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.get('/api/oss/sign-url', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
     const key = (req.query as Record<string, string>).key as string;
     const teamId = Number((req.query as Record<string, string>).teamId) || 0;
     if (!key) return rep.status(400).send({ error: '缺少 key' });
@@ -622,7 +622,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const id = Number((req.params as { id: string }).id);
     const team = await q()!.selectFrom('teams').select(['id', 'is_public']).where('id', '=', id).executeTakeFirst() as TeamRow | undefined;
     if (!team) return rep.status(404).send({ error: '团队不存在' });
-    const u = uid(req);
+    const u = req.userId;
     const role = u ? await memberRole(id, u) : null;
     if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
     const files = await kdb.sql<Record<string, unknown>>`
@@ -633,8 +633,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
     return { files };
   });
 
-  app.post('/api/teams/:id/files', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/teams/:id/files', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
     const id = Number((req.params as { id: string }).id);
     const role = await memberRole(id, userId);
     if (!role) return rep.status(403).send({ error: '仅成员可上传文件' });
@@ -676,8 +676,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
     return { success: true, file: file[0] };
   });
 
-  app.delete('/api/teams/:id/files/:fileId', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.delete('/api/teams/:id/files/:fileId', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
     const id = Number((req.params as { id: string }).id);
     const fileId = Number((req.params as { fileId: string }).fileId);
     const file = await q()!.selectFrom('team_files')
@@ -699,7 +699,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const fileId = Number((req.params as { fileId: string }).fileId);
     const team = await q()!.selectFrom('teams').select(['id', 'is_public']).where('id', '=', id).executeTakeFirst() as TeamRow | undefined;
     if (!team) return rep.status(404).send({ error: '团队不存在' });
-    const u = uid(req);
+    const u = req.userId;
     const role = u ? await memberRole(id, u) : null;
     if (!team.is_public && !role) return rep.status(403).send({ error: '这是私密团队' });
     type FileRow = { id: number; team_id: number; author_id: number; name: string; original_name: string; mime_type: string; size: number; created_at: string; storage?: string; oss_key?: string; data?: string; username: string; display_name?: string };
@@ -722,8 +722,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
   // 成员管理
   // ══════════════════════════════════════════
 
-  app.post('/api/teams/:id/join', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/teams/:id/join', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
     const id = Number((req.params as { id: string }).id);
     const team = await q()!.selectFrom('teams').selectAll().where('id', '=', id).executeTakeFirst() as TeamRow | undefined;
     if (!team) return rep.status(404).send({ error: '团队不存在' });
@@ -752,8 +752,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
     }
   });
 
-  app.post('/api/teams/:id/leave', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/teams/:id/leave', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
     const id = Number((req.params as { id: string }).id);
     const member = await q()!.selectFrom('team_members')
       .selectAll()
@@ -773,7 +773,7 @@ export function registerTeamRoutes(ctx: PluginContext) {
     const id = Number((req.params as { id: string }).id);
     const team = await q()!.selectFrom('teams').select(['id', 'is_public', 'hide_members']).where('id', '=', id).executeTakeFirst() as TeamRow | undefined;
     if (!team) return rep.status(404).send({ error: '团队不存在' });
-    const u = uid(req);
+    const u = req.userId;
     const isMember = !!(await memberRole(id, u || 0));
     if (!team.is_public && !isMember) return rep.status(403).send({ error: '这是私密团队' });
     if (team.hide_members && !isMember) {
@@ -783,16 +783,16 @@ export function registerTeamRoutes(ctx: PluginContext) {
     return { members };
   });
 
-  app.get('/api/teams/:id/applications', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.get('/api/teams/:id/applications', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
     const id = Number((req.params as { id: string }).id);
     if (!(await isTeamAdmin(id, userId))) return rep.status(403).send({ error: '仅管理员可查看' });
     const applications = await kdb.sql<Record<string, unknown>>`SELECT tm.*, u.username, u.display_name, u.avatar_url FROM team_members tm JOIN users u ON tm.user_id=u.id WHERE tm.team_id=${id} AND tm.status='pending' ORDER BY tm.joined_at DESC`;
     return { applications };
   });
 
-  app.put('/api/teams/:id/members/:userId', async (req, rep) => {
-    const adminId = uid(req); if (!adminId) return rep.status(401).send({ error: '请先登录' });
+  app.put('/api/teams/:id/members/:userId', { preHandler: [requireAuth] }, async (req, rep) => {
+    const adminId = req.userId!;
     const teamId = Number((req.params as { id: string }).id);
     const targetId = Number((req.params as { userId: string }).userId);
     if (!(await isTeamAdmin(teamId, adminId))) return rep.status(403).send({ error: '仅管理员可操作' });
@@ -818,8 +818,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
     return rep.status(400).send({ error: 'action 需为 approve 或 reject' });
   });
 
-  app.delete('/api/teams/:id/members/:userId', async (req, rep) => {
-    const adminId = uid(req); if (!adminId) return rep.status(401).send({ error: '请先登录' });
+  app.delete('/api/teams/:id/members/:userId', { preHandler: [requireAuth] }, async (req, rep) => {
+    const adminId = req.userId!;
     const teamId = Number((req.params as { id: string }).id);
     const targetId = Number((req.params as { userId: string }).userId);
     if (!(await isTeamAdmin(teamId, adminId))) return rep.status(403).send({ error: '仅管理员可操作' });

@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, uid } from '@campus-forum/core';
+import { Plugin, PluginContext, requireAuth } from '@campus-forum/core';
 import { kyselyQuery } from '@campus-forum/database';
 
 export const messagesPlugin: Plugin = {
@@ -8,11 +8,11 @@ export const messagesPlugin: Plugin = {
     const { kdb, q } = kyselyQuery(db);
 
     // ─── 发送私信 ───
-    app.post('/api/messages', async (req, rep) => {
-      const userId = uid(req);
-      if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.post('/api/messages', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const { receiverId, content } = req.body as { receiverId: number; content: string };
       if (!receiverId || !content?.trim()) return rep.status(400).send({ error: '参数不完整' });
+      if (content.length > 5000) return rep.status(400).send({ error: '消息内容过长（最多5000字）' });
       if (receiverId === userId) return rep.status(400).send({ error: '不能给自己发消息' });
 
       const userExists = await q()!
@@ -65,9 +65,8 @@ export const messagesPlugin: Plugin = {
     });
 
     // ─── 会话列表 ───
-    app.get('/api/conversations', async (req, rep) => {
-      const userId = uid(req);
-      if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.get('/api/conversations', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const conversations = await kdb.sql<any>`
         SELECT c.id, c.last_message, c.last_message_at,
           CASE WHEN c.user1_id = ${userId} THEN u2.username ELSE u1.username END as other_username,
@@ -83,9 +82,8 @@ export const messagesPlugin: Plugin = {
     });
 
     // ─── 会话消息列表 ───
-    app.get('/api/conversations/:id/messages', async (req, rep) => {
-      const userId = uid(req);
-      if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.get('/api/conversations/:id/messages', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const convId = Number((req.params as { id: string }).id);
 
       const conv = await q()!
@@ -110,9 +108,8 @@ export const messagesPlugin: Plugin = {
     });
 
     // ─── 未读消息数 ───
-    app.get('/api/messages/unread-count', async (req, rep) => {
-      const userId = uid(req);
-      if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.get('/api/messages/unread-count', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const r = await kdb.sql<{ c: number }>`
         SELECT COUNT(*) as c FROM messages m
         JOIN conversations c ON m.conversation_id = c.id
@@ -122,9 +119,8 @@ export const messagesPlugin: Plugin = {
     });
 
     // ─── 搜索用户（发起新对话） ───
-    app.get('/api/search/users', async (req, rep) => {
-      const userId = uid(req);
-      if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.get('/api/search/users', { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const qParam = (req.query as { q?: string }).q;
       if (!qParam?.trim()) return rep.status(400).send({ error: '请输入搜索关键词' });
       const kw = `%${qParam.trim()}%`;

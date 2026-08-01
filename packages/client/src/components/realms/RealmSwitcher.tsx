@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import gsap from 'gsap';
 import { useRealm } from './RealmProvider';
-import { REALMS } from '../../stores/theme';
+import { REALMS, type RealmId } from '../../stores/theme';
 
 /**
  * 渡船 · 十三境 GSAP 径向菜单
@@ -125,7 +125,7 @@ export default function RealmSwitcher() {
 
   const selectRealm = (id: string) => {
     animateClose();
-    setTimeout(() => setRealm(id as any), 300);
+    setTimeout(() => setRealm(id as RealmId), 300);
   };
 
   useEffect(() => {

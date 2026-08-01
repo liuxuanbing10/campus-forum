@@ -21,10 +21,9 @@ class WebSocketService {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
     const token = getToken();
-    const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
-    const wsUrl = `${protocol}//${host}/ws${tokenParam}`;
-
-    this.socket = new WebSocket(wsUrl);
+    // ponytail: token via Sec-WebSocket-Protocol header — avoids leaking in URL logs/referer
+    const wsUrl = `${protocol}//${host}/ws`;
+    this.socket = new WebSocket(wsUrl, token ? [`token.${token}`] : []);
 
     this.socket.onopen = () => {
       this.isConnected = true;

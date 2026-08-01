@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, uid } from '@campus-forum/core';
+import { Plugin, PluginContext, requireAuth } from '@campus-forum/core';
 import { kyselyQuery } from '@campus-forum/database';
 
 interface AchievementRow {
@@ -295,7 +295,7 @@ export function registerAchievementRoutes(ctx: PluginContext) {
 
   // 获取全部成就列表（含用户解锁状态）
   app.get('/api/achievements', async (req) => {
-    const u = uid(req);
+    const u = req.userId;
     const all = await q()!.selectFrom('achievements').selectAll().orderBy('sort_order').execute() as AchievementRow[];
 
     if (!u) {
@@ -362,7 +362,7 @@ export function registerAchievementRoutes(ctx: PluginContext) {
     const totalPointsRows = await kdb.sql<{ c: number }>`SELECT COALESCE(SUM(points),0) as c FROM achievements`;
     const totalPointsRow = totalPointsRows[0];
 
-    const u = uid(req);
+    const u = req.userId;
     if (!u) {
       return {
         total: totalRow?.c ?? 0,
@@ -402,17 +402,15 @@ export function registerAchievementRoutes(ctx: PluginContext) {
   });
 
   // 手动检查成就（由其他操作触发）
-  app.post('/api/achievements/check', async (req, rep) => {
-    const u = uid(req);
-    if (!u) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/achievements/check', { preHandler: [requireAuth] }, async (req, rep) => {
+    const u = req.userId!;
     const results = await checkAllAchievements(ctx, u);
     return { unlocked: results };
   });
 
   // 检查特定成就（供前端操作后调用）
-  app.post('/api/achievements/check/:key', async (req, rep) => {
-    const u = uid(req);
-    if (!u) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/achievements/check/:key', { preHandler: [requireAuth] }, async (req, rep) => {
+    const u = req.userId!;
     const { key } = req.params as { key: string };
     const result = await checkAndAward(ctx, u, key);
     return result;

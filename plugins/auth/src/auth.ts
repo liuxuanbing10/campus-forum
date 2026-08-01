@@ -1,6 +1,6 @@
 // ── Core auth routes: register, login, logout, me, password, profile, email, captcha ──
 
-import { PluginContext, uid, signJwt, UserRow } from '@campus-forum/core';
+import { PluginContext, signJwt, UserRow, requireAuth } from '@campus-forum/core';
 import { kyselyQuery } from '@campus-forum/database';
 import bcrypt from 'bcryptjs';
 import { EmailService, RegisterBody, LoginBody, UpdateProfileBody, ChangePasswordBody, getDeviceCode, now } from './types.js';
@@ -215,7 +215,7 @@ export function registerAuthRoutes(ctx: PluginContext) {
     // Try session first, then JWT fallback (for non-HTTPS environments where secure cookies don't work)
     let userId = request.session.userId;
     if (!userId) {
-      userId = uid(request) ?? undefined;
+      userId = request.userId ?? undefined;
     }
     if (!userId) {
       return reply.status(401).send({ error: '未登录' });
@@ -398,8 +398,8 @@ export function registerAuthRoutes(ctx: PluginContext) {
   // ========================================
   // 邮箱验证 · 接入 EmailService
   // ========================================
-  app.post('/api/auth/send-verify-email', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/auth/send-verify-email', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
     const { email } = req.body as { email: string };
     if (!email || !email.includes('@')) return rep.status(400).send({ error: '邮箱格式不正确' });
 
@@ -440,8 +440,8 @@ export function registerAuthRoutes(ctx: PluginContext) {
   // ========================================
   // 验证邮箱验证码
   // ========================================
-  app.post('/api/auth/verify-email', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/auth/verify-email', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
     const { code } = req.body as { code: string };
     if (!code) return rep.status(400).send({ error: '请输入验证码' });
     const rows = await kdb.sql<{ id: number; expire_at: string; used: number }>`SELECT id, expire_at, used FROM email_verifications WHERE user_id = ${userId} AND code = ${code} ORDER BY id DESC LIMIT 1`;

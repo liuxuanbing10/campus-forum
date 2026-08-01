@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, uid, isAdmin, requireAuth, addPoints, checkSensitive, logAction, notify, PostRow, CommentRow, ImageService } from '@campus-forum/core';
+import { Plugin, PluginContext, isAdmin, requireAuth, addPoints, checkSensitive, logAction, notify, PostRow, CommentRow, ImageService } from '@campus-forum/core';
 import { kyselyQuery } from '@campus-forum/database';
 import { z } from 'zod/v4';
 // 引入 @fastify/multipart 类型扩展，让 req.file() 方法在 TS 中可用
@@ -258,7 +258,7 @@ export const postsPlugin: Plugin = {
     // ─── 帖子列表 ─── 匿名 + 热帖/最新排序走缓存
     app.get('/api/posts', async (req) => {
       const { page, boardId, sort } = paginationSchema.parse(req.query);
-      const userId = uid(req);
+      const userId = req.userId;
       const limit = 20; const offset = (page - 1) * limit;
       const userIdVal = userId || 0;
 
@@ -297,7 +297,7 @@ export const postsPlugin: Plugin = {
     // ─── 帖子详情 ─── 用 KyselyAdapter.sql 模板标签（自动参数化）
     app.get('/api/posts/:id', async (req, rep) => {
       const id = Number((req.params as { id: string }).id);
-      const userId = uid(req);
+      const userId = req.userId;
       const uid0 = userId || 0;
       const rows = await kdb.sql<PostDetail>`SELECT p.id,p.title,p.content,p.board_id,p.is_anonymous,p.is_private,p.is_pinned,p.images,p.created_at,p.updated_at,p.view_count,
         CASE WHEN p.is_anonymous=1 THEN '匿名用户' ELSE u.username END as author_name,
@@ -440,7 +440,7 @@ export const postsPlugin: Plugin = {
     // orderClause 是受控字符串（不可由用户输入），直接拼到 SQL；用户参数走 ? 占位
     app.get('/api/posts/:id/comments', async (req) => {
       const id = Number((req.params as { id: string }).id);
-      const userId = uid(req) || 0;
+      const userId = req.userId || 0;
       const sort = (req.query as Record<string, string>).sort || 'latest';
       const orderClause = sort === 'hot' ? 'ORDER BY COALESCE(l.like_count,0) DESC, c.created_at ASC' : 'ORDER BY c.created_at ASC';
       return await db.all<any>(
@@ -693,7 +693,7 @@ export const postsPlugin: Plugin = {
 
     // ─── 审核队列（管理员）─── 用 sql 模板标签
     app.get('/api/admin/pending-posts', async (req, rep) => {
-      const u = uid(req); if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可查看' });
+      const u = req.userId; if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可查看' });
       const posts = await kdb.sql<any>`
         SELECT p.id, p.title, p.content, p.created_at, u.username as author_name, u.role as author_role
          FROM posts p JOIN users u ON p.author_id=u.id
@@ -702,7 +702,7 @@ export const postsPlugin: Plugin = {
     });
 
     app.put('/api/admin/posts/:id/review', async (req, rep) => {
-      const u = uid(req); if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可操作' });
+      const u = req.userId; if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可操作' });
       const id = Number((req.params as { id: string }).id);
       const { action } = req.body as { action: string };
       if (!['approve', 'reject'].includes(action)) return rep.status(400).send({ error: 'action 需为 approve 或 reject' });
@@ -717,7 +717,7 @@ export const postsPlugin: Plugin = {
 
     // ─── 敏感词管理（管理员）─── 用 Kysely 链式 API
     app.get('/api/admin/sensitive-words', async (req, rep) => {
-      const u = uid(req); if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可查看' });
+      const u = req.userId; if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可查看' });
       const words = await q()!.selectFrom('sensitive_words')
         .select(['id', 'word', 'created_at'])
         .orderBy('created_at', 'desc')
@@ -726,7 +726,7 @@ export const postsPlugin: Plugin = {
     });
 
     app.post('/api/admin/sensitive-words', async (req, rep) => {
-      const u = uid(req); if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可操作' });
+      const u = req.userId; if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可操作' });
       const { word } = req.body as { word: string };
       if (!word || word.trim().length < 1) return rep.status(400).send({ error: '敏感词不能为空' });
       try {
@@ -738,7 +738,7 @@ export const postsPlugin: Plugin = {
     });
 
     app.delete('/api/admin/sensitive-words/:id', async (req, rep) => {
-      const u = uid(req); if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可操作' });
+      const u = req.userId; if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可操作' });
       await q()!.deleteFrom('sensitive_words').where('id', '=', Number((req.params as { id: string }).id)).execute();
       return { success: true };
     });

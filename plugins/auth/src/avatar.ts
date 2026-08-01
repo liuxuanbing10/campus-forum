@@ -1,6 +1,6 @@
 // ── Avatar upload/crop routes ──
 
-import { PluginContext, uid, ImageService } from '@campus-forum/core';
+import { PluginContext, ImageService, requireAuth } from '@campus-forum/core';
 import { kyselyQuery } from '@campus-forum/database';
 import fs from 'fs';
 import path from 'path';
@@ -18,8 +18,8 @@ export function registerAvatarRoutes(ctx: PluginContext) {
   // ========================================
   // 头像上传 · 优先 multipart 文件流，降级支持 base64 JSON
   // ========================================
-  app.post('/api/users/avatar', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/users/avatar', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
 
     // ─── multipart 文件流路径（推荐）───
     const contentType = req.headers['content-type'] || '';

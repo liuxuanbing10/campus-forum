@@ -1,6 +1,6 @@
 // ── OAuth routes: bind, accounts, unbind, provider flows (GitHub/QQ/WeChat), complete ──
 
-import { PluginContext, uid } from '@campus-forum/core';
+import { PluginContext, requireAuth } from '@campus-forum/core';
 import { kyselyQuery } from '@campus-forum/database';
 import https from 'https';
 import crypto from 'crypto';
@@ -13,8 +13,8 @@ export function registerOauthRoutes(ctx: PluginContext) {
   // ========================================
   // 第三方登录（模拟 OAuth 绑定的 API）
   // ========================================
-  app.post('/api/auth/oauth/bind', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.post('/api/auth/oauth/bind', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
     const { provider, providerId } = req.body as { provider: string; providerId: string };
     if (!provider || !providerId) return rep.status(400).send({ error: '参数不完整' });
     try {
@@ -25,8 +25,8 @@ export function registerOauthRoutes(ctx: PluginContext) {
     return { success: true, message: '绑定成功' };
   });
 
-  app.get('/api/auth/oauth/accounts', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.get('/api/auth/oauth/accounts', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
     const accounts = await q()!.selectFrom('oauth_accounts')
       .select(['provider', 'provider_id as provider_user_id', 'created_at as binded_at'])
       .where('user_id', '=', userId)
@@ -34,8 +34,8 @@ export function registerOauthRoutes(ctx: PluginContext) {
     return { accounts };
   });
 
-  app.delete('/api/auth/oauth/unbind', async (req, rep) => {
-    const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+  app.delete('/api/auth/oauth/unbind', { preHandler: [requireAuth] }, async (req, rep) => {
+    const userId = req.userId!;
     const { provider } = req.body as { provider: string };
     await q()!.deleteFrom('oauth_accounts')
       .where('user_id', '=', userId)
@@ -158,8 +158,8 @@ export function registerOauthRoutes(ctx: PluginContext) {
     });
 
     // 1b. 获取授权 URL（绑定）
-    app.get(`/api/auth/oauth/${provider}/bind-url`, async (req, rep) => {
-      const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
+    app.get(`/api/auth/oauth/${provider}/bind-url`, { preHandler: [requireAuth] }, async (req, rep) => {
+      const userId = req.userId!;
       const clientId = process.env[envId];
       if (!clientId) return rep.status(500).send({ error: `${envId} 未配置` });
       const redirectUri = process.env[`${provider.toUpperCase()}_REDIRECT_URI`] || `${req.protocol}://${req.hostname}:${process.env.PORT || 3001}/api/auth/oauth/${provider}/callback`;
@@ -193,7 +193,7 @@ export function registerOauthRoutes(ctx: PluginContext) {
 
         // 绑定模式
         if (state === 'bind') {
-          const loggedUserId = uid(req);
+          const loggedUserId = req.userId;
           if (existing) {
             if (existing.user_id === loggedUserId) return rep.redirect(`${frontendUrl}/settings?tab=oauth&msg=already_bound`);
             return rep.redirect(`${frontendUrl}/settings?tab=oauth&msg=bound_by_other`);

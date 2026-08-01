@@ -414,7 +414,7 @@ function HalfClipCompass() {
     const txt = mk('text', { class: 'fy-curvetext fy-fadein' }, svg);
     const tpath = mk('textPath', { href: '#fyCtp', startOffset: '50%' }, txt) as SVGTextPathElement;
     tpath.setAttribute('text-anchor', 'middle');
-    (tpath as any).textContent = '与 时 偕 行 · 拾 光 而 往';
+    tpath.textContent = '与 时 偕 行 · 拾 光 而 往';
     txt.style.transitionDelay = '2.3s';
 
     const sheenCover = mk('circle', { cx: String(CX), cy: String(CY), r: '500', fill: 'url(#fySheenG)', class: 'fy-fadein' }, svg);

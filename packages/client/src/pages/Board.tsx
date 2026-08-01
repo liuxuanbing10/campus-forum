@@ -50,7 +50,7 @@ export default function BoardPage() {
         setBoardIcon(boardRes.data.icon || '📁');
       }
       const data: BoardPostsResponse = postsRes.data;
-      const newPosts = data.posts || data as any;
+      const newPosts = data.posts;
       if (append) {
         setPosts(prev => [...prev, ...newPosts]);
       } else {
