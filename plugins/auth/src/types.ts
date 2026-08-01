@@ -2,19 +2,7 @@
 
 import path from 'path';
 import { fileURLToPath } from 'url';
-
-// Extend Fastify session type
-declare module 'fastify' {
-  interface FastifyRequest {
-    session: {
-      userId?: number;
-      username?: string;
-      deviceCode?: string;
-      save(): Promise<void>;
-      destroy(): Promise<void>;
-    };
-  }
-}
+// ponytail: session augmentation lives in @campus-forum/core/src/types.ts (CampusSession with save/destroy)
 
 // ── 服务接口（与 server/services 实现匹配，运行时由 ctx.getService 注入） ──
 export interface EmailService {

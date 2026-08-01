@@ -6,6 +6,7 @@ import type { TeamContentPost, TeamContentComment } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 import Skeleton from '../components/Skeleton';
+import DOMPurify from 'dompurify';
 
 export default function TeamContentPostDetail() {
   const { id, postId } = useParams();
@@ -152,7 +153,7 @@ export default function TeamContentPostDetail() {
           </span>
         </div>
 
-        <div className="prose prose-sm max-w-none text-campus-text-primary leading-relaxed" dangerouslySetInnerHTML={{ __html: post.content }} />
+        <div className="prose prose-sm max-w-none text-campus-text-primary leading-relaxed" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content || '') }} />
 
         {images.length > 0 && (
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-3">

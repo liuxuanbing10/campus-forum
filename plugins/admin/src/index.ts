@@ -91,7 +91,7 @@ export const adminPlugin: Plugin = {
     // ========================================
     // 用户列表
     // ========================================
-    app.get('/api/admin/users', { preHandler: requireAdmin }, async (req, rep) => {
+    app.get('/api/admin/users', { preHandler: requireAdmin }, async (req, _rep) => {
       const query = req.query as { page?: string; keyword?: string };
       const page = Number(query.page) || 1;
       const limit = 20;
@@ -176,7 +176,7 @@ export const adminPlugin: Plugin = {
     // ========================================
     // 解封用户
     // ========================================
-    app.post('/api/admin/users/:id/unban', { preHandler: requireAdmin }, async (req, rep) => {
+    app.post('/api/admin/users/:id/unban', { preHandler: requireAdmin }, async (req, _rep) => {
       const id = Number((req.params as { id: string }).id);
       await q()!.updateTable('users')
         .set({
@@ -203,7 +203,7 @@ export const adminPlugin: Plugin = {
     // ========================================
     // 设置用户角色
     // ========================================
-    app.post('/api/admin/users/:id/role', { preHandler: requireSuperAdmin }, async (req, rep) => {
+    app.post('/api/admin/users/:id/role', { preHandler: requireSuperAdmin }, async (req, _rep) => {
       const id = Number((req.params as { id: string }).id);
       const { role } = roleSchema.parse(req.body);
 
@@ -234,7 +234,7 @@ export const adminPlugin: Plugin = {
     // ========================================
     // 设备黑名单
     // ========================================
-    app.get('/api/admin/devices', { preHandler: requireAdmin }, async (req, rep) => {
+    app.get('/api/admin/devices', { preHandler: requireAdmin }, async (req, _rep) => {
       const query = req.query as { user_id?: string };
       let devices: any[];
       if (query.user_id) {
@@ -292,7 +292,7 @@ export const adminPlugin: Plugin = {
     // ========================================
     // 统计
     // ========================================
-    app.get('/api/admin/stats', { preHandler: requireAdmin }, async (req, rep) => {
+    app.get('/api/admin/stats', { preHandler: requireAdmin }, async (_req, _rep) => {
       const userCount = (await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM users`)[0].c;
       const postCount = (await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM posts`)[0].c;
       const commentCount = (await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM comments`)[0].c;
@@ -315,7 +315,7 @@ export const adminPlugin: Plugin = {
     // ========================================
     // 管理员日志
     // ========================================
-    app.get('/api/admin/logs', { preHandler: requireAdmin }, async (req, rep) => {
+    app.get('/api/admin/logs', { preHandler: requireAdmin }, async (req, _rep) => {
       const query = req.query as { page?: string };
       const page = Number(query.page) || 1;
       const limit = 50;
@@ -329,7 +329,7 @@ export const adminPlugin: Plugin = {
     // ========================================
     // 批量操作：批量封禁
     // ========================================
-    app.post('/api/admin/batch/ban', { preHandler: requireAdmin }, async (req, rep) => {
+    app.post('/api/admin/batch/ban', { preHandler: requireAdmin }, async (req, _rep) => {
       const { ids, reason, duration } = batchBanSchema.parse(req.body);
 
       const bannedUntil = duration && duration > 0
@@ -352,7 +352,7 @@ export const adminPlugin: Plugin = {
     // ========================================
     // 批量操作：批量解封
     // ========================================
-    app.post('/api/admin/batch/unban', { preHandler: requireAdmin }, async (req, rep) => {
+    app.post('/api/admin/batch/unban', { preHandler: requireAdmin }, async (req, _rep) => {
       const { ids } = batchIdsSchema.parse(req.body);
 
       await q()!.updateTable('users')
@@ -387,7 +387,7 @@ export const adminPlugin: Plugin = {
     // ========================================
     // 批量操作：批量设为管理员
     // ========================================
-    app.post('/api/admin/batch/role', { preHandler: requireSuperAdmin }, async (req, rep) => {
+    app.post('/api/admin/batch/role', { preHandler: requireSuperAdmin }, async (req, _rep) => {
       const { ids, role } = batchRoleSchema.parse(req.body);
 
       await q()!.updateTable('users')

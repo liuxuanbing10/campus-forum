@@ -1,4 +1,14 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
+
+// Augment FastifyRequest with session/cookie properties from plugins
+declare module 'fastify' {
+  interface FastifyRequest {
+    // ponytail: session plugin is always loaded globally, so session is always present
+    session: CampusSession;
+    cookies?: Record<string, string>;
+    userId?: number;
+  }
+}
 
 // Plugin lifecycle states
 export type PluginState = 'pending' | 'loading' | 'active' | 'failed' | 'disabled';
@@ -10,6 +20,15 @@ export interface PluginManifest {
   description: string;
   author: string;
   dependencies?: string[];  // Other plugin names this depends on
+}
+
+// Session type stored on request by @fastify/session
+export interface CampusSession {
+  userId?: number;
+  deviceCode?: string;
+  username?: string;
+  save(): Promise<void>;
+  destroy(): Promise<void>;
 }
 
 // Plugin context - injected into plugin's apply function
@@ -31,6 +50,22 @@ export interface PluginContext {
 
   // Register another plugin's service
   getService<T>(name: string): T;
+
+  // WebSocket: push real-time event to a user
+  sendToUser(userId: number, type: string, data: Record<string, unknown>): void;
+
+  // Create a notification record in DB
+  createNotification(
+    userId: number, type: string, message: string,
+    relatedPostId?: number, relatedCommentId?: number,
+    fromUserId?: number, relatedTeamId?: number,
+  ): Promise<void>;
+
+  // Helper: extract userId from session or JWT
+  getSessionUserId(req: FastifyRequest): number | null;
+
+  // Helper: extract deviceCode from session
+  getSessionDeviceCode(req: FastifyRequest): string | undefined;
 }
 
 // Plugin definition

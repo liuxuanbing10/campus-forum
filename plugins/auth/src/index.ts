@@ -1,4 +1,3 @@
-import type { FastifyInstance } from 'fastify';
 import { Plugin, PluginContext } from '@campus-forum/core';
 import { registerAuthRoutes } from './auth.js';
 import { registerOauthRoutes } from './oauth.js';

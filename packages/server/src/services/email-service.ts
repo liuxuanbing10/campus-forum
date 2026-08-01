@@ -55,7 +55,7 @@ export class EmailService {
   async send(opts: SendMailOptions): Promise<boolean> {
     if (!this.transporter) {
       console.log(`[Email][dev] To: ${opts.to} | Subject: ${opts.subject}`);
-      if (opts.text) console.log(`  Body: ${opts.text}`);
+      // ponytail: never log email body — production data leak risk
       return true;
     }
 

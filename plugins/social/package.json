@@ -7,5 +7,5 @@
   "types": "./dist/index.d.ts",
   "scripts": { "build": "tsc", "dev": "tsc --watch" },
   "dependencies": { "@campus-forum/core": "*", "@campus-forum/database": "*" },
-  "devDependencies": { "typescript": "^5.7.0", "@types/node": "^22.0.0" }
+  "devDependencies": { "typescript": "^6.0.3", "@types/node": "^22.0.0" }
 }

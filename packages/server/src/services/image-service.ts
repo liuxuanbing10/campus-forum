@@ -41,6 +41,16 @@ const DEFAULT_OPTS: Required<Omit<ImageUploadOptions, 'userId' | 'filename'>> = 
   thumbWidth: 400,
 };
 
+// ponytail: explicit allowlist — blocks SVG, HTML-in-image, and exotic MIME types
+const ALLOWED_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/avif',
+  'image/bmp',
+]);
+
 let __dirname: string;
 try {
   __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -80,6 +90,9 @@ export class ImageService {
     const m = base64Data.match(/^data:(image\/\w+);base64,(.+)$/);
     if (!m) throw new Error('图片格式错误：需要 data:image/...;base64,... 格式');
     const srcMime = m[1];
+    if (!ALLOWED_IMAGE_TYPES.has(srcMime)) {
+      throw new Error(`Unsupported image type: ${srcMime}`);
+    }
     const buf = Buffer.from(m[2], 'base64');
 
     if (buf.length > options.maxSize) {
@@ -120,8 +133,8 @@ export class ImageService {
     }
 
     // 校验 MIME
-    if (!mimeType.startsWith('image/')) {
-      throw new Error('仅支持图片文件');
+    if (!ALLOWED_IMAGE_TYPES.has(mimeType)) {
+      throw new Error(`Unsupported image type: ${mimeType}`);
     }
 
     // sharp 可用 → 优化 + 文件系统存储

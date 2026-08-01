@@ -20,7 +20,7 @@ export default function FollowButton({ userId, className = '', onToggle }: Props
     if (!user) { setChecking(false); return; }
     followApi.check(userId).then(r => {
       setIsFollowing(r.data.isFollowing);
-    }).catch(() => {}).finally(() => setChecking(false));
+    }).catch(() => console.debug('Failed to check follow status')).finally(() => setChecking(false));
   }, [userId, user]);
 
   const handleToggle = async () => {

@@ -39,9 +39,9 @@ export const messagesPlugin: Plugin = {
           .orderBy('id', 'desc')
           .limit(1)
           .execute();
-        convId = (lastConv[0] as any).id;
+        convId = (lastConv[0] as { id: number }).id;
       } else {
-        convId = (conv[0] as any).id;
+        convId = (conv[0] as { id: number }).id;
       }
 
       await kdb.run('INSERT INTO messages (conversation_id,sender_id,content) VALUES (?,?,?)', convId, userId, content.trim());
@@ -54,7 +54,7 @@ export const messagesPlugin: Plugin = {
         .where('id', '=', userId)
         .execute();
       const senderRow = sender[0] as { username: string; display_name: string | null } | undefined;
-      (ctx as any).sendToUser?.(receiverId, 'new_message', {
+      ctx.sendToUser?.(receiverId, 'new_message', {
         conversationId: convId,
         senderId: userId,
         senderName: senderRow?.display_name || senderRow?.username,

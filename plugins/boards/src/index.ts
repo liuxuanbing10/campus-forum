@@ -44,7 +44,7 @@ export const boardsPlugin: Plugin = {
         return reply.status(404).send({ error: '板块不存在' });
       }
 
-      const page = Math.min(100, Math.max(1, Number((request.query as any).page) || 1));
+      const page = Math.min(100, Math.max(1, Number((request.query as Record<string, string>).page) || 1));
       const limit = 20;
       const offset = (page - 1) * limit;
       const posts = await kdb.sql<{

@@ -593,7 +593,7 @@ function WordsTab() {
 
   const loadWords = () => {
     adminExtendedApi.getSensitiveWords().then(r => setWords(r.data.words || []))
-      .catch(() => {}).finally(() => setLoading(false));
+      .catch(() => console.debug('Failed to load sensitive words')).finally(() => setLoading(false));
   };
 
   const handleAdd = async () => {
@@ -845,7 +845,7 @@ function LogsTab() {
 
   useEffect(() => {
     adminExtendedApi.getAuditLogs().then(r => setLogs(r.data.logs || []))
-      .catch(() => {}).finally(() => setLoading(false));
+      .catch(() => console.debug('Failed to load audit logs')).finally(() => setLoading(false));
   }, []);
 
   if (loading) return (

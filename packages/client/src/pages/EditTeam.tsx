@@ -23,7 +23,7 @@ export default function EditTeam() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    teamsApi.getCategories().then(res => setCategories(res.data.categories)).catch(() => {});
+    teamsApi.getCategories().then(res => setCategories(res.data.categories)).catch(() => console.debug('Failed to load categories'));
   }, []);
 
   useEffect(() => {

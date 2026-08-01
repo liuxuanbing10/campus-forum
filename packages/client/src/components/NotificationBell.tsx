@@ -24,14 +24,14 @@ export default function NotificationBell() {
     try {
       const { data } = await api.get('/notifications/unread-count');
       setUnread(data.unread_count || data.unreadCount || 0);
-    } catch {}
+    } catch { console.debug('Failed to fetch unread count'); }
   };
 
   const fetchAll = async () => {
     try {
       const { data } = await api.get('/notifications?page=1');
       setNotifs(data.notifications || []);
-    } catch {}
+    } catch { console.debug('Failed to fetch notifications'); }
   };
 
   useEffect(() => { fetchUnread(); }, []);

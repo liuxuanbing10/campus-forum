@@ -30,7 +30,7 @@ export default function MessagesPage() {
       setConversations(r.data.conversations || []);
       const total = (r.data.conversations || []).reduce((sum: number, c: Conversation) => sum + (c.unread_count || 0), 0);
       setUnreadTotal(total);
-    }).catch(() => {});
+    }).catch(() => console.debug('Failed to load conversations'));
   }, [user]);
 
   useEffect(() => {

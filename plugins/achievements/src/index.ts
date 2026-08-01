@@ -80,7 +80,7 @@ async function checkAndAward(
       await kdb.sql<unknown>`UPDATE users SET points=COALESCE(points,0)+${ach.points * timesToAward} WHERE id=${userId}`;
       // 发送通知
       try {
-        await (ctx as any).createNotification?.(
+        await ctx.createNotification?.(
           userId,
           'achievement',
           `🎉 成就「${ach.name}」×${timesToAward}！获得 ${ach.points * timesToAward} 积分`,
@@ -256,7 +256,7 @@ async function checkAndAward(
 
   // 发送通知
   try {
-    await (ctx as any).createNotification?.(
+    await ctx.createNotification?.(
       userId,
       'achievement',
       `🎉 解锁成就「${ach.name}」！获得 ${ach.points} 积分奖励`,
@@ -270,7 +270,7 @@ async function checkAndAward(
 
 async function checkAllAchievements(ctx: PluginContext, userId: number) {
   const { db } = ctx;
-  const { kdb, q } = kyselyQuery(db);
+  const { q } = kyselyQuery(db);
 
   const all = await q()!.selectFrom('achievements').selectAll().orderBy('sort_order').execute() as AchievementRow[];
   const results: { achievement: AchievementRow }[] = [];
@@ -343,7 +343,6 @@ export function registerAchievementRoutes(ctx: PluginContext) {
     return {
       achievements: all.map(a => {
         const ua = unlockedMap.get(a.id);
-        const isRepeat = a.repeat_interval > 0;
         return {
           ...a,
           unlocked: !!ua,

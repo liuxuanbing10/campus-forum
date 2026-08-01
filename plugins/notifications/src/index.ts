@@ -70,7 +70,7 @@ export const notificationsPlugin: Plugin = {
         .where('user_id', '=', userId)
         .execute();
       if (!n.length) return rep.status(404).send({ error: '通知不存在' });
-      await kdb.run('UPDATE notifications SET is_read=1 WHERE id=?', (n[0] as any).id);
+      await kdb.run('UPDATE notifications SET is_read=1 WHERE id=?', (n[0] as { id: number }).id);
       return { success: true };
     });
 

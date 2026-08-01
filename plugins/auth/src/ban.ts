@@ -11,7 +11,7 @@ export function registerBanRoutes(ctx: PluginContext) {
   // 放逐空间
   // ========================================
   app.get('/api/ostracism/info', async (req, rep) => {
-    const userId = uid(req) ?? (req as any).session?.userId;
+    const userId = uid(req) ?? req.session?.userId;
     if (!userId) return rep.status(401).send({ error: '请先登录' });
     const user = await q()!.selectFrom('users')
       .select(['is_banned', 'banned_until', 'ban_reason', 'username', 'display_name'])
@@ -40,7 +40,7 @@ export function registerBanRoutes(ctx: PluginContext) {
     const url = request.url.split('?')[0];
     if (url === '/api/auth/login' || url === '/api/auth/register' || url === '/api/auth/logout' || url === '/api/auth/me') return;
 
-    const userId = uid(request) ?? (request as any).session?.userId;
+    const userId = uid(request) ?? request.session?.userId;
     if (!userId) return;
 
     const user = await q()!.selectFrom('users')

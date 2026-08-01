@@ -101,7 +101,7 @@ export function registerOauthRoutes(ctx: PluginContext) {
         if (!d.access_token) throw new Error('token_exchange_failed');
         return { accessToken: d.access_token, raw: d };
       },
-      getUserInfo: async (token) => {
+      getUserInfo: async (_token) => {
         const res = await httpsGet(`https://api.github.com/user`);
         const u = JSON.parse(res);
         return { id: String(u.id), username: u.login || 'unknown' };

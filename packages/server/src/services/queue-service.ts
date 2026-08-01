@@ -4,6 +4,9 @@
  * - 优雅降级：Redis 不可用时自动降级为同步执行
  * - 支持任务进度查询、取消、重试
  */
+// ponytail: type-only import — bullmq is loaded dynamically inside registerHandler
+// to avoid pulling in its peer deps (node-abort-controller, msgpackr) at module load.
+// Tests don't have Redis, so a static import would break them.
 import type { Queue, Job, QueueEvents } from 'bullmq';
 
 export interface TaskResult<T = unknown> {

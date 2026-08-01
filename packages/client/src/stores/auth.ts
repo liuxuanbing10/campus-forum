@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import api, { setToken, clearToken } from '../lib/api';
 import { getDeviceCode } from '../lib/device';
 
-interface User {
+export interface User {
   id: number;
   username: string;
   displayName: string;
@@ -52,7 +52,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
-    try { await api.post('/auth/logout'); } catch {}
+    try { await api.post('/auth/logout'); } catch { console.debug('Failed to notify server of logout'); }
     clearToken();
     set({ user: null });
   },

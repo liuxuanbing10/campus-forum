@@ -22,7 +22,7 @@ export default function CreateTeam() {
   const [categories, setCategories] = useState<TeamCategory[]>([]);
 
   useEffect(() => {
-    teamsApi.getCategories().then(res => setCategories(res.data.categories)).catch(() => {});
+    teamsApi.getCategories().then(res => setCategories(res.data.categories)).catch(() => console.debug('Failed to load categories'));
   }, []);
 
   if (authLoading) return (

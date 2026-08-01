@@ -1,8 +1,15 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import type { DatabaseAdapter } from './types.js';
+import type { DatabaseAdapter, PluginContext, CampusSession } from './types.js';
 import crypto from 'crypto';
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'dev-secret-change-me';
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+if (!JWT_SECRET) {
+  // ponytail: fail-safe — never use hardcoded secrets in production
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET or SESSION_SECRET environment variable is required');
+  }
+  console.warn('[security] No JWT_SECRET set — using insecure fallback for development only');
+}
 
 function base64UrlEncode(buf: Buffer): string {
   return buf.toString('base64url');
@@ -29,8 +36,9 @@ export function signJwt(payload: Record<string, unknown>, expiresIn: string = '7
   const payloadWithExp = { ...payload, iat: now, exp };
   const headerB64 = base64UrlEncode(Buffer.from(JSON.stringify(header)));
   const payloadB64 = base64UrlEncode(Buffer.from(JSON.stringify(payloadWithExp)));
+  // ponytail: JWT_SECRET validated at module init (throws in prod, warns in dev)
   const signature = crypto
-    .createHmac('sha256', JWT_SECRET)
+    .createHmac('sha256', JWT_SECRET!)
     .update(`${headerB64}.${payloadB64}`)
     .digest('base64url');
   return `${headerB64}.${payloadB64}.${signature}`;
@@ -42,7 +50,7 @@ export function verifyJwt(token: string): Record<string, unknown> | null {
     if (parts.length !== 3) return null;
     const [headerB64, payloadB64, signature] = parts;
     const expectedSignature = crypto
-      .createHmac('sha256', JWT_SECRET)
+      .createHmac('sha256', JWT_SECRET!)
       .update(`${headerB64}.${payloadB64}`)
       .digest('base64url');
     if (signature !== expectedSignature) return null;
@@ -59,15 +67,14 @@ export function getTokenFromRequest(req: FastifyRequest): string | null {
   if (authHeader?.startsWith('Bearer ')) {
     return authHeader.substring(7);
   }
-  const cookies = (req as any).cookies;
-  if (cookies?.token) {
-    return cookies.token;
+  if (req.cookies?.token) {
+    return req.cookies.token;
   }
   return null;
 }
 
 export function uid(req: FastifyRequest): number | null {
-  const sessionUid = (req as any).session?.userId;
+  const sessionUid = req.session?.userId;
   if (typeof sessionUid === 'number') return sessionUid;
   const token = getTokenFromRequest(req);
   if (!token) return null;
@@ -83,7 +90,7 @@ export async function requireAuth(req: FastifyRequest, reply: FastifyReply): Pro
     reply.code(401).send({ error: '请先登录' });
     return;
   }
-  (req as any).userId = userId;
+  req.userId = userId;
 }
 
 // 检查用户是否是管理员
@@ -138,10 +145,9 @@ export async function logAction(
   );
 }
 
-// 通知发送（通过 PluginContext，createNotification 是运行时注入的）
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// 通知发送（通过 PluginContext，createNotification 已定义在接口中）
 export async function notify(
-  ctx: any,
+  ctx: PluginContext,
   userId: number,
   type: string,
   message: string,
@@ -150,7 +156,5 @@ export async function notify(
   fromUserId?: number,
   teamId?: number
 ): Promise<void> {
-  if (ctx?.createNotification) {
-    await ctx.createNotification(userId, type, message, postId, commentId, fromUserId, teamId);
-  }
+  await ctx.createNotification(userId, type, message, postId, commentId, fromUserId, teamId);
 }

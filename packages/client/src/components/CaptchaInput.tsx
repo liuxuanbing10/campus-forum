@@ -19,7 +19,7 @@ export default function CaptchaInput({ onVerify, error }: Props) {
       const res = await captchaApi.get();
       setCaptcha(res.data);
       setAnswer('');
-    } catch {} finally { setLoading(false); }
+    } catch { console.debug('Failed to load captcha'); } finally { setLoading(false); }
   };
 
   useEffect(() => { loadCaptcha(); }, []);

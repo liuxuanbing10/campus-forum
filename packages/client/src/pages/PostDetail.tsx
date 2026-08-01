@@ -11,6 +11,7 @@ import ReportDialog from '../components/ReportDialog';
 import Skeleton from '../components/Skeleton';
 import ShareModal from '../components/ShareModal';
 import MetaManager from '../components/MetaManager';
+import DOMPurify from 'dompurify';
 
 interface PostDetail {
   id: number; title: string; content: string; board_id: number; board_name: string;
@@ -122,7 +123,7 @@ export default function PostDetailPage() {
     api.get(`/posts/${id}/comments`).then(r => setComments(r.data));
   };
   const fetchStats = () => {
-    postsApi.getStats(Number(id)).then(r => setStats(r.data)).catch(() => {});
+    postsApi.getStats(Number(id)).then(r => setStats(r.data)).catch(() => console.debug('Failed to fetch post stats'));
   };
   const fetchVersions = async () => {
     try {
@@ -267,7 +268,7 @@ export default function PostDetailPage() {
           )}
         </div>
 
-        <div className="prose dark:prose-invert max-w-none text-campus-text-secondary font-body" dangerouslySetInnerHTML={{ __html: post.content }} />
+        <div className="prose dark:prose-invert max-w-none text-campus-text-secondary font-body" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content || '') }} />
 
         {images.length > 0 && (
           <div className="grid grid-cols-3 gap-2 mt-4">

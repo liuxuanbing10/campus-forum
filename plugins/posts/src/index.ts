@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, uid, isAdmin, requireAuth, paginate, addPoints, checkSensitive, logAction, notify, BoardRow, PostRow, UserRow, CommentRow, ImageService } from '@campus-forum/core';
+import { Plugin, PluginContext, uid, isAdmin, requireAuth, addPoints, checkSensitive, logAction, notify, PostRow, CommentRow, ImageService } from '@campus-forum/core';
 import { kyselyQuery } from '@campus-forum/database';
 import { z } from 'zod/v4';
 // 引入 @fastify/multipart 类型扩展，让 req.file() 方法在 TS 中可用
@@ -112,7 +112,7 @@ export const postsPlugin: Plugin = {
 
     // ─── 创建版块（管理员）─── 用 Kysely 链式 API（类型安全）
     app.post('/api/boards', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
+      const userId = req.userId!;
       if (!(await isAdmin(db, userId))) return rep.status(403).send({ error: '仅管理员可操作' });
       const { name, description, icon } = boardSchema.parse(req.body);
       await q()!.insertInto('boards')
@@ -124,12 +124,12 @@ export const postsPlugin: Plugin = {
 
     // ─── 编辑版块 ─── 用 Kysely updateTable 链式 API
     app.put('/api/boards/:id', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
+      const userId = req.userId!;
       if (!(await isAdmin(db, userId))) return rep.status(403).send({ error: '仅管理员可操作' });
       const id = Number((req.params as { id: string }).id);
       const exists = await q()!.selectFrom('boards').select('id').where('id', '=', id).executeTakeFirst();
       if (!exists) return rep.status(404).send({ error: '版块不存在' });
-      const body = req.body as any;
+      const body = req.body as Record<string, unknown>;
       const updates: Record<string, unknown> = {};
       if (body.name) updates.name = body.name;
       if (body.description !== undefined) updates.description = body.description;
@@ -142,7 +142,7 @@ export const postsPlugin: Plugin = {
 
     // ─── 删除版块 ─── 用 Kysely deleteFrom 链式 API
     app.delete('/api/boards/:id', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
+      const userId = req.userId!;
       if (!(await isAdmin(db, userId))) return rep.status(403).send({ error: '仅管理员可操作' });
       const id = Number((req.params as { id: string }).id);
       const exists = await q()!.selectFrom('boards').select('id').where('id', '=', id).executeTakeFirst();
@@ -153,7 +153,7 @@ export const postsPlugin: Plugin = {
 
     // ─── 发帖（含敏感词 + 审核队列）─── 用 Kysely 链式 API
     app.post('/api/posts', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
+      const userId = req.userId!;
       const { title, content, boardId, isAnonymous, isPrivate, images } = createPostSchema.parse(req.body);
       const board = await q()!.selectFrom('boards').select('id').where('id', '=', boardId).executeTakeFirst();
       if (!board) return rep.status(404).send({ error: '版块不存在' });
@@ -182,7 +182,7 @@ export const postsPlugin: Plugin = {
 
     // ─── 编辑帖子 ─── 用 Kysely updateTable 链式 API
     app.put('/api/posts/:id', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
+      const userId = req.userId!;
       const id = Number((req.params as { id: string }).id);
       const post = await q()!.selectFrom('posts').selectAll().where('id', '=', id).executeTakeFirst() as PostRow | undefined;
       if (!post) return rep.status(404).send({ error: '帖子不存在' });
@@ -205,7 +205,7 @@ export const postsPlugin: Plugin = {
 
     // ─── 置顶 ─── 用 Kysely updateTable
     app.put('/api/posts/:id/pin', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
+      const userId = req.userId!;
       if (!(await isAdmin(db, userId))) return rep.status(403).send({ error: '仅管理员可操作' });
       const id = Number((req.params as { id: string }).id);
       const post = await q()!.selectFrom('posts').select(['id', 'is_pinned']).where('id', '=', id).executeTakeFirst() as { id: number; is_pinned: number } | undefined;
@@ -217,7 +217,7 @@ export const postsPlugin: Plugin = {
 
     // ─── 切换私密（仅作者可操作）─── 用 Kysely updateTable
     app.put('/api/posts/:id/privacy', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
+      const userId = req.userId!;
       const id = Number((req.params as { id: string }).id);
       const post = await q()!.selectFrom('posts').select(['id', 'author_id', 'is_private']).where('id', '=', id).executeTakeFirst() as { id: number; author_id: number; is_private: number } | undefined;
       if (!post) return rep.status(404).send({ error: '帖子不存在' });
@@ -229,7 +229,7 @@ export const postsPlugin: Plugin = {
 
     // ─── 删除帖子（手动级联）─── 用 Kysely deleteFrom
     app.delete('/api/posts/:id', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
+      const userId = req.userId!;
       const id = Number((req.params as { id: string }).id);
       const post = await q()!.selectFrom('posts').selectAll().where('id', '=', id).executeTakeFirst() as PostRow | undefined;
       if (!post) return rep.status(404).send({ error: '帖子不存在' });
@@ -244,9 +244,9 @@ export const postsPlugin: Plugin = {
     });
 
     // ─── 我的帖子 ─── 用 sql 模板标签（自动参数化，类型安全）
-    app.get('/api/posts/my', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
-      const page = Math.min(100, Math.max(1, Number((req.query as any).page) || 1));
+    app.get('/api/posts/my', { preHandler: [requireAuth] }, async (req, _rep) => {
+      const userId = req.userId!;
+      const page = Math.min(100, Math.max(1, Number((req.query as Record<string, string>).page) || 1));
       const limit = 20; const offset = (page - 1) * limit;
       const sqlText = buildPostListSql({ where: 'WHERE p.author_id=?', orderBy: 'ORDER BY p.created_at DESC', limit: true });
       // 用 KyselyAdapter.sql 模板标签：参数通过 ${...} 内联，自动转 ? 占位
@@ -319,7 +319,7 @@ export const postsPlugin: Plugin = {
       }
       await q()!.updateTable('posts').set((eb) => eb('view_count', '+', 1)).where('id', '=', id).execute();
       post.view_count = (post.view_count || 0) + 1;
-      post.images = post.images ? JSON.parse(post.images as any) : [];
+      post.images = post.images ? JSON.parse(post.images as string) : [];
       return post;
     });
 
@@ -327,7 +327,7 @@ export const postsPlugin: Plugin = {
     // 前端 FormData 上传：Content-Type 自动为 multipart/form-data
     // 前端兼容旧版：Content-Type 为 application/json 时走 base64 路径
     app.post('/api/upload', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
+      const userId = req.userId!;
 
       // ─── multipart 文件流路径（推荐）───
       const contentType = req.headers['content-type'] || '';
@@ -441,7 +441,7 @@ export const postsPlugin: Plugin = {
     app.get('/api/posts/:id/comments', async (req) => {
       const id = Number((req.params as { id: string }).id);
       const userId = uid(req) || 0;
-      const sort = (req.query as any).sort || 'latest';
+      const sort = (req.query as Record<string, string>).sort || 'latest';
       const orderClause = sort === 'hot' ? 'ORDER BY COALESCE(l.like_count,0) DESC, c.created_at ASC' : 'ORDER BY c.created_at ASC';
       return await db.all<any>(
         `SELECT c.id,c.content,c.post_id,c.parent_id,c.is_anonymous,c.created_at,c.edited_at,
@@ -457,7 +457,7 @@ export const postsPlugin: Plugin = {
 
     // ─── 发表评论（含敏感词 + @提及解析）─── 用 Kysely 链式 API
     app.post('/api/posts/:id/comments', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
+      const userId = req.userId!;
       const postId = Number((req.params as { id: string }).id);
       const { content, parentId, isAnonymous } = createCommentSchema.parse(req.body);
       const post = await q()!.selectFrom('posts').select('id').where('id', '=', postId).executeTakeFirst();
@@ -507,7 +507,7 @@ export const postsPlugin: Plugin = {
 
     // ─── 删除评论 ─── 用 Kysely deleteFrom
     app.delete('/api/comments/:id', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
+      const userId = req.userId!;
       const id = Number((req.params as { id: string }).id);
       const c = await q()!.selectFrom('comments').select(['id', 'author_id']).where('id', '=', id).executeTakeFirst() as CommentRow | undefined;
       if (!c) return rep.status(404).send({ error: '评论不存在' });
@@ -518,7 +518,7 @@ export const postsPlugin: Plugin = {
 
     // ─── 编辑评论 ─── 用 Kysely updateTable
     app.put('/api/comments/:id', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
+      const userId = req.userId!;
       const id = Number((req.params as { id: string }).id);
       const c = await q()!.selectFrom('comments').select(['id', 'author_id']).where('id', '=', id).executeTakeFirst() as CommentRow | undefined;
       if (!c) return rep.status(404).send({ error: '评论不存在' });
@@ -531,7 +531,7 @@ export const postsPlugin: Plugin = {
 
     // ─── 点赞 ─── 用 Kysely 链式 API（按 target 类型分支）
     app.post('/api/votes', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
+      const userId = req.userId!;
       const { postId, commentId, value } = voteSchema.parse(req.body);
       const isPost = !!postId;
       const targetId = postId ?? commentId!;
@@ -579,7 +579,7 @@ export const postsPlugin: Plugin = {
 
     // ─── 收藏 ─── 用 Kysely 链式 API
     app.post('/api/favorites', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
+      const userId = req.userId!;
       const { postId } = favoriteSchema.parse(req.body);
       const post = await q()!.selectFrom('posts').select('id').where('id', '=', postId).executeTakeFirst();
       if (!post) return rep.status(404).send({ error: '帖子不存在' });
@@ -594,9 +594,9 @@ export const postsPlugin: Plugin = {
     });
 
     // ─── 我的收藏 ─── 复杂 JOIN，用 buildPostListSql + db.all（参数化已保证安全）
-    app.get('/api/favorites', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
-      const page = Math.min(100, Math.max(1, Number((req.query as any).page) || 1));
+    app.get('/api/favorites', { preHandler: [requireAuth] }, async (req, _rep) => {
+      const userId = req.userId!;
+      const page = Math.min(100, Math.max(1, Number((req.query as Record<string, string>).page) || 1));
       const sqlText = buildPostListSql({
         withContent: true,
         extraFields: ['COALESCE((SELECT 1 FROM favorites WHERE post_id=p.id AND user_id=?),0) as is_favorited'],
@@ -656,7 +656,7 @@ export const postsPlugin: Plugin = {
 
     // ─── 添加标签（管理员）─── 用 Kysely 链式 API
     app.post('/api/posts/:id/tags', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
+      const userId = req.userId!;
       if (!(await isAdmin(db, userId))) return rep.status(403).send({ error: '仅管理员可操作' });
       const postId = Number((req.params as { id: string }).id);
       const postExists = await q()!.selectFrom('posts').select('id').where('id', '=', postId).executeTakeFirst();
@@ -683,10 +683,10 @@ export const postsPlugin: Plugin = {
 
     // ─── 删除标签（管理员）─── 用 Kysely deleteFrom
     app.delete('/api/posts/:id/tags/:tagId', { preHandler: [requireAuth] }, async (req, rep) => {
-      const userId = (req as any).userId as number;
+      const userId = req.userId!;
       if (!(await isAdmin(db, userId))) return rep.status(403).send({ error: '仅管理员可操作' });
       const postId = Number((req.params as { id: string }).id);
-      const tagId = Number((req.params as any).tagId);
+      const tagId = Number((req.params as { tagId: string }).tagId);
       await q()!.deleteFrom('post_tags').where('post_id', '=', postId).where('tag_id', '=', tagId).execute();
       return { success: true };
     });

@@ -3,6 +3,7 @@ import { teamsApi } from '../../lib/api';
 import type { Team, TeamMember } from '@campus-forum/core';
 import { toastStore } from '../../App';
 import type { User } from '../../stores/auth';
+import type { NavigateFunction } from 'react-router-dom';
 
 interface Props {
   team: Team;
@@ -15,7 +16,7 @@ interface Props {
   loadData: () => Promise<void>;
   setTeam: (team: Team) => void;
   setActionLoading: (v: boolean) => void;
-  navigate: (to: string) => void;
+  navigate: NavigateFunction;
 }
 
 export default function TeamHeader({ team, user, isOwner, isAdmin, isMember, actionLoading, teamId, loadData, setTeam, setActionLoading, navigate }: Props) {

@@ -8,7 +8,7 @@ import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import multipart from '@fastify/multipart';
-import { PluginManager, SimpleEventBus, PluginContext, Logger } from '@campus-forum/core';
+import { PluginManager, SimpleEventBus, PluginContext, Logger, uid } from '@campus-forum/core';
 import { ZodError } from 'zod/v4';
 import 'dotenv/config';
 import { createKyselyDatabase, initializeSchema, migrateSchema, seedData } from '@campus-forum/database';
@@ -23,7 +23,7 @@ try {
   __dirname = process.cwd();
 }
 
-import { isSuspiciousUA, BOT_UA_PATTERNS, SUSPICIOUS_UA_PATTERNS } from './bot-config.js';
+import { isSuspiciousUA } from './bot-config.js';
 
 // ── 可公开访问的路径（无需验证 UA 或额外限流）────
 const PUBLIC_ASSET_PATHS = ['/uploads/', '/health'];
@@ -34,7 +34,6 @@ export async function buildApp(options?: { plugins?: any[] }) {
     bodyLimit: 50 * 1024 * 1024, // 请求体最大 50MB（团队文件上传需要）
     maxParamLength: 200,    // URL 参数最大长度
   });
-  const port = Number(process.env.PORT) || 3001;
 
   // ── 安全响应头 ──────────────────────────────
   await app.register(helmet, {
@@ -149,7 +148,7 @@ export async function buildApp(options?: { plugins?: any[] }) {
   });
 
   // ── POST/PUT/DELETE 写入接口额外限流（路由级）─
-  app.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.addHook('onRequest', async (request: FastifyRequest, _reply: FastifyReply) => {
     if (!['POST', 'PUT', 'DELETE'].includes(request.method)) return;
     if (!request.url.startsWith('/api/')) return;
     // 已有全局限流，此处仅记录日志供调试
@@ -183,7 +182,7 @@ export async function buildApp(options?: { plugins?: any[] }) {
   try {
     sessionPlugin = (await import('@fastify/session' as string)).default;
   } catch {
-    try { sessionPlugin = (await import('@fastify/secure-session' as string)).default; } catch {}
+    try { sessionPlugin = (await import('@fastify/secure-session' as string)).default; } catch { console.debug('secure-session not available'); }
   }
   await app.register(sessionPlugin, {
     secret: sessionSecret,
@@ -213,6 +212,9 @@ export async function buildApp(options?: { plugins?: any[] }) {
   services.set('emailService', emailService);
   services.set('queueService', queueService);
 
+  // ── WebSocket ───────────────────────────────
+  const wsManager = new WsManager(app.server);
+
   const pluginCtx: PluginContext = {
     app, db, events, logger,
     config: {
@@ -224,15 +226,24 @@ export async function buildApp(options?: { plugins?: any[] }) {
       if (!svc) throw new Error(`Service "${name}" not registered`);
       return svc as T;
     },
+    sendToUser: (userId: number, type: string, data: Record<string, unknown>) => {
+      wsManager.sendToUser(userId, type, data);
+    },
+    createNotification: async (
+      userId: number, type: string, message: string,
+      relatedPostId?: number, relatedCommentId?: number, fromUserId?: number, relatedTeamId?: number,
+    ) => {
+      await db.run(
+        `INSERT INTO notifications (user_id, type, message, related_post_id, related_comment_id, from_user_id, related_team_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        userId, type, message, relatedPostId || null, relatedCommentId || null, fromUserId || null, relatedTeamId || null,
+      );
+    },
+    getSessionUserId: (req) => uid(req),
+    getSessionDeviceCode: (req) => req.session?.deviceCode,
   };
 
   const pluginManager = new PluginManager(pluginCtx);
-
-  // ── WebSocket ───────────────────────────────
-  const wsManager = new WsManager(app.server);
-  (pluginCtx as any).sendToUser = (userId: number, type: string, data: Record<string, unknown>) => {
-    wsManager.sendToUser(userId, type, data);
-  };
 
   if (options?.plugins && options.plugins.length > 0) {
     for (const plugin of options.plugins) {
@@ -268,18 +279,6 @@ export async function buildApp(options?: { plugins?: any[] }) {
       }
     }
   }
-
-  // 暴露 createNotification 到 context 供其他插件调用
-  (pluginCtx as any).createNotification = async (
-    userId: number, type: string, message: string,
-    relatedPostId?: number, relatedCommentId?: number, fromUserId?: number, relatedTeamId?: number,
-  ) => {
-    await db.run(
-      `INSERT INTO notifications (user_id, type, message, related_post_id, related_comment_id, from_user_id, related_team_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      userId, type, message, relatedPostId || null, relatedCommentId || null, fromUserId || null, relatedTeamId || null,
-    );
-  };
 
   // Health check
   app.get('/api/health', async () => {

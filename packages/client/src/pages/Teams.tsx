@@ -31,7 +31,7 @@ export default function Teams() {
     try {
       const res = await teamsApi.getCategories();
       setCategories(res.data.categories);
-    } catch {}
+    } catch { console.debug('Failed to load categories'); }
   };
 
   const loadTeams = async () => {

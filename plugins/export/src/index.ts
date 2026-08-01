@@ -110,6 +110,8 @@ export const exportPlugin: Plugin = {
       if (!queueService) return rep.status(400).send({ error: '队列服务未启用' });
       const job = await queueService.getJob<ExportResult>('user-export', jobId);
       if (!job) return rep.status(404).send({ error: '任务不存在' });
+      const jobUserId = (job as { data?: { userId?: number } }).data?.userId;
+      if (jobUserId && jobUserId !== userId) return rep.status(403).send({ error: '无权访问' });
       return {
         jobId: job.id,
         status: job.status,
@@ -126,6 +128,8 @@ export const exportPlugin: Plugin = {
       if (!queueService) return rep.status(400).send({ error: '队列服务未启用' });
       const job = await queueService.getJob<ExportResult>('user-export', jobId);
       if (!job) return rep.status(404).send({ error: '任务不存在' });
+      const jobUserId = (job as { data?: { userId?: number } }).data?.userId;
+      if (jobUserId && jobUserId !== userId) return rep.status(403).send({ error: '无权访问' });
       if (job.status !== 'completed') return rep.status(400).send({ error: '任务尚未完成' });
       const result = job.result;
       if (!result) return rep.status(500).send({ error: '导出结果丢失' });
@@ -141,6 +145,10 @@ export const exportPlugin: Plugin = {
       if (!userId) return rep.status(401).send({ error: '请先登录' });
       const jobId = (req.params as { jobId: string }).jobId;
       if (!queueService) return rep.status(400).send({ error: '队列服务未启用' });
+      const job = await queueService.getJob<ExportResult>('user-export', jobId);
+      if (!job) return rep.status(404).send({ error: '任务不存在' });
+      const jobUserId = (job as { data?: { userId?: number } }).data?.userId;
+      if (jobUserId && jobUserId !== userId) return rep.status(403).send({ error: '无权访问' });
       const ok = await queueService.cancelJob('user-export', jobId);
       return { success: ok };
     });

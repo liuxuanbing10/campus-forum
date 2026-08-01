@@ -212,9 +212,10 @@ export async function createKyselyDatabase(dbPath?: string): Promise<KyselyAdapt
  * 替代插件中的 `const kdb = db as KyselyAdapter; const q = kdb.query?.bind(kdb);` 样板。
  * 返回的 kdb 保留 sql/exec/all/run 等兼容接口，q 是绑定的 Kysely 链式查询构造器。
  */
-export function kyselyQuery(db: DatabaseAdapter): { kdb: KyselyAdapter; q: (() => Kysely<AnyDB>) | undefined } {
+export function kyselyQuery(db: DatabaseAdapter): { kdb: KyselyAdapter; q: () => Kysely<AnyDB> } {
   const kdb = db as KyselyAdapter;
-  return { kdb, q: kdb.query?.bind(kdb) };
+  // ponytail: query() is a method on KyselyAdapter, always defined — safe to drop the | undefined
+  return { kdb, q: kdb.query.bind(kdb) };
 }
 
 

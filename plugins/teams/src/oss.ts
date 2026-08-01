@@ -22,7 +22,7 @@ async function ensureOSS() {
 async function getClient() {
   await ensureOSS();
   // Default 类型避免 TS 错误，实际运行时有 ali-oss
-  const OSS = (ossModule as any).default || ossModule;
+  const OSS = (ossModule as Record<string, unknown>).default || ossModule;
   return new OSS({ region, bucket, accessKeyId, accessKeySecret });
 }
 

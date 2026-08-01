@@ -1,6 +1,6 @@
 // ── Core auth routes: register, login, logout, me, password, profile, email, captcha ──
 
-import { PluginContext, uid, isAdmin, signJwt, UserRow, ImageService } from '@campus-forum/core';
+import { PluginContext, uid, signJwt, UserRow } from '@campus-forum/core';
 import { kyselyQuery } from '@campus-forum/database';
 import bcrypt from 'bcryptjs';
 import { EmailService, RegisterBody, LoginBody, UpdateProfileBody, ChangePasswordBody, getDeviceCode, now } from './types.js';
@@ -10,7 +10,7 @@ export function registerAuthRoutes(ctx: PluginContext) {
   const { kdb, q } = kyselyQuery(db);
   const isTest = process.env.NODE_ENV === 'test';
   let emailService: EmailService | null = null;
-  try { emailService = ctx.getService<EmailService>('emailService'); } catch { /* 未注册时降级 */ }
+  try { emailService = ctx.getService<EmailService>('emailService'); } catch { console.debug('emailService not registered'); }
 
   // ========================================
   // 注册
@@ -164,28 +164,37 @@ export function registerAuthRoutes(ctx: PluginContext) {
       }
     }
 
-    // 3. 设置 session（不校验设备码，支持多设备登录）
+    // 3. 检查封禁状态（必须在发放 token 之前）
+    const isActuallyBanned = user.is_banned === 1 && (!user.banned_until || new Date(user.banned_until + 'Z') > new Date());
+    if (isActuallyBanned) {
+      return reply.status(403).send({
+        success: false,
+        error: '账号已被放逐',
+        isBanned: true,
+        bannedUntil: user.banned_until || null,
+        banReason: user.ban_reason || null,
+      });
+    }
+
+    // 4. 设置 session（不校验设备码，支持多设备登录）
     request.session.userId = user.id;
     request.session.username = user.username;
     await request.session.save();
 
     const token = signJwt({ userId: user.id, username: user.username });
 
-    // 检查封禁状态
-    const isActuallyBanned = user.is_banned === 1 && (!user.banned_until || new Date(user.banned_until + 'Z') > new Date());
-
     return {
       success: true,
-      message: isActuallyBanned ? '账号已被放逐' : '登录成功',
+      message: '登录成功',
       user: {
         id: user.id,
         username: user.username,
         displayName: user.display_name,
         role: user.role || 'user',
         isAdmin: user.role === 'superadmin' || user.role === 'admin',
-        isBanned: isActuallyBanned,
-        bannedUntil: user.banned_until || null,
-        banReason: user.ban_reason || null,
+        isBanned: false,
+        bannedUntil: null,
+        banReason: null,
       },
       token,
     };
@@ -194,7 +203,7 @@ export function registerAuthRoutes(ctx: PluginContext) {
   // ========================================
   // 登出
   // ========================================
-  app.post('/api/auth/logout', async (request, reply) => {
+  app.post('/api/auth/logout', async (request, _reply) => {
     await request.session.destroy();
     return { success: true, message: '已退出登录' };
   });
@@ -212,7 +221,7 @@ export function registerAuthRoutes(ctx: PluginContext) {
       return reply.status(401).send({ error: '未登录' });
     }
     // 更新在线时间
-    await kdb.sql<any>`UPDATE users SET last_active_at = datetime('now') WHERE id = ${userId}`.catch(() => {});
+    await kdb.sql<any>`UPDATE users SET last_active_at = datetime('now') WHERE id = ${userId}`.catch((_e) => console.debug('Failed to update last_active_at'));
 
     const user = await q()!.selectFrom('users')
       .select(['id', 'username', 'display_name', 'email', 'avatar_url', 'is_admin', 'role', 'is_banned', 'banned_until', 'ban_reason', 'created_at'])
@@ -230,7 +239,7 @@ export function registerAuthRoutes(ctx: PluginContext) {
         .set({ is_banned: 0, banned_until: null, ban_reason: null })
         .where('id', '=', userId)
         .execute()
-        .catch(() => {});
+        .catch((_e) => console.debug('Failed to auto-unban user'));
       user.is_banned = 0;
       user.banned_until = null;
       user.ban_reason = null;
@@ -366,7 +375,7 @@ export function registerAuthRoutes(ctx: PluginContext) {
     const user = await q()!.selectFrom('users')
       .select(['id', 'username', 'display_name', 'bio', 'created_at', 'last_active_at', 'points'])
       .where('id', '=', id)
-      .executeTakeFirst() as any;
+      .executeTakeFirst() as { id: number; username: string; display_name: string; bio: string | null; created_at: string; last_active_at: string | null; points: number } | undefined;
     if (!user) return rep.status(404).send({ error: '用户不存在' });
 
     const postCount = (await kdb.sql<{ c: number }>`SELECT COUNT(*) as c FROM posts WHERE author_id = ${id}`)[0].c;
@@ -425,7 +434,7 @@ export function registerAuthRoutes(ctx: PluginContext) {
       if (!ok) return rep.status(500).send({ error: '邮件发送失败，请稍后重试' });
       return { success: true, message: '验证码已发送至邮箱' };
     }
-    return { success: true, message: '验证码已生成（演示模式：未配置 SMTP）', demoCode: code };
+    return { success: true, message: '验证码已生成（演示模式：未配置 SMTP）' };
   });
 
   // ========================================

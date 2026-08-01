@@ -1,4 +1,4 @@
-import { Plugin, PluginContext, uid, isAdmin, addPoints, logAction } from '@campus-forum/core';
+import { Plugin, PluginContext, uid, isAdmin, logAction } from '@campus-forum/core';
 import { kyselyQuery } from '@campus-forum/database';
 
 export const socialPlugin: Plugin = {
@@ -44,7 +44,7 @@ export const socialPlugin: Plugin = {
     // 检查是否已关注
     app.get('/api/follow/check', async (req, rep) => {
       const userId = uid(req); if (!userId) return rep.status(401).send({ error: '请先登录' });
-      const targetId = Number((req.query as any).userId);
+      const targetId = Number((req.query as Record<string, string>).userId);
       if (!targetId) return rep.status(400).send({ error: '缺少 userId' });
       const f = await q()!.selectFrom('follows').select('id').where('user_id', '=', userId).where('followed_id', '=', targetId).executeTakeFirst();
       return { isFollowing: !!f };
@@ -65,7 +65,7 @@ export const socialPlugin: Plugin = {
     // ─── 管理员审核举报 ───
     app.get('/api/admin/reports', async (req, rep) => {
       const u = uid(req); if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可查看' });
-      const page = Math.min(100, Math.max(1, Number((req.query as any).page) || 1));
+      const page = Math.min(100, Math.max(1, Number((req.query as Record<string, string>).page) || 1));
       return { reports: await kdb.sql<any>`SELECT r.*,ru.username as reporter_name FROM reports r JOIN users ru ON r.reporter_id=ru.id ORDER BY r.created_at DESC LIMIT 20 OFFSET ${(page - 1) * 20}`, page };
     });
 
@@ -107,7 +107,7 @@ export const socialPlugin: Plugin = {
     app.get('/api/users/:id/posts', async (req, rep) => {
       const id = Number((req.params as { id: string }).id);
       if (!(await q()!.selectFrom('users').select('id').where('id', '=', id).executeTakeFirst())) return rep.status(404).send({ error: '用户不存在' });
-      const page = Math.min(100, Math.max(1, Number((req.query as any).page) || 1));
+      const page = Math.min(100, Math.max(1, Number((req.query as Record<string, string>).page) || 1));
       const posts = await kdb.sql<any>`SELECT p.id,p.title,p.created_at,b.name as board_name,COALESCE(l.like_count,0) as like_count,COALESCE(c.comment_count,0) as comment_count
         FROM posts p JOIN boards b ON p.board_id=b.id
         LEFT JOIN (SELECT post_id,COUNT(*) as like_count FROM votes WHERE value=1 GROUP BY post_id) l ON l.post_id=p.id
@@ -120,7 +120,7 @@ export const socialPlugin: Plugin = {
     app.get('/api/users/:id/comments', async (req, rep) => {
       const id = Number((req.params as { id: string }).id);
       if (!(await q()!.selectFrom('users').select('id').where('id', '=', id).executeTakeFirst())) return rep.status(404).send({ error: '用户不存在' });
-      const page = Math.min(100, Math.max(1, Number((req.query as any).page) || 1));
+      const page = Math.min(100, Math.max(1, Number((req.query as Record<string, string>).page) || 1));
       const comments = await kdb.sql<any>`SELECT c.id,c.content,c.created_at,p.id as post_id,p.title as post_title
         FROM comments c JOIN posts p ON c.post_id=p.id WHERE c.author_id = ${id} AND p.is_private=0 ORDER BY c.created_at DESC LIMIT 20 OFFSET ${(page - 1) * 20}`;
       return { comments, page };
@@ -129,7 +129,7 @@ export const socialPlugin: Plugin = {
     // ─── 操作日志（管理员） ───
     app.get('/api/admin/audit-logs', async (req, rep) => {
       const u = uid(req); if (!u || !(await isAdmin(db, u))) return rep.status(403).send({ error: '仅管理员可查看' });
-      const page = Math.min(100, Math.max(1, Number((req.query as any).page) || 1));
+      const page = Math.min(100, Math.max(1, Number((req.query as Record<string, string>).page) || 1));
       return { logs: await kdb.sql<any>`SELECT l.*,a.username as admin_name FROM audit_logs l JOIN users a ON l.admin_id=a.id ORDER BY l.created_at DESC LIMIT 30 OFFSET ${(page - 1) * 30}`, page };
     });
   },

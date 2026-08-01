@@ -55,7 +55,7 @@ export default function Home() {
   useEffect(() => {
     api.get('/boards')
       .then((res) => setBoards(res.data))
-      .catch(() => {})
+      .catch(() => console.debug('Failed to load boards'))
       .finally(() => setBoardsLoading(false));
   }, []);
 
@@ -114,7 +114,7 @@ export default function Home() {
       try {
         const res = await api.get('/boards');
         setBoards(res.data);
-      } catch {}
+      } catch { console.debug('Failed to refresh boards'); }
       toastStore.success('已刷新', 1500);
     },
   });

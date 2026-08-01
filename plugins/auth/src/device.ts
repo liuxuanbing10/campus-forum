@@ -13,11 +13,11 @@ export function registerDeviceRoutes(ctx: PluginContext) {
   app.get('/api/my-devices', async (req, rep) => {
     const userId = uid(req);
     if (!userId) return rep.status(401).send({ error: '请先登录' });
-    const devices = await kdb.sql<any>`SELECT id, user_id, device_id, device_name, device_info, is_active, last_login_at, created_at
+    const devices = await kdb.sql<Record<string, unknown>>`SELECT id, user_id, device_id, device_name, device_info, is_active, last_login_at, created_at
         FROM user_devices WHERE user_id = ${userId} ORDER BY last_login_at DESC`;
-    const currentDeviceCode = (req as any).session?.deviceCode;
+    const currentDeviceCode = req.session?.deviceCode;
     return {
-      devices: (devices as any[]).map(d => ({
+      devices: devices.map(d => ({
         ...d,
         is_current: currentDeviceCode ? d.device_id === currentDeviceCode : undefined,
       })),

@@ -136,7 +136,7 @@ export class CacheService {
     if (this.redis) {
       try {
         await this.redis.del(k);
-      } catch {}
+      } catch (e) { console.debug('Failed to delete cache key', e); }
     }
     this._lru?.delete(k);
   }
@@ -156,7 +156,7 @@ export class CacheService {
           await this.redis.del(...keys);
           count += keys.length;
         }
-      } catch {}
+      } catch (e) { console.debug('Failed to invalidate cache keys', e); }
     }
 
     // LRU 不可用时跳过
