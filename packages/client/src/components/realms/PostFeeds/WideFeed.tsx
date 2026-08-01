@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import { Post } from './types';
 import { PENTADS } from '../../../lib/realm-utils';
@@ -37,9 +38,9 @@ export default function WideFeed({ posts }: Props) {
             </div>
             <div className="space-y-2">
               {g.items.map((p, i) => (
-                <a
+                <Link
                   key={p.id}
-                  href={`/post/${p.id}`}
+                  to={`/post/${p.id}`}
                   className="block py-1.5 group"
                 >
                   <div className="text-[13px] font-bold text-[var(--ink)] line-clamp-2 group-hover:text-[var(--acc)] transition-colors leading-snug">
@@ -48,7 +49,7 @@ export default function WideFeed({ posts }: Props) {
                   <div className="text-[10px] text-[var(--soft)] mt-0.5">
                     {p.author_name} · 赞 {p.like_count}
                   </div>
-                </a>
+                </Link>
               ))}
               {g.items.length === 0 && (
                 <div className="text-[11px] text-[var(--soft)] italic py-2">虚位以待</div>
@@ -67,21 +68,24 @@ export default function WideFeed({ posts }: Props) {
             其他佳作
           </div>
           {rest.map((p, i) => (
-            <motion.a
+            <Link
               key={p.id}
-              href={`/post/${p.id}`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: i * 0.03 }}
-              className="block py-2 border-b border-[var(--line)] group"
+              to={`/post/${p.id}`}
             >
-              <div className="text-[13px] font-medium text-[var(--ink)] group-hover:text-[var(--acc)] transition-colors">
-                {p.title}
-              </div>
-              <div className="text-[10px] text-[var(--soft)] mt-0.5">
-                {p.author_name} · {p.board_name}
-              </div>
-            </motion.a>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: i * 0.03 }}
+                className="block py-2 border-b border-[var(--line)] group"
+              >
+                <div className="text-[13px] font-medium text-[var(--ink)] group-hover:text-[var(--acc)] transition-colors">
+                  {p.title}
+                </div>
+                <div className="text-[10px] text-[var(--soft)] mt-0.5">
+                  {p.author_name} · {p.board_name}
+                </div>
+              </motion.div>
+            </Link>
           ))}
         </div>
       )}

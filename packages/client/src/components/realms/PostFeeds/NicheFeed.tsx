@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import { Post } from './types';
 
@@ -16,15 +17,17 @@ export default function NicheFeed({ posts }: Props) {
       {posts.map((p, i) => {
         const color = colors[i % colors.length];
         return (
-          <motion.a
+          <Link
             key={p.id}
-            href={`/post/${p.id}`}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.04 }}
-            whileHover={{ y: -2 }}
-            className="relative block pt-3 pb-3 px-3 bg-[var(--card)] rounded-t-2xl rounded-b-md border border-[var(--line)] hover:border-[var(--acc)] transition-colors group overflow-hidden"
+            to={`/post/${p.id}`}
           >
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+              whileHover={{ y: -2 }}
+              className="relative block pt-3 pb-3 px-3 bg-[var(--card)] rounded-t-2xl rounded-b-md border border-[var(--line)] hover:border-[var(--acc)] transition-colors group overflow-hidden"
+            >
             {/* 顶部彩条 */}
             <div
               className="absolute top-0 left-0 right-0 h-1.5"
@@ -46,7 +49,8 @@ export default function NicheFeed({ posts }: Props) {
               <span>{p.author_name} · {p.board_name}</span>
               <span className="tabular-nums">赞 {p.like_count}</span>
             </div>
-          </motion.a>
+            </motion.div>
+          </Link>
         );
       })}
     </div>

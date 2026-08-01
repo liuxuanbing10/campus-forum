@@ -89,37 +89,3 @@ export function ToastContainer({ toasts, onClose }: ToastContainerProps) {
     </div>
   );
 }
-
-let toastId = 0;
-
-interface ToastStore {
-  toasts: ToastProps[];
-  add: (message: string, type?: ToastProps['type'], duration?: number) => void;
-  remove: (id: string) => void;
-  success: (message: string, duration?: number) => void;
-  error: (message: string, duration?: number) => void;
-  warning: (message: string, duration?: number) => void;
-  info: (message: string, duration?: number) => void;
-}
-
-export function createToastStore(): ToastStore {
-  const toasts: ToastProps[] = [];
-
-  const add = (message: string, type: ToastProps['type'] = 'info', duration?: number) => {
-    const id = `toast-${++toastId}`;
-    toasts.push({ id, message, type, duration, onClose: () => remove(id) });
-    return id;
-  };
-
-  const remove = (id: string) => {
-    const index = toasts.findIndex((t) => t.id === id);
-    if (index !== -1) toasts.splice(index, 1);
-  };
-
-  const success = (message: string, duration?: number) => add(message, 'success', duration);
-  const error = (message: string, duration?: number) => add(message, 'error', duration);
-  const warning = (message: string, duration?: number) => add(message, 'warning', duration);
-  const info = (message: string, duration?: number) => add(message, 'info', duration);
-
-  return { toasts, add, remove, success, error, warning, info };
-}

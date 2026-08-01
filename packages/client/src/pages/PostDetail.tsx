@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 import api, { postsApi, commentApi, versionApi, reportApi } from '../lib/api';
@@ -31,9 +31,9 @@ interface PostVersion {
   id: number; title: string; content: string; editor_name: string; created_at: string;
 }
 
-function CommentItem({ comment, allComments, user, onReply, onDelete, onReport, onEdit, depth }: {
+function CommentItem({ comment, childrenMap, user, onReply, onDelete, onReport, onEdit, depth }: {
   comment: Comment;
-  allComments: Comment[];
+  childrenMap: Map<number, Comment[]>;
   user: any;
   onReply: (id: number, name: string) => void;
   onDelete: (id: number) => void;
@@ -57,7 +57,7 @@ function CommentItem({ comment, allComments, user, onReply, onDelete, onReport, 
     finally { setSaving(false); }
   };
 
-  const children = allComments.filter(c => c.parent_id === comment.id);
+  const children = childrenMap.get(comment.id) || [];
   return (
     <div className={`card ${depth > 0 ? 'ml-4 mt-3 pl-4 border-l-2 border-border' : ''}`}>
       <div className="flex items-center justify-between text-sm text-campus-text-tertiary mb-2 font-body">
@@ -94,7 +94,7 @@ function CommentItem({ comment, allComments, user, onReply, onDelete, onReport, 
         )}
       </div>
       {children.map(child => (
-        <CommentItem key={child.id} comment={child} allComments={allComments}
+        <CommentItem key={child.id} comment={child} childrenMap={childrenMap}
           user={user} onReply={onReply} onDelete={onDelete} onReport={onReport} onEdit={onEdit} depth={depth + 1} />
       ))}
     </div>
@@ -134,6 +134,18 @@ export default function PostDetailPage() {
   };
 
   useEffect(() => { fetchPost(); fetchComments(); fetchStats(); }, [id]);
+
+  const childrenMap = useMemo(() => {
+    const map = new Map<number, Comment[]>();
+    for (const c of comments) {
+      if (c.parent_id != null) {
+        const arr = map.get(c.parent_id) || [];
+        arr.push(c);
+        map.set(c.parent_id, arr);
+      }
+    }
+    return map;
+  }, [comments]);
 
   const handleVote = async (value: 1 | -1 | 0) => {
     if (!user) return navigate('/login');
@@ -332,7 +344,7 @@ export default function PostDetailPage() {
         <h2 className="font-handwrite text-xl font-semibold text-campus-text-primary mb-6">评论 ({comments.length})</h2>
         <div className="space-y-4">
           {comments.filter(c => c.parent_id === null).map(c => (
-            <CommentItem key={c.id} comment={c} allComments={comments} user={user}
+            <CommentItem key={c.id} comment={c} childrenMap={childrenMap} user={user}
               onReply={(id, name) => setReplyTo({ id, name })}
               onDelete={handleDeleteComment}
               onReport={(cid) => setShowReport({ type: 'comment', id: cid })}

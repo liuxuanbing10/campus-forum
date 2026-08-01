@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import { Post } from './types';
 
@@ -12,14 +13,16 @@ export default function SparseFeed({ posts }: Props) {
   return (
     <div className="space-y-6">
       {posts.map((p, i) => (
-        <motion.a
+        <Link
           key={p.id}
-          href={`/post/${p.id}`}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.06 }}
-          className="block group"
+          to={`/post/${p.id}`}
         >
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.06 }}
+            className="block group"
+          >
           <div className="flex items-baseline justify-between gap-4 pb-3 border-b border-[var(--line)]">
             <div className="flex-1 min-w-0">
               <div
@@ -43,7 +46,8 @@ export default function SparseFeed({ posts }: Props) {
               </div>
             </div>
           </div>
-        </motion.a>
+          </motion.div>
+        </Link>
       ))}
     </div>
   );

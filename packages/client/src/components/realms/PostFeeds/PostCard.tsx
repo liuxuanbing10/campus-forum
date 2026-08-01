@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { Post } from './types';
 
 interface Props {
@@ -14,8 +15,8 @@ export default function PostCard({ post, variant = 'default' }: Props) {
 
   if (variant === 'compact') {
     return (
-      <a
-        href={url}
+      <Link
+        to={url}
         className="block py-2 px-3 rounded-md hover:bg-[var(--line)] transition-colors"
       >
         <div className="text-[13px] text-[var(--ink)] truncate font-medium">
@@ -26,14 +27,14 @@ export default function PostCard({ post, variant = 'default' }: Props) {
           <span>·</span>
           <span>{post.board_name}</span>
         </div>
-      </a>
+      </Link>
     );
   }
 
   if (variant === 'ghost') {
     return (
-      <a
-        href={url}
+      <Link
+        to={url}
         className="block py-3 border-b border-[var(--line)] hover:pl-2 transition-all"
       >
         <div className="text-[14px] text-[var(--ink)] font-medium leading-snug">
@@ -44,13 +45,13 @@ export default function PostCard({ post, variant = 'default' }: Props) {
           <span>{post.board_name}</span>
           <span className="tabular-nums">浏览 {post.view_count}</span>
         </div>
-      </a>
+      </Link>
     );
   }
 
   return (
-    <a
-      href={url}
+    <Link
+      to={url}
       className="block p-3 rounded-lg border border-[var(--line)] bg-[var(--card)] hover:border-[var(--acc)] hover:shadow-card transition-all group"
     >
       <div className="flex items-start gap-2">
@@ -71,6 +72,6 @@ export default function PostCard({ post, variant = 'default' }: Props) {
           </div>
         </div>
       </div>
-    </a>
+    </Link>
   );
 }

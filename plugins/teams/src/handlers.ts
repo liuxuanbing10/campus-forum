@@ -67,8 +67,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
 
   app.get('/api/teams/my', async (req) => {
     const u = req.userId; if (!u) return { teams: [], owned: [], adminOf: [], memberOf: [] };
-    const all = await kdb.sql<Record<string, unknown>>`SELECT t.*, tm.role FROM teams t JOIN team_members tm ON t.id=tm.team_id WHERE tm.user_id=${u} AND tm.status='approved' ORDER BY t.created_at DESC`;
-    const teams = await Promise.all(all.map(withMemberCount));
+    const all = await kdb.sql<Record<string, unknown>>`SELECT t.*, tm.role, (SELECT COUNT(*) FROM team_members WHERE team_id=t.id AND status='approved') as member_count, (SELECT COUNT(*) FROM team_content_posts WHERE team_id=t.id) as post_count FROM teams t JOIN team_members tm ON t.id=tm.team_id WHERE tm.user_id=${u} AND tm.status='approved' ORDER BY t.created_at DESC`;
+    const teams = all;
     return {
       teams,
       owned: teams.filter((t: any) => t.role === 'owner'),
@@ -83,8 +83,8 @@ export function registerTeamRoutes(ctx: PluginContext) {
 
   app.get('/api/teams/favorites', async (req) => {
     const u = req.userId; if (!u) return { teams: [] };
-    const all = await kdb.sql<Record<string, unknown>>`SELECT t.* FROM teams t JOIN team_favorites tf ON t.id=tf.team_id WHERE tf.user_id=${u} ORDER BY tf.created_at DESC`;
-    const teams = await Promise.all(all.map(withMemberCount));
+    const all = await kdb.sql<Record<string, unknown>>`SELECT t.*, (SELECT COUNT(*) FROM team_members WHERE team_id=t.id AND status='approved') as member_count, (SELECT COUNT(*) FROM team_content_posts WHERE team_id=t.id) as post_count FROM teams t JOIN team_favorites tf ON t.id=tf.team_id WHERE tf.user_id=${u} ORDER BY tf.created_at DESC`;
+    const teams = all;
     return { teams };
   });
 

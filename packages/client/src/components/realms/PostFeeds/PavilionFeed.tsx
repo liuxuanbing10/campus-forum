@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import { Post } from './types';
 
@@ -40,9 +41,9 @@ export default function PavilionFeed({ posts }: Props) {
             </div>
             <div className="space-y-1.5 mt-7">
               {groupPosts.map((p) => (
-                <a
+                <Link
                   key={p.id}
-                  href={`/post/${p.id}`}
+                  to={`/post/${p.id}`}
                   className="block py-1.5 group"
                 >
                   <div className="text-[14px] font-bold text-[var(--ink)] group-hover:text-[var(--acc)] transition-colors">
@@ -51,7 +52,7 @@ export default function PavilionFeed({ posts }: Props) {
                   <div className="text-[11px] text-[var(--soft)] mt-0.5">
                     {p.author_name} · 赞 {p.like_count}
                   </div>
-                </a>
+                </Link>
               ))}
             </div>
           </motion.div>

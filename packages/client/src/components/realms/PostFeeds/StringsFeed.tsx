@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import { Post } from './types';
 
@@ -33,18 +34,20 @@ export default function StringsFeed({ posts }: Props) {
           const top = 8 + (i % 7) * 38;
           const left = (i % 3) * 28 + 8;
           return (
-            <motion.a
+            <Link
               key={p.id}
-              href={`/post/${p.id}`}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              whileHover={{ scale: 1.04, zIndex: 10 }}
-              className="block w-full p-2.5 rounded-md bg-[var(--card)]/95 backdrop-blur-sm border border-[var(--line)] hover:border-[var(--acc)] transition-colors group"
-              style={{
-                marginLeft: `${left}px`,
-              }}
+              to={`/post/${p.id}`}
             >
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                whileHover={{ scale: 1.04, zIndex: 10 }}
+                className="block w-full p-2.5 rounded-md bg-[var(--card)]/95 backdrop-blur-sm border border-[var(--line)] hover:border-[var(--acc)] transition-colors group"
+                style={{
+                  marginLeft: `${left}px`,
+                }}
+              >
               <div className="flex items-center gap-2">
                 <span
                   className="text-[var(--acc)] text-[10px] w-4 h-4 rounded-full flex items-center justify-center border border-[var(--acc)]"
@@ -61,7 +64,8 @@ export default function StringsFeed({ posts }: Props) {
                   </div>
                 </div>
               </div>
-            </motion.a>
+              </motion.div>
+            </Link>
           );
         })}
       </div>

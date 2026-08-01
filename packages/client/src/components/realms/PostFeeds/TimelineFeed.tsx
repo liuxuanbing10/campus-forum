@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import { Post } from './types';
 import { EARTHLY_BRANCHES } from '../../../lib/realm-utils';
@@ -32,14 +33,16 @@ export default function TimelineFeed({ posts }: Props) {
         {posts.map((p, i) => {
           const shichen = EARTHLY_BRANCHES[i % 12];
           return (
-            <motion.a
+            <Link
               key={p.id}
-              href={`/post/${p.id}`}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.04 }}
-              className="relative block p-4 rounded-lg border border-[var(--line)] bg-[var(--card)] hover:-translate-y-1 hover:shadow-lg hover:border-[var(--acc)] transition-all group"
+              to={`/post/${p.id}`}
             >
+              <motion.div
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.04 }}
+                className="relative block p-4 rounded-lg border border-[var(--line)] bg-[var(--card)] hover:-translate-y-1 hover:shadow-lg hover:border-[var(--acc)] transition-all group"
+              >
               {/* 圆点 */}
               <span
                 className="absolute -left-[22px] top-5 w-3 h-3 rounded-full bg-[var(--acc)] ring-2 ring-[var(--g1)] group-hover:scale-125 transition-transform"
@@ -62,7 +65,8 @@ export default function TimelineFeed({ posts }: Props) {
                 <span>·</span>
                 <span className="tabular-nums">赞 {p.like_count}</span>
               </div>
-            </motion.a>
+              </motion.div>
+            </Link>
           );
         })}
       </div>

@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import { Post } from './types';
 
@@ -23,18 +24,20 @@ export default function WindowsFeed({ posts }: Props) {
       {posts.map((p, i) => {
         const shape = SHAPES[i % SHAPES.length];
         return (
-          <motion.a
+          <Link
             key={p.id}
-            href={`/post/${p.id}`}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: i * 0.04 }}
-            whileHover={{ scale: 1.03 }}
-            className={`block p-3 border border-[var(--line)] bg-[var(--card)] hover:border-[var(--acc)] transition-colors group ${shape}`}
-            style={{
-              clipPath: shape === 'clip-hex' ? 'polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%)' : undefined,
-            }}
+            to={`/post/${p.id}`}
           >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.04 }}
+              whileHover={{ scale: 1.03 }}
+              className={`block p-3 border border-[var(--line)] bg-[var(--card)] hover:border-[var(--acc)] transition-colors group ${shape}`}
+              style={{
+                clipPath: shape === 'clip-hex' ? 'polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%)' : undefined,
+              }}
+            >
             <div
               className="text-[10px] text-[var(--acc)] mb-1"
               style={{ fontFamily: 'var(--disp)' }}
@@ -48,7 +51,8 @@ export default function WindowsFeed({ posts }: Props) {
               <span className="truncate">{p.author_name}</span>
               <span className="tabular-nums">✦ {p.like_count}</span>
             </div>
-          </motion.a>
+            </motion.div>
+          </Link>
         );
       })}
     </div>

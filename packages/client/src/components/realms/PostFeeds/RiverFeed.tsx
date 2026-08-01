@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import { Post } from './types';
 
@@ -25,16 +26,18 @@ export default function RiverFeed({ posts }: Props) {
         {posts.map((p, i) => {
           const alt = i % 2 === 0;
           return (
-            <motion.a
+            <Link
               key={p.id}
-              href={`/post/${p.id}`}
-              initial={{ opacity: 0, x: alt ? -8 : 8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.05 }}
-              whileHover={{ scale: 1.02 }}
-              className="relative block p-4 rounded-lg border border-[var(--line)] bg-[var(--card)] hover:-translate-y-1 hover:shadow-lg hover:border-[var(--acc)] transition-all group"
-              style={{ marginLeft: alt ? 0 : 16 }}
+              to={`/post/${p.id}`}
             >
+              <motion.div
+                initial={{ opacity: 0, x: alt ? -8 : 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                whileHover={{ scale: 1.02 }}
+                className="relative block p-4 rounded-lg border border-[var(--line)] bg-[var(--card)] hover:-translate-y-1 hover:shadow-lg hover:border-[var(--acc)] transition-all group"
+                style={{ marginLeft: alt ? 0 : 16 }}
+              >
               {/* 灯笼圆点 */}
               <motion.span
                 className="absolute -left-[22px] top-5 w-3 h-3 rounded-full bg-[var(--acc)]"
@@ -63,7 +66,8 @@ export default function RiverFeed({ posts }: Props) {
                 <span>·</span>
                 <span className="tabular-nums">赞 {p.like_count}</span>
               </div>
-            </motion.a>
+              </motion.div>
+            </Link>
           );
         })}
 

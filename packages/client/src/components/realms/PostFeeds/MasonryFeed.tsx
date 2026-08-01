@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import { Post } from './types';
 
@@ -19,15 +20,17 @@ export default function MasonryFeed({ posts }: Props) {
         else if (mod === 3) cls = 'col-span-2 row-span-1';
         else if (mod === 5) cls = 'col-span-1 row-span-2';
         return (
-          <motion.a
+          <Link
             key={p.id}
-            href={`/post/${p.id}`}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: i * 0.03 }}
-            whileHover={{ scale: 1.03, zIndex: 10 }}
-            className={`${cls} relative overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--card)] hover:border-[var(--acc)] transition-colors group p-3`}
+            to={`/post/${p.id}`}
           >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.03 }}
+              whileHover={{ scale: 1.03, zIndex: 10 }}
+              className={`${cls} relative overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--card)] hover:border-[var(--acc)] transition-colors group p-3`}
+            >
             {/* 光斑背景 */}
             <div
               className="absolute inset-0 opacity-30 group-hover:opacity-50 transition-opacity"
@@ -45,7 +48,8 @@ export default function MasonryFeed({ posts }: Props) {
                 <span className="tabular-nums">✦ {p.like_count}</span>
               </div>
             </div>
-          </motion.a>
+            </motion.div>
+          </Link>
         );
       })}
     </div>

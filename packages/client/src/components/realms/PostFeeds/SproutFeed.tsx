@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import { Post } from './types';
 
@@ -26,15 +27,17 @@ export default function SproutFeed({ posts }: Props) {
         {posts.map((p, i) => {
           const indent = (i % 5) * 16;
           return (
-            <motion.a
+            <Link
               key={p.id}
-              href={`/post/${p.id}`}
-              initial={{ opacity: 0, y: 24, scaleY: 0.5 }}
-              animate={{ opacity: 1, y: 0, scaleY: 1 }}
-              transition={{ delay: i * 0.06, type: 'spring', stiffness: 150, damping: 12 }}
-              className="block py-3 pl-3 pr-3 border-l-3 border-[var(--acc)]/70 hover:border-[var(--acc)] hover:bg-[var(--card)] transition-all group"
-              style={{ marginLeft: indent }}
+              to={`/post/${p.id}`}
             >
+              <motion.div
+                initial={{ opacity: 0, y: 24, scaleY: 0.5 }}
+                animate={{ opacity: 1, y: 0, scaleY: 1 }}
+                transition={{ delay: i * 0.06, type: 'spring', stiffness: 150, damping: 12 }}
+                className="block py-3 pl-3 pr-3 border-l-3 border-[var(--acc)]/70 hover:border-[var(--acc)] hover:bg-[var(--card)] transition-all group"
+                style={{ marginLeft: indent }}
+              >
               {/* 破土裂痕 */}
               <div className="absolute left-0 top-0 w-full h-px bg-gradient-to-r from-[var(--acc)] to-transparent opacity-30" aria-hidden />
               <div className="flex items-center gap-2">
@@ -58,7 +61,8 @@ export default function SproutFeed({ posts }: Props) {
                   ▲ {p.like_count}
                 </span>
               </div>
-            </motion.a>
+              </motion.div>
+            </Link>
           );
         })}
       </div>

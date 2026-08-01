@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Search, ArrowLeft, MessageCircle, Eye, ThumbsUp, Clock, Hash } from 'lucide-react';
-import { searchApi } from '../lib/api';
+import api, { searchApi } from '../lib/api';
 import type { SearchResult } from '@campus-forum/core';
 import { toastStore } from '../App';
 
@@ -26,11 +26,11 @@ export default function SearchPage() {
 
   useEffect(() => {
     if (!q) return;
-    // ponytail: AbortController was dead code — signal never connected to fetch
+    const controller = new AbortController();
     const doSearch = async () => {
       setLoading(true);
       try {
-        const res = await searchApi.search(q, page);
+        const res = await api.get<{ posts: SearchResult[]; page: number; limit: number; total: number }>('/search', { params: { q, page }, signal: controller.signal });
         if (page === 1) {
           setResults(res.data.posts);
         } else {
@@ -45,6 +45,7 @@ export default function SearchPage() {
       }
     };
     doSearch();
+    return () => controller.abort();
   }, [q, page]);
 
   const loadMore = () => setPage(p => p + 1);

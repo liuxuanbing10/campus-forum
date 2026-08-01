@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import { Post } from './types';
 
@@ -16,16 +17,18 @@ export default function ScatterFeed({ posts }: Props) {
           const rot = ((i * 17) % 11) - 5;  // -5° ~ 5°
           const ageFade = Math.max(0.5, 1 - i * 0.07); // 越往下越淡
           return (
-            <motion.a
+            <Link
               key={p.id}
-              href={`/post/${p.id}`}
-              initial={{ opacity: 0, scale: 0.85, rotate: rot * 3 }}
-              animate={{ opacity: ageFade, scale: 1, rotate: rot }}
-              transition={{ delay: i * 0.05, type: 'spring', stiffness: 100 }}
-              whileHover={{ scale: 1.05, rotate: 0, zIndex: 10, opacity: 1 }}
-              className="block p-4 rounded-lg border border-[var(--line)] bg-[var(--card)] backdrop-blur-sm shadow-card hover:shadow-card-hover transition-shadow"
-              style={{ transformOrigin: 'center' }}
+              to={`/post/${p.id}`}
             >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.85, rotate: rot * 3 }}
+                animate={{ opacity: ageFade, scale: 1, rotate: rot }}
+                transition={{ delay: i * 0.05, type: 'spring', stiffness: 100 }}
+                whileHover={{ scale: 1.05, rotate: 0, zIndex: 10, opacity: 1 }}
+                className="block p-4 rounded-lg border border-[var(--line)] bg-[var(--card)] backdrop-blur-sm shadow-card hover:shadow-card-hover transition-shadow"
+                style={{ transformOrigin: 'center' }}
+              >
               <div className="font-bold text-[14px] text-[var(--ink)] line-clamp-2 leading-snug">
                 {p.title}
               </div>
@@ -33,7 +36,8 @@ export default function ScatterFeed({ posts }: Props) {
                 <span className="truncate">{p.author_name}</span>
                 <span className="tabular-nums">✦ {p.like_count}</span>
               </div>
-            </motion.a>
+              </motion.div>
+            </Link>
           );
         })}
       </div>

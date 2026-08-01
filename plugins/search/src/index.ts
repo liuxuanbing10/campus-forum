@@ -81,28 +81,43 @@ export const searchPlugin: Plugin = {
       const dataParams = [...params, limit, offset];
       const posts = await kdb.all<any>(searchSql, ...dataParams);
 
+      // 给前端用的高亮片段 — 嵌入每条 post.highlight { title, content }，匹配词用 <mark> 包裹
+      const highlightMark = (text: string): string => {
+        let result = text;
+        for (const term of terms) {
+          const re = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+          result = result.replace(re, '<mark>$1</mark>');
+        }
+        return result;
+      };
+
+      for (const post of posts) {
+        const titleSnippet = highlightMark(post.title);
+        // 在 content 中找到第一个匹配词位置，截取前后 60 字
+        let contentSnippet = post.content;
+        for (const term of terms) {
+          const idx = post.content.toLowerCase().indexOf(term.toLowerCase());
+          if (idx !== -1) {
+            const start = Math.max(0, idx - 60);
+            const end = Math.min(post.content.length, idx + term.length + 60);
+            contentSnippet = (start > 0 ? '...' : '') +
+              post.content.slice(start, end) +
+              (end < post.content.length ? '...' : '');
+            break;
+          }
+        }
+        post.highlight = {
+          title: titleSnippet !== post.title ? titleSnippet : undefined,
+          content: highlightMark(contentSnippet),
+        };
+      }
+
       return {
         posts,
         total,
         page,
         limit,
         keyword,
-        // 给前端用的高亮片段（截取匹配内容前后）
-        highlights: posts.map((post: any) => {
-          let snippet = post.content;
-          for (const term of terms) {
-            const idx = snippet.toLowerCase().indexOf(term.toLowerCase());
-            if (idx !== -1) {
-              const start = Math.max(0, idx - 30);
-              const end = Math.min(snippet.length, idx + term.length + 30);
-              snippet = (start > 0 ? '...' : '') +
-                snippet.slice(start, end) +
-                (end < snippet.length ? '...' : '');
-              break;
-            }
-          }
-          return { postId: post.id, snippet };
-        }),
       };
     });
 

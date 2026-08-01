@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { motion } from 'framer-motion';
 import { Post } from './types';
 
@@ -15,15 +16,17 @@ export default function StarsFeed({ posts }: Props) {
         const alt = i % 2 === 0;
         const color = alt ? 'var(--acc)' : 'var(--acc2)';
         return (
-          <motion.a
+          <Link
             key={p.id}
-            href={`/post/${p.id}`}
-            initial={{ opacity: 0, x: -8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.04 }}
-            className="block py-2.5 pl-4 pr-3 border-l-2 hover:pl-5 transition-all"
-            style={{ borderColor: color }}
+            to={`/post/${p.id}`}
           >
+            <motion.div
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.04 }}
+              className="block py-2.5 pl-4 pr-3 border-l-2 hover:pl-5 transition-all"
+              style={{ borderColor: color }}
+            >
             <div className="flex items-baseline gap-2">
               <span style={{ color }} className="text-sm">✦</span>
               <div className="flex-1 min-w-0">
@@ -39,7 +42,8 @@ export default function StarsFeed({ posts }: Props) {
                 </div>
               </div>
             </div>
-          </motion.a>
+            </motion.div>
+          </Link>
         );
       })}
     </div>
