@@ -52,13 +52,13 @@ export default function SproutFeed({ posts }: Props) {
                     {p.title}
                   </div>
                   <div className="text-[12px] text-[var(--soft)] mt-0.5 flex items-center gap-2">
-                    <span>{p.author_name}</span>
+                    <span>{p.authorName}</span>
                     <span>·</span>
-                    <span>{p.board_name}</span>
+                    <span>{p.boardName}</span>
                   </div>
                 </div>
                 <span className="text-[10px] text-[var(--soft)] tabular-nums">
-                  ▲ {p.like_count}
+                  ▲ {p.likeCount}
                 </span>
               </div>
               </motion.div>

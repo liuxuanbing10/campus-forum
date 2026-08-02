@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, ArrowLeft, CheckCheck, MessageCircle, Heart, UserPlus, AtSign, AlertCircle } from 'lucide-react';
 import { notificationsApi } from '../lib/api';
-import type { Notification } from '@campus-forum/core';
+import type { Notification } from '../types/api';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 import Skeleton from '../components/Skeleton';
@@ -56,7 +56,7 @@ export default function NotificationsPage() {
     if (!user) return;
     try {
       const res = await notificationsApi.getUnreadCount();
-      setUnreadCount(res.data.unread_count);
+      setUnreadCount(res.data.unreadCount);
     } catch {
       // ignore
     }
@@ -76,7 +76,7 @@ export default function NotificationsPage() {
   const handleMarkAllRead = async () => {
     try {
       await notificationsApi.markAllAsRead();
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: 1 })));
       setUnreadCount(0);
       toastStore.success('已全部标记为已读');
     } catch {
@@ -85,19 +85,19 @@ export default function NotificationsPage() {
   };
 
   const handleNotificationClick = async (notification: Notification) => {
-    if (notification.is_read === 0) {
+    if (notification.isRead === 0) {
       try {
         await notificationsApi.markAsRead(notification.id);
         setNotifications(prev => prev.map(n =>
-          n.id === notification.id ? { ...n, is_read: 1 } : n
+          n.id === notification.id ? { ...n, isRead: 1 } : n
         ));
         setUnreadCount(prev => Math.max(0, prev - 1));
       } catch {
         // ignore
       }
     }
-    if (notification.related_type === 'post' && notification.related_id) {
-      navigate(`/post/${notification.related_id}`);
+    if (notification.relatedType === 'post' && notification.relatedId) {
+      navigate(`/post/${notification.relatedId}`);
     }
   };
 
@@ -163,7 +163,7 @@ export default function NotificationsPage() {
             key={notification.id}
             onClick={() => handleNotificationClick(notification)}
             className={`bg-surface border rounded-xl p-4 cursor-pointer transition-all hover:shadow-card ${
-              notification.is_read === 0
+              notification.isRead === 0
                 ? 'border-primary/30 bg-primary/5'
                 : 'border-border'
             }`}
@@ -176,12 +176,12 @@ export default function NotificationsPage() {
                 <div className="flex items-start justify-between gap-2">
                   <h4 className="font-medium text-campus-text-primary text-sm">
                     {notification.title}
-                    {notification.is_read === 0 && (
+                    {notification.isRead === 0 && (
                       <span className="inline-block w-2 h-2 bg-destructive rounded-full ml-2 mb-0.5" />
                     )}
                   </h4>
                   <span className="text-xs text-campus-text-tertiary flex-shrink-0">
-                    {new Date(notification.created_at).toLocaleDateString()}
+                    {new Date(notification.createdAt).toLocaleDateString()}
                   </span>
                 </div>
                 <p className="text-sm text-campus-text-secondary mt-1 line-clamp-2">

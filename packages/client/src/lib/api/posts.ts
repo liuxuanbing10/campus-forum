@@ -1,5 +1,5 @@
 import api from './client';
-import type { Post, SearchResult, PostStats, ShareInfo, PostVersion } from '@campus-forum/core';
+import type { Post, SearchResult, PostStats, ShareInfo, PostVersion } from '../../types/api';
 
 export const searchApi = {
   search: (q: string, page?: number, boardId?: number) =>
@@ -10,7 +10,7 @@ export const searchApi = {
 
 export const postsApi = {
   getPost: (id: number) => api.get<Post>(`/posts/${id}`),
-  updatePost: (id: number, data: { title: string; content: string; board_id: number; is_anonymous?: boolean; is_private?: boolean; images?: string[] }) =>
+  updatePost: (id: number, data: { title: string; content: string; boardId: number; isAnonymous?: boolean; isPrivate?: boolean; images?: string[] }) =>
     api.put(`/posts/${id}`, data),
   getStats: (id: number) => api.get<PostStats>(`/posts/${id}/stats`),
   getShareInfo: (id: number) => api.get<ShareInfo>(`/posts/${id}/share`),

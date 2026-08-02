@@ -7,7 +7,7 @@ interface Board {
   name: string;
   description: string;
   icon: string;
-  post_count: number;
+  postCount: number;
 }
 
 interface Props {
@@ -72,7 +72,7 @@ export default function BoardsPanel({ boards, loading }: Props) {
                   </div>
                 </div>
                 <span className="text-xs text-[var(--soft)] tabular-nums">
-                  {b.post_count}
+                  {b.postCount}
                 </span>
               </Link>
             </motion.div>

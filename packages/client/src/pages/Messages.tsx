@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 import { messageApi } from '../lib/api';
-import type { Conversation, Message } from '@campus-forum/core';
+import type { Conversation, Message } from '../types/api';
 import { toastStore } from '../App';
 import { ArrowLeft, Send, MessageCircle, Loader2, Search, Plus, X } from 'lucide-react';
 import api from '../lib/api';
@@ -20,7 +20,7 @@ export default function MessagesPage() {
   const [sending, setSending] = useState(false);
   const [showNewChat, setShowNewChat] = useState(false);
   const [searchUser, setSearchUser] = useState('');
-  const [searchResults, setSearchResults] = useState<{ id: number; username: string; display_name?: string }[]>([]);
+  const [searchResults, setSearchResults] = useState<{ id: number; username: string; displayName?: string }[]>([]);
   const [unreadTotal, setUnreadTotal] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -28,7 +28,7 @@ export default function MessagesPage() {
     if (!user) return Promise.resolve();
     return messageApi.getConversations().then(r => {
       setConversations(r.data.conversations || []);
-      const total = (r.data.conversations || []).reduce((sum: number, c: Conversation) => sum + (c.unread_count || 0), 0);
+      const total = (r.data.conversations || []).reduce((sum: number, c: Conversation) => sum + (c.unreadCount || 0), 0);
       setUnreadTotal(total);
     }).catch(() => console.debug('Failed to load conversations'));
   }, [user]);
@@ -56,12 +56,12 @@ export default function MessagesPage() {
       if (id && parseInt(id) === data.conversationId) {
         const newMessage: Message = {
           id: Date.now(),
-          conversation_id: data.conversationId,
-          sender_id: data.senderId,
+          conversationId: data.conversationId,
+          senderId: data.senderId,
           content: data.content,
-          created_at: new Date().toISOString(),
-          is_read: 1,
-          sender_name: data.senderName,
+          createdAt: new Date().toISOString(),
+          isRead: 1,
+          senderName: data.senderName,
         };
         setMessages(prev => [...prev, newMessage]);
       }
@@ -153,10 +153,10 @@ export default function MessagesPage() {
                 <button key={u.id} onClick={() => startNewChat(u.id)}
                   className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-surface-hover transition-colors text-left">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white text-sm font-bold">
-                    {u.display_name?.[0] || u.username[0]}
+                    {u.displayName?.[0] || u.username[0]}
                   </div>
                   <div>
-                    <p className="text-sm font-body">{u.display_name || u.username}</p>
+                    <p className="text-sm font-body">{u.displayName || u.username}</p>
                     <p className="text-xs text-campus-text-tertiary">@{u.username}</p>
                   </div>
                 </button>
@@ -172,14 +172,14 @@ export default function MessagesPage() {
             <Link key={c.id} to={`/messages/${c.id}`}
               className="flex items-center gap-3 p-4 card hover:bg-surface-hover transition-colors">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white font-bold shrink-0">
-                {c.other_username[0]}
+                {c.otherUsername[0]}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium font-display text-sm">{c.other_username}</span>
-                  {c.unread_count > 0 && <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{c.unread_count}</span>}
+                  <span className="font-medium font-display text-sm">{c.otherUsername}</span>
+                  {c.unreadCount > 0 && <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{c.unreadCount}</span>}
                 </div>
-                <p className="text-xs text-campus-text-tertiary truncate mt-0.5 font-body">{c.last_message}</p>
+                <p className="text-xs text-campus-text-tertiary truncate mt-0.5 font-body">{c.lastMessage}</p>
               </div>
             </Link>
           ))}
@@ -197,20 +197,20 @@ export default function MessagesPage() {
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white font-bold text-sm">
-          {conv?.other_username?.[0] || '?'}
+          {conv?.otherUsername?.[0] || '?'}
         </div>
-        <span className="font-medium font-display">{conv?.other_username || '对话'}</span>
+        <span className="font-medium font-display">{conv?.otherUsername || '对话'}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-3 mb-4 px-1">
         {messages.map(m => (
-          <div key={m.id} className={`flex ${m.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}>
+          <div key={m.id} className={`flex ${m.senderId === user?.id ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[75%] px-4 py-2 rounded-xl text-sm font-body ${
-              m.sender_id === user?.id ? 'bg-primary text-white' : 'bg-surface-hover text-campus-text-secondary'
+              m.senderId === user?.id ? 'bg-primary text-white' : 'bg-surface-hover text-campus-text-secondary'
             }`}>
               {m.content}
-              <div className={`text-xs mt-1 ${m.sender_id === user?.id ? 'text-white/60' : 'text-campus-text-tertiary'}`}>
-                {new Date(m.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+              <div className={`text-xs mt-1 ${m.senderId === user?.id ? 'text-white/60' : 'text-campus-text-tertiary'}`}>
+                {new Date(m.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
           </div>

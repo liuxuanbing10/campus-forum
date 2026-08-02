@@ -20,12 +20,12 @@ export default function PostCard({ post, variant = 'default' }: Props) {
         className="block py-2 px-3 rounded-md hover:bg-[var(--line)] transition-colors"
       >
         <div className="text-[13px] text-[var(--ink)] truncate font-medium">
-          {post.is_pinned ? '📌 ' : ''}{post.title}
+          {post.isPinned ? '📌 ' : ''}{post.title}
         </div>
         <div className="text-[10px] text-[var(--soft)] mt-0.5 flex items-center gap-2">
-          <span>{post.author_name}</span>
+          <span>{post.authorName}</span>
           <span>·</span>
-          <span>{post.board_name}</span>
+          <span>{post.boardName}</span>
         </div>
       </Link>
     );
@@ -38,12 +38,12 @@ export default function PostCard({ post, variant = 'default' }: Props) {
         className="block py-3 border-b border-[var(--line)] hover:pl-2 transition-all"
       >
         <div className="text-[14px] text-[var(--ink)] font-medium leading-snug">
-          {post.is_pinned ? '📌 ' : ''}{post.title}
+          {post.isPinned ? '📌 ' : ''}{post.title}
         </div>
         <div className="text-[11px] text-[var(--soft)] mt-1 flex items-center gap-3">
-          <span>{post.author_name}</span>
-          <span>{post.board_name}</span>
-          <span className="tabular-nums">浏览 {post.view_count}</span>
+          <span>{post.authorName}</span>
+          <span>{post.boardName}</span>
+          <span className="tabular-nums">浏览 {post.viewCount}</span>
         </div>
       </Link>
     );
@@ -57,18 +57,18 @@ export default function PostCard({ post, variant = 'default' }: Props) {
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
           <div className="text-[14px] font-bold text-[var(--ink)] leading-snug group-hover:text-[var(--acc)] transition-colors">
-            {post.is_pinned ? '📌 ' : ''}{post.title}
+            {post.isPinned ? '📌 ' : ''}{post.title}
           </div>
           <div className="text-[11px] text-[var(--soft)] mt-1.5 flex items-center flex-wrap gap-x-2.5 gap-y-1">
-            <span>作者 {post.author_name}</span>
+            <span>作者 {post.authorName}</span>
             <span>·</span>
-            <span>{post.board_name}</span>
+            <span>{post.boardName}</span>
             <span>·</span>
-            <span className="tabular-nums">浏览 {post.view_count}</span>
+            <span className="tabular-nums">浏览 {post.viewCount}</span>
             <span>·</span>
-            <span className="tabular-nums">赞 {post.like_count}</span>
+            <span className="tabular-nums">赞 {post.likeCount}</span>
             <span>·</span>
-            <span className="tabular-nums">评 {post.comment_count}</span>
+            <span className="tabular-nums">评 {post.commentCount}</span>
           </div>
         </div>
       </div>

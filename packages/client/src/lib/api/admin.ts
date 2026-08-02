@@ -1,5 +1,5 @@
 import api from './client';
-import type { AdminUser, PendingPost, SensitiveWord, AdminReport, AuditLog, AdminStats, DeviceBlacklistEntry, UserDevice } from '@campus-forum/core';
+import type { AdminUser, PendingPost, SensitiveWord, AdminReport, AuditLog, AdminStats, DeviceBlacklistEntry, UserDevice } from '../../types/api';
 
 export const adminApi = {
   getUsers: (page?: number, search?: string) =>
@@ -8,7 +8,7 @@ export const adminApi = {
   banUser: (id: number, opts?: { ban?: boolean; duration?: number; reason?: string }) =>
     api.put(`/admin/users/${id}/ban`, opts || {}),
   setRole: (id: number, role: string) => api.put(`/admin/users/${id}/role`, { role }),
-  createUser: (data: { username: string; password: string; display_name?: string; email?: string; role?: string }) =>
+  createUser: (data: { username: string; password: string; displayName?: string; email?: string; role?: string }) =>
     api.post<{ success: boolean; message: string }>('/admin/users', data),
   batchDeleteUsers: (ids: number[]) =>
     api.delete<{ success: boolean; message: string; skipped: number }>('/admin/users/batch', { data: { ids } }),
@@ -30,7 +30,7 @@ export const adminExtendedApi = {
 
 export const adminDeviceApi = {
   getBlacklist: () => api.get<{ devices: DeviceBlacklistEntry[] }>('/admin/device-blacklist'),
-  addToBlacklist: (deviceId: string, deviceName?: string, reason?: string) => api.post<{ success: boolean }>('/admin/device-blacklist', { device_id: deviceId, device_name: deviceName, reason }),
+  addToBlacklist: (deviceId: string, deviceName?: string, reason?: string) => api.post<{ success: boolean }>('/admin/device-blacklist', { deviceId: deviceId, deviceName: deviceName, reason }),
   removeFromBlacklist: (id: number) => api.delete(`/admin/device-blacklist/${id}`),
-  getAllDevices: (userId?: number) => api.get<{ devices: (UserDevice & { username?: string })[] }>('/admin/devices', { params: userId ? { user_id: userId } : {} }),
+  getAllDevices: (userId?: number) => api.get<{ devices: (UserDevice & { username?: string })[] }>('/admin/devices', { params: userId ? { userId: userId } : {} }),
 };

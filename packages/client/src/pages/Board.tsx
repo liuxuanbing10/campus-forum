@@ -11,10 +11,10 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 interface Post {
   id: number;
   title: string;
-  author_name: string;
-  created_at: string;
-  view_count: number;
-  vote_count: number;
+  authorName: string;
+  createdAt: string;
+  viewCount: number;
+  voteCount: number;
 }
 
 interface BoardPostsResponse {
@@ -181,16 +181,16 @@ export default function BoardPage() {
                 {post.title}
               </h3>
               <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-campus-text-tertiary font-body flex-wrap">
-                <span className="whitespace-nowrap">{post.author_name}</span>
+                <span className="whitespace-nowrap">{post.authorName}</span>
                 <span className="whitespace-nowrap flex items-center gap-1">
                   <Eye className="w-3.5 h-3.5" />
-                  {post.view_count}
+                  {post.viewCount}
                 </span>
                 <span className="whitespace-nowrap flex items-center gap-1">
                   <ThumbsUp className="w-3.5 h-3.5" />
-                  {post.vote_count || 0}
+                  {post.voteCount || 0}
                 </span>
-                <span className="whitespace-nowrap ml-auto">{new Date(post.created_at).toLocaleDateString()}</span>
+                <span className="whitespace-nowrap ml-auto">{new Date(post.createdAt).toLocaleDateString()}</span>
               </div>
             </Link>
           ))

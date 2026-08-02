@@ -34,11 +34,11 @@ export default function StarsFeed({ posts }: Props) {
                   {p.title}
                 </div>
                 <div className="text-[11px] text-[var(--soft)] mt-0.5 flex items-center gap-2.5">
-                  <span>{p.author_name}</span>
+                  <span>{p.authorName}</span>
                   <span>·</span>
-                  <span>{p.board_name}</span>
+                  <span>{p.boardName}</span>
                   <span>·</span>
-                  <span className="tabular-nums">赞 {p.like_count}</span>
+                  <span className="tabular-nums">赞 {p.likeCount}</span>
                 </div>
               </div>
             </div>

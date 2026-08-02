@@ -33,8 +33,8 @@ export default function ScatterFeed({ posts }: Props) {
                 {p.title}
               </div>
               <div className="text-[11px] text-[var(--soft)] mt-2 flex items-center justify-between">
-                <span className="truncate">{p.author_name}</span>
-                <span className="tabular-nums">✦ {p.like_count}</span>
+                <span className="truncate">{p.authorName}</span>
+                <span className="tabular-nums">✦ {p.likeCount}</span>
               </div>
               </motion.div>
             </Link>

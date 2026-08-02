@@ -8,7 +8,7 @@ import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import multipart from '@fastify/multipart';
-import { PluginManager, PluginContext, uid, createLogger } from '@campus-forum/core';
+import { PluginManager, PluginContext, uid, createLogger, toCamelCase } from '@campus-forum/core';
 import { ZodError } from 'zod/v4';
 import 'dotenv/config';
 import { createKyselyDatabase, initializeSchema, migrateSchema, seedData } from '@campus-forum/database';
@@ -164,6 +164,15 @@ export async function buildApp(options?: { plugins?: any[] }) {
       error: statusCode >= 500 ? 'Internal Server Error' : err.code || 'Error',
       message,
     });
+  });
+
+  // ── 序列化层：API 响应统一 snake_case → camelCase ──
+  // DB 行透传的 snake_case 键在出口处一次性转换；
+  // 已手动转为 camelCase 的键（如 auth 插件）无下划线，幂等不受影响。
+  app.addHook('preSerialization', async (request, _reply, payload) => {
+    if (!request.url.startsWith('/api/')) return payload;
+    if (payload === null || typeof payload !== 'object') return payload;
+    return toCamelCase(payload);
   });
 
   // ── POST/PUT/DELETE 写入接口额外限流（路由级）─

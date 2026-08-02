@@ -1,6 +1,6 @@
 import { UserPlus, Check, X } from 'lucide-react';
 import { teamsApi } from '../../lib/api';
-import type { TeamMember } from '@campus-forum/core';
+import type { TeamMember } from '../../types/api';
 import { toastStore } from '../../App';
 
 interface Props {
@@ -39,17 +39,17 @@ export default function PendingApplications({ teamId, applications, loadData }: 
       <div className="space-y-3">
         {applications.map(app => (
           <div key={app.id} className="flex items-center justify-between p-3 bg-surface-hover rounded-xl">
-            <span className="text-campus-text-primary">{app.display_name || app.username}</span>
+            <span className="text-campus-text-primary">{app.displayName || app.username}</span>
             <div className="flex gap-2">
               <button
-                onClick={() => handleApprove(app.user_id)}
+                onClick={() => handleApprove(app.userId)}
                 className="btn-primary btn-xs btn-inline flex items-center gap-1"
               >
                 <Check className="w-3.5 h-3.5" />
                 通过
               </button>
               <button
-                onClick={() => handleReject(app.user_id)}
+                onClick={() => handleReject(app.userId)}
                 className="btn-secondary btn-xs btn-inline flex items-center gap-1 text-destructive"
               >
                 <X className="w-3.5 h-3.5" />

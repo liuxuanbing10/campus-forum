@@ -47,7 +47,7 @@ export default function WideFeed({ posts }: Props) {
                     {p.title}
                   </div>
                   <div className="text-[10px] text-[var(--soft)] mt-0.5">
-                    {p.author_name} · 赞 {p.like_count}
+                    {p.authorName} · 赞 {p.likeCount}
                   </div>
                 </Link>
               ))}
@@ -82,7 +82,7 @@ export default function WideFeed({ posts }: Props) {
                   {p.title}
                 </div>
                 <div className="text-[10px] text-[var(--soft)] mt-0.5">
-                  {p.author_name} · {p.board_name}
+                  {p.authorName} · {p.boardName}
                 </div>
               </motion.div>
             </Link>

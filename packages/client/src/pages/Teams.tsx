@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Filter, ArrowUpDown } from 'lucide-react';
 import { teamsApi } from '../lib/api';
-import type { Team, TeamCategory } from '@campus-forum/core';
+import type { Team, TeamCategory } from '../types/api';
 import TeamCard from '../components/TeamCard';
 import { toastStore } from '../App';
 import Skeleton from '../components/Skeleton';

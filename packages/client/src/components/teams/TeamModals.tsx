@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Copy, Check, Shield, Upload, ImagePlus, X } from 'lucide-react';
 import { teamsApi } from '../../lib/api';
 import api from '../../lib/api';
-import type { Team, TeamMember } from '@campus-forum/core';
+import type { Team, TeamMember } from '../../types/api';
 import { toastStore } from '../../App';
 import MarkdownEditor from '../MarkdownEditor';
 
@@ -147,9 +147,9 @@ export default function TeamModals({
   };
 
   const handleCopyInvite = async () => {
-    if (!team.invite_code) return;
+    if (!team.inviteCode) return;
     try {
-      await navigator.clipboard.writeText(team.invite_code);
+      await navigator.clipboard.writeText(team.inviteCode);
       setCopied(true);
       toastStore.success('邀请码已复制');
       setTimeout(() => setCopied(false), 2000);
@@ -160,7 +160,7 @@ export default function TeamModals({
     if (!confirm('确定要重置邀请码吗？重置后原邀请码将失效。')) return;
     try {
       const res = await teamsApi.resetInviteCode(teamId);
-      setTeam({ ...team, invite_code: res.data.inviteCode });
+      setTeam({ ...team, inviteCode: res.data.inviteCode });
       toastStore.success('邀请码已重置');
     } catch (err: any) {
       toastStore.error(err.response?.data?.error || '操作失败');
@@ -179,13 +179,13 @@ export default function TeamModals({
               {members.filter(m => m.role !== 'owner').map(member => (
                 <button
                   key={member.id}
-                  onClick={() => handleTransfer(member.user_id)}
+                  onClick={() => handleTransfer(member.userId)}
                   className="w-full flex items-center gap-3 p-3 bg-surface-hover rounded-xl hover:bg-primary/10 transition-colors text-left"
                 >
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-medium text-primary">{(member.display_name || member.username)[0]}</span>
+                    <span className="text-sm font-medium text-primary">{(member.displayName || member.username)[0]}</span>
                   </div>
-                  <span className="text-campus-text-primary">{member.display_name || member.username}</span>
+                  <span className="text-campus-text-primary">{member.displayName || member.username}</span>
                   {member.role === 'admin' && <Shield className="w-4 h-4 text-accent ml-auto" />}
                 </button>
               ))}
@@ -347,7 +347,7 @@ export default function TeamModals({
             <p className="text-sm text-campus-text-secondary mb-4">分享邀请码给好友，对方可直接加入团队。</p>
             <div className="flex items-center gap-2 mb-4">
               <code className="flex-1 px-4 py-3 bg-surface-hover rounded-xl text-campus-text-primary font-mono text-center tracking-wider">
-                {team.invite_code}
+                {team.inviteCode}
               </code>
               <button
                 onClick={handleCopyInvite}

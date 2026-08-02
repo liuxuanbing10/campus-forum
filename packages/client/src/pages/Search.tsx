@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Search, ArrowLeft, MessageCircle, Eye, ThumbsUp, Clock, Hash } from 'lucide-react';
 import api, { searchApi } from '../lib/api';
-import type { SearchResult } from '@campus-forum/core';
+import type { SearchResult } from '../types/api';
 import { toastStore } from '../App';
 
 export default function SearchPage() {
@@ -120,23 +120,23 @@ export default function SearchPage() {
             <div className="flex items-center gap-4 text-xs text-campus-text-tertiary">
               <span className="flex items-center gap-1">
                 <Hash className="w-3 h-3" />
-                {post.board_name}
+                {post.boardName}
               </span>
               <span className="flex items-center gap-1">
                 <Eye className="w-3 h-3" />
-                {post.view_count}
+                {post.viewCount}
               </span>
               <span className="flex items-center gap-1">
                 <MessageCircle className="w-3 h-3" />
-                {post.comment_count}
+                {post.commentCount}
               </span>
               <span className="flex items-center gap-1">
                 <ThumbsUp className="w-3 h-3" />
-                {post.like_count}
+                {post.likeCount}
               </span>
               <span className="flex items-center gap-1 ml-auto">
                 <Clock className="w-3 h-3" />
-                {new Date(post.created_at).toLocaleDateString()}
+                {new Date(post.createdAt).toLocaleDateString()}
               </span>
             </div>
           </Link>

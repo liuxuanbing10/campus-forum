@@ -1,6 +1,6 @@
 import { Upload, FileText, Download as DownloadIcon, Trash2 } from 'lucide-react';
 import { teamsApi } from '../../lib/api';
-import type { TeamFile } from '@campus-forum/core';
+import type { TeamFile } from '../../types/api';
 import type { User } from '../../stores/auth';
 import { toastStore } from '../../App';
 import { useState } from 'react';
@@ -62,23 +62,23 @@ export default function FilesTab({ files, isMember, isAdmin, user, teamId, loadD
               <FileText className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-campus-text-primary truncate">{file.original_name}</h4>
+              <h4 className="font-medium text-campus-text-primary truncate">{file.originalName}</h4>
               <div className="flex items-center gap-3 text-xs text-campus-text-tertiary mt-0.5">
-                <span>{file.display_name || file.username}</span>
+                <span>{file.displayName || file.username}</span>
                 <span>{formatFileSize(file.size)}</span>
-                <span>{new Date(file.created_at).toLocaleDateString('zh-CN')}</span>
+                <span>{new Date(file.createdAt).toLocaleDateString('zh-CN')}</span>
               </div>
             </div>
             <div className="flex gap-1 flex-shrink-0">
               <a
                 href={teamsApi.getTeamFileDownloadUrl(teamId, file.id)}
-                download={file.original_name}
+                download={file.originalName}
                 className="p-2 rounded-lg hover:bg-primary/10 text-campus-text-secondary hover:text-primary transition-colors"
                 title="下载"
               >
                 <DownloadIcon className="w-5 h-5" />
               </a>
-              {(isAdmin || file.author_id === user?.id) && (
+              {(isAdmin || file.authorId === user?.id) && (
                 <button
                   onClick={() => handleDeleteFile(file.id)}
                   disabled={fileDeleteLoading === file.id}

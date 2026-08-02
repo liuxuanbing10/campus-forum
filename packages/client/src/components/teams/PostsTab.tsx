@@ -1,6 +1,6 @@
 import { FileText, Pin, Trash2, Plus } from 'lucide-react';
 import { teamsApi } from '../../lib/api';
-import type { TeamContentPost } from '@campus-forum/core';
+import type { TeamContentPost } from '../../types/api';
 import { toastStore } from '../../App';
 
 interface Props {
@@ -71,8 +71,8 @@ export default function PostsTab({ posts, postSearch, postSort, setPostSearch, s
       ) : (
         posts.filter(p => !postSearch || p.title.toLowerCase().includes(postSearch.toLowerCase()))
           .sort((a, b) => postSort === 'newest'
-            ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            : new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            : new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           ).map(post => (
           <div
             key={post.id}
@@ -81,7 +81,7 @@ export default function PostsTab({ posts, postSearch, postSort, setPostSearch, s
           >
             <div className="flex items-start justify-between">
               <h4 className="font-medium text-campus-text-primary hover:text-primary transition-colors mb-1">
-                {post.is_pinned === 1 && <Pin className="w-3.5 h-3.5 inline mr-1 text-primary" />}
+                {post.isPinned === 1 && <Pin className="w-3.5 h-3.5 inline mr-1 text-primary" />}
                 {post.title}
               </h4>
               {isAdmin && (
@@ -98,8 +98,8 @@ export default function PostsTab({ posts, postSearch, postSort, setPostSearch, s
             </div>
             <p className="text-sm text-campus-text-secondary line-clamp-2 mb-2">{post.content}</p>
             <div className="flex items-center gap-3 text-xs text-campus-text-tertiary">
-              <span>{post.display_name || post.username}</span>
-              <span>{new Date(post.created_at).toLocaleDateString('zh-CN')}</span>
+              <span>{post.displayName || post.username}</span>
+              <span>{new Date(post.createdAt).toLocaleDateString('zh-CN')}</span>
             </div>
           </div>
         ))

@@ -1,5 +1,5 @@
 import api from './client';
-import type { UserProfile, UserPost, UserComment, Conversation, Message, Notification, ReportData } from '@campus-forum/core';
+import type { UserProfile, UserPost, UserComment, Conversation, Message, Notification, ReportData } from '../../types/api';
 
 export const userApi = {
   getProfile: (id: number) => api.get<UserProfile>(`/users/${id}`),
@@ -20,13 +20,13 @@ export const messageApi = {
   getConversations: () => api.get<{ conversations: Conversation[] }>('/conversations'),
   getMessages: (conversationId: number, page?: number) => api.get<{ messages: Message[] }>(`/conversations/${conversationId}/messages`, { params: { page } }),
   send: (receiverId: number, content: string) => api.post<{ success: boolean; message: Message }>('/messages', { receiverId, content }),
-  getUnreadCount: () => api.get<{ unread_count: number }>('/messages/unread-count'),
+  getUnreadCount: () => api.get<{ unreadCount: number }>('/messages/unread-count'),
 };
 
 export const notificationsApi = {
   getNotifications: (page?: number) =>
     api.get<{ notifications: Notification[]; page: number; limit: number; total: number }>('/notifications', { params: { page } }),
-  getUnreadCount: () => api.get<{ unread_count: number }>('/notifications/unread-count'),
+  getUnreadCount: () => api.get<{ unreadCount: number }>('/notifications/unread-count'),
   markAsRead: (id: number) => api.put(`/notifications/${id}/read`),
   markAllAsRead: () => api.put('/notifications/read-all'),
 };

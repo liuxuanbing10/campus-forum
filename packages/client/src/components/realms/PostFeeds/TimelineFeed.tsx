@@ -56,14 +56,14 @@ export default function TimelineFeed({ posts }: Props) {
                 {shichen}
               </span>
               <div className="font-bold text-base text-[var(--ink)] group-hover:text-[var(--acc)] transition-colors leading-relaxed">
-                {p.is_pinned ? '📌 ' : ''}{p.title}
+                {p.isPinned ? '📌 ' : ''}{p.title}
               </div>
               <div className="text-xs text-[var(--soft)] mt-1.5 flex items-center gap-2 flex-wrap">
-                <span>{p.author_name}</span>
+                <span>{p.authorName}</span>
                 <span>·</span>
-                <span>{p.board_name}</span>
+                <span>{p.boardName}</span>
                 <span>·</span>
-                <span className="tabular-nums">赞 {p.like_count}</span>
+                <span className="tabular-nums">赞 {p.likeCount}</span>
               </div>
               </motion.div>
             </Link>

@@ -8,10 +8,10 @@ interface Notification {
   type: string;
   title: string;
   content: string;
-  related_id: number | null;
-  related_type: string | null;
-  is_read: number;
-  created_at: string;
+  relatedId: number | null;
+  relatedType: string | null;
+  isRead: number;
+  createdAt: string;
 }
 
 export default function NotificationBell() {
@@ -23,7 +23,7 @@ export default function NotificationBell() {
   const fetchUnread = async () => {
     try {
       const { data } = await api.get('/notifications/unread-count');
-      setUnread(data.unread_count || data.unreadCount || 0);
+      setUnread(data.unreadCount || data.unreadCount || 0);
     } catch { console.debug('Failed to fetch unread count'); }
   };
 
@@ -40,20 +40,20 @@ export default function NotificationBell() {
   const markRead = async (id: number) => {
     await api.put(`/notifications/${id}/read`);
     setUnread(prev => Math.max(0, prev - 1));
-    setNotifs(prev => prev.map(n => n.id === id ? { ...n, is_read: 1 } : n));
+    setNotifs(prev => prev.map(n => n.id === id ? { ...n, isRead: 1 } : n));
   };
 
   const markAllRead = async () => {
     await api.put('/notifications/read-all');
     setUnread(0);
-    setNotifs(prev => prev.map(n => ({ ...n, is_read: 1 })));
+    setNotifs(prev => prev.map(n => ({ ...n, isRead: 1 })));
   };
 
   const handleNotificationClick = (n: Notification) => {
-    if (!n.is_read) markRead(n.id);
+    if (!n.isRead) markRead(n.id);
     setOpen(false);
-    if (n.related_type === 'post' && n.related_id) {
-      navigate(`/post/${n.related_id}`);
+    if (n.relatedType === 'post' && n.relatedId) {
+      navigate(`/post/${n.relatedId}`);
     }
   };
 
@@ -100,7 +100,7 @@ export default function NotificationBell() {
                     key={n.id}
                     onClick={() => handleNotificationClick(n)}
                     className={`p-3 border-b border-border cursor-pointer transition-colors ${
-                      !n.is_read ? 'bg-primary/5' : 'hover:bg-background'
+                      !n.isRead ? 'bg-primary/5' : 'hover:bg-background'
                     }`}
                   >
                     <div className="flex gap-2">
@@ -112,10 +112,10 @@ export default function NotificationBell() {
                           {n.content}
                         </p>
                         <p className="text-xs text-campus-text-tertiary mt-1">
-                          {new Date(n.created_at).toLocaleDateString()}
+                          {new Date(n.createdAt).toLocaleDateString()}
                         </p>
                       </div>
-                      {!n.is_read && (
+                      {!n.isRead && (
                         <span className="w-2 h-2 bg-primary rounded-full mt-2 shrink-0" />
                       )}
                     </div>

@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Trophy, Medal, Star, TrendingUp, Sparkles, Lock, CheckCircle, Loader2, RefreshCw, BookOpen } from 'lucide-react';
 import api from '../lib/api';
-import type { Achievement } from '@campus-forum/core';
+import type { Achievement } from '../types/api';
 
 interface AchievementWithStatus extends Achievement {
   unlocked: boolean;
-  unlocked_at: string | null;
-  repeat_interval?: number;
-  max_repeats?: number;
-  repeat_count?: number;
+  unlockedAt: string | null;
+  repeatInterval?: number;
+  maxRepeats?: number;
+  repeatCount?: number;
 }
 
 interface AchievementStats {
@@ -233,16 +233,16 @@ export default function Achievements() {
                     <span className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-1">
                       <Star className="w-3 h-3" />
                       +{ach.points}
-                      {ach.repeat_interval && ach.repeat_interval > 0 && <span className="text-[10px] opacity-70">×{ach.max_repeats || '∞'}</span>}
+                      {ach.repeatInterval && ach.repeatInterval > 0 && <span className="text-[10px] opacity-70">×{ach.maxRepeats || '∞'}</span>}
                     </span>
                     <span className="text-[11px] text-campus-text-tertiary">
-                      {ach.condition_desc}
-                      {ach.repeat_interval && ach.repeat_interval > 0 && ` · 已获 ${ach.repeat_count || 0}/${ach.max_repeats || '∞'}`}
+                      {ach.conditionDesc}
+                      {ach.repeatInterval && ach.repeatInterval > 0 && ` · 已获 ${ach.repeatCount || 0}/${ach.maxRepeats || '∞'}`}
                     </span>
                   </div>
-                  {ach.unlocked && ach.unlocked_at && (
+                  {ach.unlocked && ach.unlockedAt && (
                     <p className="text-[10px] text-campus-text-tertiary mt-1.5">
-                      达成于 {new Date(ach.unlocked_at + 'Z').toLocaleDateString('zh-CN')}
+                      达成于 {new Date(ach.unlockedAt + 'Z').toLocaleDateString('zh-CN')}
                     </p>
                   )}
                 </div>

@@ -1,6 +1,6 @@
 import { Users, Lock, Unlock, ArrowLeft, Settings, LogOut, UserPlus, Heart } from 'lucide-react';
 import { teamsApi } from '../../lib/api';
-import type { Team, TeamMember } from '@campus-forum/core';
+import type { Team, TeamMember } from '../../types/api';
 import { toastStore } from '../../App';
 import type { User } from '../../stores/auth';
 import type { NavigateFunction } from 'react-router-dom';
@@ -75,7 +75,7 @@ export default function TeamHeader({ team, user, isOwner, isAdmin, isMember, act
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-2 flex-wrap">
               <h1 className="text-2xl font-bold text-campus-text-primary font-display">{team.name}</h1>
-              {team.is_public === 1 ? (
+              {team.isPublic === 1 ? (
                 <span className="flex items-center gap-1 text-xs text-campus-text-secondary bg-surface-hover px-2 py-1 rounded-full">
                   <Unlock className="w-3 h-3" />
                   公开
@@ -93,10 +93,10 @@ export default function TeamHeader({ team, user, isOwner, isAdmin, isMember, act
             <div className="flex items-center gap-5 text-sm text-campus-text-tertiary">
               <span className="flex items-center gap-1">
                 <Users className="w-4 h-4" />
-                {team.member_count}/{team.max_members} 人
+                {team.memberCount}/{team.maxMembers} 人
               </span>
               <span className="flex items-center gap-1">
-                <span>{team.post_count} 帖</span>
+                <span>{team.postCount} 帖</span>
               </span>
             </div>
           </div>
@@ -139,7 +139,7 @@ export default function TeamHeader({ team, user, isOwner, isAdmin, isMember, act
                 className="btn-primary btn-sm btn-inline flex items-center gap-1.5 disabled:opacity-50"
               >
                 <UserPlus className="w-4 h-4" />
-                {team.is_public === 1 ? '加入团队' : '申请加入'}
+                {team.isPublic === 1 ? '加入团队' : '申请加入'}
               </button>
             )}
           </div>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Shield, ArrowLeft, Search, Ban, UserCog, MoreVertical, UserX, UserCheck, FileText, Flag, History, AlertTriangle, Loader2, Trash2, Check, X, BarChart3, TrendingUp, Users, MessageSquare, Folder, Trophy, Smartphone, Key } from 'lucide-react';
 import { adminApi, adminExtendedApi, adminDeviceApi } from '../lib/api';
 import api from '../lib/api';
-import type { AdminUser, PendingPost, SensitiveWord, AdminReport, AuditLog, AdminStats, DeviceBlacklistEntry, UserDevice } from '@campus-forum/core';
+import type { AdminUser, PendingPost, SensitiveWord, AdminReport, AuditLog, AdminStats, DeviceBlacklistEntry, UserDevice } from '../types/api';
 import { ROLE_NAMES } from '@campus-forum/core';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
@@ -211,8 +211,8 @@ function StatsTab() {
                 <div key={t.name} className="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-hover transition-colors">
                   <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-amber-400 text-white' : i === 1 ? 'bg-gray-400 text-white' : i === 2 ? 'bg-orange-400 text-white' : 'bg-surface-hover text-campus-text-tertiary'}`}>{i + 1}</span>
                   <span className="flex-1 text-sm font-body truncate">{t.name}</span>
-                  <span className="text-xs text-campus-text-tertiary font-body">{t.member_count} 人</span>
-                  <span className="text-xs text-campus-text-tertiary font-body">{t.post_count} 帖</span>
+                  <span className="text-xs text-campus-text-tertiary font-body">{t.memberCount} 人</span>
+                  <span className="text-xs text-campus-text-tertiary font-body">{t.postCount} 帖</span>
                 </div>
               ))}
             </div>
@@ -230,10 +230,10 @@ function StatsTab() {
             {stats.activeUsers.map((u, i) => (
               <div key={u.username} className="flex flex-col items-center p-3 rounded-lg bg-surface-hover">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white font-bold mb-2">
-                  {u.display_name?.[0] || u.username[0]}
+                  {u.displayName?.[0] || u.username[0]}
                 </div>
-                <span className="text-sm font-body truncate w-full text-center">{u.display_name || u.username}</span>
-                <span className="text-xs text-campus-text-tertiary font-body mt-1">{u.points} 积分 · {u.post_count} 帖</span>
+                <span className="text-sm font-body truncate w-full text-center">{u.displayName || u.username}</span>
+                <span className="text-xs text-campus-text-tertiary font-body mt-1">{u.points} 积分 · {u.postCount} 帖</span>
                 {i < 3 && <span className="text-xs text-amber-500 mt-1">#{i + 1}</span>}
               </div>
             ))}
@@ -371,7 +371,7 @@ function UsersTab({ currentUser }: { currentUser: { role: string } | null }) {
       await adminApi.createUser({
         username: newUser.username,
         password: newUser.password,
-        display_name: newUser.username,
+        displayName: newUser.username,
         email: newUser.email || undefined,
         role: newUser.role,
       });
@@ -448,14 +448,14 @@ function UsersTab({ currentUser }: { currentUser: { role: string } | null }) {
               <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleSelect(u.id)}
                 className="w-4 h-4 rounded border-border text-primary focus:ring-primary" />
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white font-bold">
-                {u.display_name?.[0] || '?'}
+                {u.displayName?.[0] || '?'}
               </div>
               <div>
                 <p className="text-sm font-medium font-body">
-                  {u.display_name} <span className="text-xs text-campus-text-tertiary">@{u.username}</span>
-                  {u.is_banned ? <span className="ml-2 px-1.5 py-0.5 rounded bg-red-50 text-red-500 text-xs">已封禁</span> : null}
+                  {u.displayName} <span className="text-xs text-campus-text-tertiary">@{u.username}</span>
+                  {u.isBanned ? <span className="ml-2 px-1.5 py-0.5 rounded bg-red-50 text-red-500 text-xs">已封禁</span> : null}
                 </p>
-                <p className="text-xs text-campus-text-tertiary font-body">{u.email || '无邮箱'} · {u.post_count} 帖子 ·{' '}
+                <p className="text-xs text-campus-text-tertiary font-body">{u.email || '无邮箱'} · {u.postCount} 帖子 ·{' '}
                   <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
                     u.role === 'superadmin' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400' :
                     u.role === 'admin' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' :
@@ -570,7 +570,7 @@ function PendingTab() {
           <div className="flex items-start justify-between">
             <div>
               <p className="font-medium font-body text-sm">{p.title}</p>
-              <p className="text-xs text-campus-text-tertiary mt-1 font-body">{p.author_name} · {new Date(p.created_at).toLocaleDateString()}</p>
+              <p className="text-xs text-campus-text-tertiary mt-1 font-body">{p.authorName} · {new Date(p.createdAt).toLocaleDateString()}</p>
             </div>
             <div className="flex gap-2">
               <button onClick={() => handleReview(p.id, 'approve')} className="px-3 py-1.5 rounded-lg bg-green-500 text-white text-xs font-body hover:bg-green-600"><Check className="w-3 h-3 inline mr-1" />通过</button>
@@ -670,11 +670,11 @@ function ReportsTab() {
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded text-xs bg-orange-50 text-orange-500 font-body">{r.target_type}</span>
-                <span className="text-sm font-medium font-body">#{r.target_id}</span>
+                <span className="px-2 py-0.5 rounded text-xs bg-orange-50 text-orange-500 font-body">{r.targetType}</span>
+                <span className="text-sm font-medium font-body">#{r.targetId}</span>
               </div>
               <p className="text-sm text-campus-text-secondary mt-1 font-body">{r.reason}</p>
-              <p className="text-xs text-campus-text-tertiary mt-1 font-body">举报者: {r.reporter_name} · {new Date(r.created_at).toLocaleDateString()}</p>
+              <p className="text-xs text-campus-text-tertiary mt-1 font-body">举报者: {r.reporterName} · {new Date(r.createdAt).toLocaleDateString()}</p>
             </div>
             <div className="flex gap-2">
               <button onClick={() => handleResolve(r.id, 'dismiss')} className="px-3 py-1.5 rounded-lg bg-surface-hover text-xs font-body hover:bg-border">驳回</button>
@@ -763,7 +763,7 @@ function DevicesTab() {
   const filteredDevices = deviceFilter
     ? devices.filter(d => {
         const f = deviceFilter.toLowerCase();
-        const ua = d.device_name || d.device_info || '';
+        const ua = d.deviceName || d.deviceInfo || '';
         const browser = parseBrowser(ua).toLowerCase();
         const device = parseDevice(ua).toLowerCase();
         return d.username?.toLowerCase().includes(f) || browser.includes(f) || device.includes(f);
@@ -800,8 +800,8 @@ function DevicesTab() {
             {blacklist.map(b => (
               <div key={b.id} className="flex items-center justify-between p-2 rounded-lg bg-surface-hover">
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm font-mono font-body">{b.device_id}</span>
-                  {b.device_name && <span className="text-xs text-campus-text-secondary ml-2 font-body">({b.device_name})</span>}
+                  <span className="text-sm font-mono font-body">{b.deviceId}</span>
+                  {b.deviceName && <span className="text-xs text-campus-text-secondary ml-2 font-body">({b.deviceName})</span>}
                   {b.reason && <span className="text-xs text-campus-text-tertiary ml-2 font-body">— {b.reason}</span>}
                 </div>
                 <button onClick={() => handleRemoveBlacklist(b.id)} className="p-1 hover:bg-surface-hover rounded text-destructive shrink-0">
@@ -826,9 +826,9 @@ function DevicesTab() {
           <div className="space-y-2">
             {filteredDevices.map(d => (
               <div key={d.id} className="flex items-center justify-between p-2 rounded-lg bg-surface-hover text-sm font-body">
-                <span className="text-campus-text-primary">{d.username || '未知用户'} · {parseDevice(d.device_name || d.device_info)} · {parseBrowser(d.device_name || d.device_info)}</span>
+                <span className="text-campus-text-primary">{d.username || '未知用户'} · {parseDevice(d.deviceName || d.deviceInfo)} · {parseBrowser(d.deviceName || d.deviceInfo)}</span>
                 <span className="text-campus-text-tertiary shrink-0 text-xs">
-                  {d.last_login_at ? new Date(d.last_login_at).toLocaleString() : '-'}
+                  {d.lastLoginAt ? new Date(d.lastLoginAt).toLocaleString() : '-'}
                 </span>
               </div>
             ))}
@@ -864,12 +864,12 @@ function LogsTab() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-body">
-              <span className="font-medium">{l.admin_name}</span>
+              <span className="font-medium">{l.adminName}</span>
               <span className="text-campus-text-secondary"> {l.action} </span>
-              <span className="text-xs text-campus-text-tertiary">{l.target_type} #{l.target_id}</span>
+              <span className="text-xs text-campus-text-tertiary">{l.targetType} #{l.targetId}</span>
             </p>
             {l.details && <p className="text-xs text-campus-text-tertiary mt-0.5 font-body">{l.details}</p>}
-            <p className="text-xs text-campus-text-tertiary mt-0.5 font-body">{new Date(l.created_at).toLocaleString()}</p>
+            <p className="text-xs text-campus-text-tertiary mt-0.5 font-body">{new Date(l.createdAt).toLocaleString()}</p>
           </div>
         </div>
       ))}

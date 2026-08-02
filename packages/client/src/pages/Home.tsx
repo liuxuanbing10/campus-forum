@@ -23,7 +23,7 @@ interface Board {
   name: string;
   description: string;
   icon: string;
-  post_count: number;
+  postCount: number;
 }
 
 const POST_LIMIT = 10;

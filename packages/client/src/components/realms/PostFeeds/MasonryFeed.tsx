@@ -44,8 +44,8 @@ export default function MasonryFeed({ posts }: Props) {
                 {p.title}
               </div>
               <div className="mt-auto text-[10px] text-[var(--soft)] flex items-center justify-between">
-                <span className="truncate">{p.author_name}</span>
-                <span className="tabular-nums">✦ {p.like_count}</span>
+                <span className="truncate">{p.authorName}</span>
+                <span className="tabular-nums">✦ {p.likeCount}</span>
               </div>
             </div>
             </motion.div>

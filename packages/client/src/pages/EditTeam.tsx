@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, Lock, Unlock, Tag, EyeOff } from 'lucide-react';
 import { teamsApi } from '../lib/api';
-import type { Team, UpdateTeamData, TeamCategory } from '@campus-forum/core';
+import type { Team, UpdateTeamData, TeamCategory } from '../types/api';
 import { toastStore } from '../App';
 import Skeleton from '../components/Skeleton';
 
@@ -39,10 +39,10 @@ export default function EditTeam() {
       setForm({
         name: res.data.name,
         description: res.data.description,
-        isPublic: res.data.is_public === 1,
-        maxMembers: res.data.max_members,
-        categoryId: res.data.category_id ?? undefined,
-        hideMembers: res.data.hide_members === 1,
+        isPublic: res.data.isPublic === 1,
+        maxMembers: res.data.maxMembers,
+        categoryId: res.data.categoryId ?? undefined,
+        hideMembers: res.data.hideMembers === 1,
       });
     } catch (err: any) {
       if (err.response?.status === 404) {

@@ -174,6 +174,37 @@ export function requireSuperAdminFactory(db: DatabaseAdapter) {
   };
 }
 
+// ── 序列化层：snake_case ↔ camelCase 深度键转换 ──
+
+const SNAKE_RE = /_([a-z0-9])/g;
+const CAMEL_RE = /([a-z0-9])([A-Z])/g;
+
+function keyToCamel(key: string): string {
+  return key.replace(SNAKE_RE, (_, c: string) => c.toUpperCase());
+}
+
+function keyToSnake(key: string): string {
+  return key.replace(CAMEL_RE, '$1_$2').toLowerCase();
+}
+
+/** 深度递归转换对象键名（数组、嵌套对象均处理；Date/null/primitive 原样返回） */
+export function deepMapKeys<T = unknown>(obj: unknown, fn: (key: string) => string): T {
+  if (obj === null || obj === undefined || typeof obj !== 'object') return obj as T;
+  if (obj instanceof Date) return obj as T;
+  if (Array.isArray(obj)) return obj.map((item) => deepMapKeys(item, fn)) as T;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+    out[fn(k)] = deepMapKeys(v, fn);
+  }
+  return out as T;
+}
+
+/** DB 行 → API 响应：snake_case → camelCase */
+export const toCamelCase = <T = unknown>(obj: unknown): T => deepMapKeys<T>(obj, keyToCamel);
+
+/** API 请求 → DB 写入：camelCase → snake_case */
+export const toSnakeCase = <T = unknown>(obj: unknown): T => deepMapKeys<T>(obj, keyToSnake);
+
 // ── 公共业务工具函数 ──────────────────────────────
 
 // 积分操作

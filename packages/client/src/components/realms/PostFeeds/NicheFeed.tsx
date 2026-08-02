@@ -46,8 +46,8 @@ export default function NicheFeed({ posts }: Props) {
               {p.title}
             </div>
             <div className="text-[11px] text-[var(--soft)] mt-1.5 flex items-center justify-between">
-              <span>{p.author_name} · {p.board_name}</span>
-              <span className="tabular-nums">赞 {p.like_count}</span>
+              <span>{p.authorName} · {p.boardName}</span>
+              <span className="tabular-nums">赞 {p.likeCount}</span>
             </div>
             </motion.div>
           </Link>

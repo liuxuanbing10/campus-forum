@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Users, Megaphone, FileText, Upload, Plus, Copy } from 'lucide-react';
 import { teamsApi } from '../lib/api';
-import type { Team, TeamMember, TeamAnnouncement, TeamContentPost, TeamFile } from '@campus-forum/core';
+import type { Team, TeamMember, TeamAnnouncement, TeamContentPost, TeamFile } from '../types/api';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 import Skeleton from '../components/Skeleton';

@@ -11,7 +11,7 @@ import {
 import { useAuthStore } from '../stores/auth';
 import { REALMS, useThemeStore, type RealmId } from '../stores/theme';
 import api, { authApi, oauthApi, exportApi, avatarApi, userDeviceApi } from '../lib/api';
-import type { User, OAuthAccount, UserDevice } from '@campus-forum/core';
+import type { User, OAuthAccount, UserDevice } from '../types/api';
 import Skeleton from '../components/Skeleton';
 import MetaManager from '../components/MetaManager';
 
@@ -98,7 +98,7 @@ function ProfileTab() {
   const fetchUser = useAuthStore(s => s.fetchUser);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [profileForm, setProfileForm] = useState({ display_name: '', email: '' });
+  const [profileForm, setProfileForm] = useState({ displayName: '', email: '' });
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -115,7 +115,7 @@ function ProfileTab() {
       if (userInfo) {
         const { data } = await api.get('/auth/me');
         setUser(data);
-        setProfileForm({ display_name: data.displayName, email: data.email || '' });
+        setProfileForm({ displayName: data.displayName, email: data.email || '' });
       }
     } catch {
       toastStore.error('加载用户信息失败');
@@ -192,8 +192,8 @@ function ProfileTab() {
             </Avatar.Fallback>
             {avatarPreview ? (
               <Avatar.Image src={avatarPreview} className="w-full h-full object-cover" alt="预览" />
-            ) : user?.avatar_url ? (
-              <Avatar.Image src={user.avatar_url} className="w-full h-full object-cover" alt="头像" />
+            ) : user?.avatarUrl ? (
+              <Avatar.Image src={user.avatarUrl} className="w-full h-full object-cover" alt="头像" />
             ) : null}
           </Avatar.Root>
           <div className="space-y-2">
@@ -250,12 +250,12 @@ function ProfileTab() {
               editing ? (
                 <input
                   type="text"
-                  value={profileForm.display_name}
-                  onChange={e => setProfileForm(p => ({ ...p, display_name: e.target.value }))}
+                  value={profileForm.displayName}
+                  onChange={e => setProfileForm(p => ({ ...p, displayName: e.target.value }))}
                   className="realm-input-flat"
                 />
               ) : (
-                profileForm.display_name || user?.displayName || '-'
+                profileForm.displayName || user?.displayName || '-'
               )
             }
           />
@@ -289,7 +289,7 @@ function ProfileTab() {
                 onClick={() => {
                   setEditing(false);
                   setProfileForm({
-                    display_name: user?.displayName ?? '',
+                    displayName: user?.displayName ?? '',
                     email: user?.email ?? '',
                   });
                 }}
@@ -447,7 +447,7 @@ function OAuthTab() {
                   <p className="text-[12px] font-medium text-[var(--ink)]">{p.name}</p>
                   {bound && (
                     <p className="text-[10px] text-[var(--soft)]">
-                      已绑定 · {new Date(bound.binded_at).toLocaleDateString()}
+                      已绑定 · {new Date(bound.bindedAt).toLocaleDateString()}
                     </p>
                   )}
                 </div>
@@ -555,7 +555,7 @@ function AppearanceTab() {
 
 // ── 设备管理 ─────────────────────────────────────
 function DevicesTab() {
-  const [devices, setDevices] = useState<(UserDevice & { is_current?: boolean })[]>([]);
+  const [devices, setDevices] = useState<(UserDevice & { isCurrent?: boolean })[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { loadDevices(); }, []);
@@ -605,26 +605,26 @@ function DevicesTab() {
                 <div className="flex items-center gap-2">
                   <Smartphone className="w-3.5 h-3.5 text-[var(--soft)] shrink-0" />
                   <span className="text-[12px] font-medium text-[var(--ink)] truncate">
-                    {d.device_name || d.device_id.slice(0, 16)}
+                    {d.deviceName || d.deviceId.slice(0, 16)}
                   </span>
-                  {d.is_current ? (
+                  {d.isCurrent ? (
                     <span className="px-1.5 py-0.5 rounded text-[10px] text-[var(--acc)] bg-[var(--acc)]/15">
                       当前设备
                     </span>
-                  ) : d.is_active === 0 ? (
+                  ) : d.isActive === 0 ? (
                     <span className="px-1.5 py-0.5 rounded text-[10px] text-[var(--hot)] bg-[var(--hot)]/15">
                       已禁用
                     </span>
                   ) : null}
                 </div>
-                {d.device_info && (
-                  <p className="text-[10px] text-[var(--soft)] mt-1">{d.device_info}</p>
+                {d.deviceInfo && (
+                  <p className="text-[10px] text-[var(--soft)] mt-1">{d.deviceInfo}</p>
                 )}
                 <p className="text-[10px] text-[var(--soft)] mt-0.5">
-                  最后登录: {d.last_login_at ? new Date(d.last_login_at).toLocaleString() : '-'}
+                  最后登录: {d.lastLoginAt ? new Date(d.lastLoginAt).toLocaleString() : '-'}
                 </p>
               </div>
-              {!d.is_current && d.is_active !== 0 && (
+              {!d.isCurrent && d.isActive !== 0 && (
                 <button
                   onClick={() => handleRevoke(d.id)}
                   className="px-2.5 py-1 rounded-md text-[11px] text-[var(--hot)] border border-[var(--hot)]/40 hover:bg-[var(--hot)]/10 transition-colors shrink-0 ml-2"

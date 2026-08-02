@@ -1,5 +1,5 @@
 import { User, Crown, Shield, UserCircle } from 'lucide-react';
-import type { TeamMember } from '@campus-forum/core';
+import type { TeamMember } from '../types/api';
 
 interface TeamMemberListProps {
   members: TeamMember[];
@@ -50,13 +50,13 @@ export default function TeamMemberList({ members, onRemove, showActions = false 
                   {getRoleIcon(member.role)}
                   <span>{getRoleLabel(member.role)}</span>
                   <span>•</span>
-                  <span>{new Date(member.joined_at).toLocaleDateString('zh-CN')}</span>
+                  <span>{new Date(member.joinedAt).toLocaleDateString('zh-CN')}</span>
                 </div>
               </div>
             </div>
             {showActions && onRemove && member.role === 'member' && (
               <button
-                onClick={() => onRemove(member.user_id)}
+                onClick={() => onRemove(member.userId)}
                 className="text-xs text-destructive hover:text-destructive-hover px-3 py-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
               >
                 移除

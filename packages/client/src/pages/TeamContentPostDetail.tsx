@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trash2, Pin, Clock, User, Send, MessageSquare } from 'lucide-react';
 import { teamsApi } from '../lib/api';
-import type { TeamContentPost, TeamContentComment } from '@campus-forum/core';
+import type { TeamContentPost, TeamContentComment } from '../types/api';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 import Skeleton from '../components/Skeleton';
@@ -26,7 +26,7 @@ export default function TeamContentPostDetail() {
   const [commenting, setCommenting] = useState(false);
 
   const isAdmin = myRole === 'owner' || myRole === 'admin';
-  const isAuthor = post && user && post.author_id === user.id;
+  const isAuthor = post && user && post.authorId === user.id;
 
   useEffect(() => {
     const load = async () => {
@@ -124,7 +124,7 @@ export default function TeamContentPostDetail() {
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl font-bold text-campus-text-primary font-display">{post.title}</h1>
-            {post.is_pinned === 1 && (
+            {post.isPinned === 1 && (
               <span className="flex items-center gap-1 text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
                 <Pin className="w-3 h-3" />
                 置顶
@@ -141,11 +141,11 @@ export default function TeamContentPostDetail() {
         <div className="flex items-center gap-4 text-sm text-campus-text-tertiary mb-6 pb-4 border-b border-border">
           <span className="flex items-center gap-1.5">
             <User className="w-4 h-4" />
-            {post.display_name || post.username}
+            {post.displayName || post.username}
           </span>
           <span className="flex items-center gap-1.5">
             <Clock className="w-4 h-4" />
-            {new Date(post.created_at).toLocaleString('zh-CN')}
+            {new Date(post.createdAt).toLocaleString('zh-CN')}
           </span>
           <span className="flex items-center gap-1.5">
             <MessageSquare className="w-4 h-4" />
@@ -182,17 +182,17 @@ export default function TeamContentPostDetail() {
             comments.map(comment => (
               <div key={comment.id} className="flex gap-3 pb-4 border-b border-border last:border-0">
                 <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-sm font-bold shrink-0">
-                  {(comment.display_name || comment.username || '?')[0]}
+                  {(comment.displayName || comment.username || '?')[0]}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm font-medium text-campus-text-primary">
-                      {comment.display_name || comment.username}
+                      {comment.displayName || comment.username}
                     </span>
                     <span className="text-xs text-campus-text-tertiary">
-                      {new Date(comment.created_at).toLocaleString('zh-CN')}
+                      {new Date(comment.createdAt).toLocaleString('zh-CN')}
                     </span>
-                    {(isAdmin || user?.id === comment.author_id) && (
+                    {(isAdmin || user?.id === comment.authorId) && (
                       <button
                         onClick={() => handleDeleteComment(comment.id)}
                         className="ml-auto text-xs text-campus-text-tertiary hover:text-destructive transition-colors"

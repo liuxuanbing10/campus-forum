@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Heart, MessageCircle, Eye, ArrowLeft, Clock, Hash } from 'lucide-react';
 import { favoritesApi } from '../lib/api';
-import type { Post } from '@campus-forum/core';
+import type { Post } from '../types/api';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 import Skeleton from '../components/Skeleton';
@@ -92,7 +92,7 @@ export default function FavoritesPage() {
             className="block bg-surface border border-border rounded-xl p-4 hover:border-primary/30 hover:shadow-card transition-all"
           >
             <h3 className="font-medium text-campus-text-primary mb-2 line-clamp-1">
-              {post.is_pinned === 1 && <span className="text-primary mr-2">📌</span>}
+              {post.isPinned === 1 && <span className="text-primary mr-2">📌</span>}
               {post.title}
             </h3>
             <p className="text-sm text-campus-text-secondary line-clamp-2 mb-3">
@@ -101,23 +101,23 @@ export default function FavoritesPage() {
             <div className="flex items-center gap-4 text-xs text-campus-text-tertiary">
               <span className="flex items-center gap-1">
                 <Hash className="w-3 h-3" />
-                {post.board_name}
+                {post.boardName}
               </span>
               <span className="flex items-center gap-1">
                 <Eye className="w-3 h-3" />
-                {post.view_count}
+                {post.viewCount}
               </span>
               <span className="flex items-center gap-1">
                 <MessageCircle className="w-3 h-3" />
-                {post.comment_count}
+                {post.commentCount}
               </span>
               <span className="flex items-center gap-1">
                 <Heart className="w-3 h-3" />
-                {post.like_count}
+                {post.likeCount}
               </span>
               <span className="flex items-center gap-1 ml-auto">
                 <Clock className="w-3 h-3" />
-                {new Date(post.created_at).toLocaleDateString()}
+                {new Date(post.createdAt).toLocaleDateString()}
               </span>
             </div>
           </Link>

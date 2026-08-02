@@ -1,6 +1,6 @@
 import { Lock, Crown, Shield } from 'lucide-react';
 import { teamsApi } from '../../lib/api';
-import type { TeamMember } from '@campus-forum/core';
+import type { TeamMember } from '../../types/api';
 import { toastStore } from '../../App';
 
 interface Props {
@@ -18,7 +18,7 @@ export default function MembersTab({ members, membersHidden, isOwner, isAdmin, t
     if (!isOwner) return;
     const newRole = member.role === 'admin' ? 'member' : 'admin';
     try {
-      await teamsApi.setMemberRole(teamId, member.user_id, newRole);
+      await teamsApi.setMemberRole(teamId, member.userId, newRole);
       toastStore.success(newRole === 'admin' ? '已设为管理员' : '已取消管理员');
       loadData();
     } catch (err: any) {
@@ -50,22 +50,22 @@ export default function MembersTab({ members, membersHidden, isOwner, isAdmin, t
             <div key={member.id} className="flex items-center justify-between p-3 bg-surface border border-border rounded-xl">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0">
-                  {member.avatar_url ? (
-                    <img src={member.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                  {member.avatarUrl ? (
+                    <img src={member.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
                   ) : (
-                    <span className="text-sm font-medium text-primary">{(member.display_name || member.username)[0]}</span>
+                    <span className="text-sm font-medium text-primary">{(member.displayName || member.username)[0]}</span>
                   )}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-campus-text-primary font-medium text-sm">
-                      {member.display_name || member.username}
+                      {member.displayName || member.username}
                     </span>
                     {member.role === 'owner' && <Crown className="w-4 h-4 text-yellow-500" />}
                     {member.role === 'admin' && <Shield className="w-4 h-4 text-accent" />}
                   </div>
                   <span className="text-xs text-campus-text-tertiary">
-                    {new Date(member.joined_at).toLocaleDateString('zh-CN')} 加入
+                    {new Date(member.joinedAt).toLocaleDateString('zh-CN')} 加入
                   </span>
                 </div>
               </div>
@@ -78,7 +78,7 @@ export default function MembersTab({ members, membersHidden, isOwner, isAdmin, t
                     {member.role === 'admin' ? '取消管理员' : '设为管理员'}
                   </button>
                   <button
-                    onClick={() => handleRemoveMember(member.user_id)}
+                    onClick={() => handleRemoveMember(member.userId)}
                     className="btn-secondary btn-xs btn-inline text-destructive hover:bg-destructive/10"
                   >
                     移除
@@ -87,7 +87,7 @@ export default function MembersTab({ members, membersHidden, isOwner, isAdmin, t
               )}
               {isAdmin && !isOwner && member.role === 'member' && (
                 <button
-                  onClick={() => handleRemoveMember(member.user_id)}
+                  onClick={() => handleRemoveMember(member.userId)}
                   className="btn-secondary btn-xs btn-inline text-destructive hover:bg-destructive/10"
                 >
                   移除

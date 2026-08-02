@@ -57,14 +57,14 @@ export default function ScrollFeed({ posts }: Props) {
             className="snap-start flex-shrink-0 w-64 p-3 rounded-lg border border-[var(--line)] bg-[var(--card)] hover:border-[var(--acc)] transition-colors group"
           >
             <div className="text-[11px] text-[var(--acc)] mb-1.5" style={{ fontFamily: 'var(--disp)' }}>
-              {String(i + 1).padStart(2, '0')} · {p.board_name}
+              {String(i + 1).padStart(2, '0')} · {p.boardName}
             </div>
             <div className="font-bold text-[14px] text-[var(--ink)] line-clamp-2 group-hover:text-[var(--acc)] transition-colors leading-snug">
               {p.title}
             </div>
             <div className="text-[11px] text-[var(--soft)] mt-2 flex items-center justify-between">
-              <span className="truncate">{p.author_name}</span>
-              <span className="tabular-nums">赞 {p.like_count}</span>
+              <span className="truncate">{p.authorName}</span>
+              <span className="tabular-nums">赞 {p.likeCount}</span>
             </div>
           </motion.a>
         ))}

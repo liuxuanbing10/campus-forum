@@ -48,8 +48,8 @@ export default function WindowsFeed({ posts }: Props) {
               {p.title}
             </div>
             <div className="text-[10px] text-[var(--soft)] mt-1.5 flex items-center justify-between">
-              <span className="truncate">{p.author_name}</span>
-              <span className="tabular-nums">✦ {p.like_count}</span>
+              <span className="truncate">{p.authorName}</span>
+              <span className="tabular-nums">✦ {p.likeCount}</span>
             </div>
             </motion.div>
           </Link>

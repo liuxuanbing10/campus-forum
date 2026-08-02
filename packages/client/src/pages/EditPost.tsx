@@ -38,16 +38,16 @@ export default function EditPostPage() {
         setLoading(true);
         const res = await postsApi.getPost(Number(id));
         const post = res.data;
-        if (user && post.author_id !== user.id) {
+        if (user && post.authorId !== user.id) {
           toastStore.error('您无权编辑此帖子');
           navigate(`/post/${id}`);
           return;
         }
         setTitle(post.title);
         setContent(post.content);
-        setBoardId(post.board_id);
-        setIsAnonymous(post.is_anonymous === 1);
-        setIsPrivate(post.is_private === 1);
+        setBoardId(post.boardId);
+        setIsAnonymous(post.isAnonymous === 1);
+        setIsPrivate(post.isPrivate === 1);
         setImages(Array.isArray(post.images) ? post.images : []);
       } catch (err: any) {
         if (err.response?.status === 404) {
@@ -104,9 +104,9 @@ export default function EditPostPage() {
       await postsApi.updatePost(Number(id), {
         title,
         content,
-        board_id: boardId,
-        is_anonymous: isAnonymous,
-        is_private: isPrivate,
+        boardId: boardId,
+        isAnonymous: isAnonymous,
+        isPrivate: isPrivate,
         images: images.length > 0 ? images : undefined,
       });
       toastStore.success('编辑成功！');

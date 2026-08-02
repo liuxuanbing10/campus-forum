@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, Lock, Unlock, Tag, EyeOff } from 'lucide-react';
 import { teamsApi } from '../lib/api';
-import type { CreateTeamData, TeamCategory } from '@campus-forum/core';
+import type { CreateTeamData, TeamCategory } from '../types/api';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 import Skeleton from '../components/Skeleton';

@@ -1,6 +1,6 @@
 import { Users, Lock, Unlock, Calendar, Heart, FileText } from 'lucide-react';
 import { teamsApi } from '../lib/api';
-import type { Team } from '@campus-forum/core';
+import type { Team } from '../types/api';
 import { useState } from 'react';
 import { toastStore } from '../App';
 
@@ -59,7 +59,7 @@ export default function TeamCard({ team, onClick, showFavorite = true, onFavorit
             <h3 className="font-semibold text-campus-text-primary text-lg group-hover:text-primary transition-colors truncate">
               {team.name}
             </h3>
-            {team.is_public === 1 ? (
+            {team.isPublic === 1 ? (
               <Unlock className="w-3.5 h-3.5 text-campus-text-secondary flex-shrink-0" />
             ) : (
               <Lock className="w-3.5 h-3.5 text-campus-text-secondary flex-shrink-0" />
@@ -71,15 +71,15 @@ export default function TeamCard({ team, onClick, showFavorite = true, onFavorit
           <div className="flex items-center gap-4 text-xs text-campus-text-tertiary">
             <span className="flex items-center gap-1">
               <Users className="w-3 h-3" />
-              {team.member_count}/{team.max_members}
+              {team.memberCount}/{team.maxMembers}
             </span>
             <span className="flex items-center gap-1">
               <FileText className="w-3 h-3" />
-              {team.post_count} 帖
+              {team.postCount} 帖
             </span>
             <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
-              {new Date(team.created_at).toLocaleDateString('zh-CN')}
+              {new Date(team.createdAt).toLocaleDateString('zh-CN')}
             </span>
           </div>
           {team.role && team.role !== 'member' && (

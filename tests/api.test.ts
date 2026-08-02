@@ -243,9 +243,9 @@ describe('teams', () => {
     expect(body.success).toBe(true);
     expect(body.team).toBeDefined();
     expect(body.team.name).toBe(teamName);
-    expect(body.team.creator_id).toBe(userId);
-    expect(body.team.is_public).toBe(1);
-    expect(body.team.invite_code).toBeTruthy();
+    expect(body.team.creatorId).toBe(userId);
+    expect(body.team.isPublic).toBe(1);
+    expect(body.team.inviteCode).toBeTruthy();
   });
 
   it('rejects duplicate team name', async () => {

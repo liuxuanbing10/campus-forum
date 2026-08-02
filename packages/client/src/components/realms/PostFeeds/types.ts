@@ -4,12 +4,12 @@
 export interface Post {
   id: number;
   title: string;
-  author_name: string;
-  created_at: string;
-  view_count: number;
-  like_count: number;
-  comment_count: number;
-  board_name: string;
-  is_pinned: number;
-  is_favorited: number;
+  authorName: string;
+  createdAt: string;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  boardName: string;
+  isPinned: number;
+  isFavorited: number;
 }

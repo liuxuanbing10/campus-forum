@@ -24,9 +24,9 @@ export interface LoginBody {
 }
 
 export interface UpdateProfileBody {
-  display_name?: string;
+  displayName?: string;
   email?: string;
-  avatar_url?: string;
+  avatarUrl?: string;
 }
 
 export interface ChangePasswordBody {

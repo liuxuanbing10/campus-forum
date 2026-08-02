@@ -1,5 +1,5 @@
 import api from './client';
-import type { User, UpdateProfileData, ChangePasswordData, OAuthAccount, CaptchaData } from '@campus-forum/core';
+import type { User, UpdateProfileData, ChangePasswordData, OAuthAccount, CaptchaData } from '../../types/api';
 
 export const authApi = {
   updateProfile: (data: UpdateProfileData) => api.put<{ success: boolean; message: string; user: User }>('/auth/me', data),

@@ -268,7 +268,7 @@ export function registerAuthRoutes(ctx: PluginContext) {
       return reply.status(401).send({ error: '未登录' });
     }
 
-    const { display_name, email, avatar_url } =
+    const { displayName, email, avatarUrl } =
       request.body as UpdateProfileBody;
 
     const user = await q()!.selectFrom('users')
@@ -282,9 +282,9 @@ export function registerAuthRoutes(ctx: PluginContext) {
 
     const updates: Record<string, unknown> = {};
 
-    if (display_name !== undefined) updates.display_name = display_name;
+    if (displayName !== undefined) updates.display_name = displayName;
     if (email !== undefined) updates.email = email;
-    if (avatar_url !== undefined) updates.avatar_url = avatar_url;
+    if (avatarUrl !== undefined) updates.avatar_url = avatarUrl;
 
     if (Object.keys(updates).length === 0) {
       return reply.status(400).send({ error: '没有提供需要更新的字段' });

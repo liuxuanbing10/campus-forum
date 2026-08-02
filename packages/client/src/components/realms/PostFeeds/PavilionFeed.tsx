@@ -50,7 +50,7 @@ export default function PavilionFeed({ posts }: Props) {
                     {p.title}
                   </div>
                   <div className="text-[11px] text-[var(--soft)] mt-0.5">
-                    {p.author_name} · 赞 {p.like_count}
+                    {p.authorName} · 赞 {p.likeCount}
                   </div>
                 </Link>
               ))}

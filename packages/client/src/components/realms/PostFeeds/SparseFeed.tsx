@@ -31,7 +31,7 @@ export default function SparseFeed({ posts }: Props) {
                 {p.title}
               </div>
               <div className="text-[11px] text-[var(--soft)] mt-1">
-                {p.author_name} · {p.board_name}
+                {p.authorName} · {p.boardName}
               </div>
             </div>
             <div className="text-right flex-shrink-0">
@@ -42,7 +42,7 @@ export default function SparseFeed({ posts }: Props) {
                 {String(i + 1).padStart(2, '0')}
               </div>
               <div className="text-[10px] text-[var(--soft)] mt-0.5">
-                赞 {p.like_count}
+                赞 {p.likeCount}
               </div>
             </div>
           </div>

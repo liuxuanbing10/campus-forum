@@ -22,7 +22,7 @@ export default function ReportDialog({ targetType, targetId, onClose }: Props) {
     if (!reason) { toastStore.warning('请选择举报原因'); return; }
     setLoading(true);
     try {
-      await reportApi.create({ target_type: targetType, target_id: targetId, reason, description });
+      await reportApi.create({ targetType: targetType, targetId: targetId, reason, description });
       toastStore.success('举报已提交，感谢您的反馈');
       onClose();
     } catch (e: any) {

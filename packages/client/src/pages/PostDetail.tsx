@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 import api, { postsApi, commentApi, versionApi, reportApi } from '../lib/api';
-import type { PostStats } from '@campus-forum/core';
+import type { PostStats } from '../types/api';
 import { toastStore } from '../App';
 import RoleBadge from '../components/RoleBadge';
 import { ArrowLeft, Eye, ThumbsUp, Heart, MessageCircle, Edit3, Trash2, X, Share2, Lock, Unlock, Pin, PinOff, Flag, History, Check, Copy } from 'lucide-react';
@@ -14,21 +14,21 @@ import MetaManager from '../components/MetaManager';
 import DOMPurify from 'dompurify';
 
 interface PostDetail {
-  id: number; title: string; content: string; board_id: number; board_name: string;
-  is_anonymous: number; is_pinned: number; is_private: number; images: string[];
-  author_name: string; author_role?: string; author_id: number; created_at: string; updated_at: string;
-  like_count: number; comment_count: number; is_favorited: number; my_vote: number;
-  view_count: number;
+  id: number; title: string; content: string; boardId: number; boardName: string;
+  isAnonymous: number; isPinned: number; isPrivate: number; images: string[];
+  authorName: string; authorRole?: string; authorId: number; createdAt: string; updatedAt: string;
+  likeCount: number; commentCount: number; isFavorited: number; myVote: number;
+  viewCount: number;
 }
 
 interface Comment {
-  id: number; content: string; post_id: number; parent_id: number | null;
-  is_anonymous: number; created_at: string; author_name: string; author_role?: string; author_id?: number;
-  like_count: number;
+  id: number; content: string; postId: number; parentId: number | null;
+  isAnonymous: number; createdAt: string; authorName: string; authorRole?: string; authorId?: number;
+  likeCount: number;
 }
 
 interface PostVersion {
-  id: number; title: string; content: string; editor_name: string; created_at: string;
+  id: number; title: string; content: string; editorName: string; createdAt: string;
 }
 
 function CommentItem({ comment, childrenMap, user, onReply, onDelete, onReport, onEdit, depth }: {
@@ -61,9 +61,9 @@ function CommentItem({ comment, childrenMap, user, onReply, onDelete, onReport, 
   return (
     <div className={`card ${depth > 0 ? 'ml-4 mt-3 pl-4 border-l-2 border-border' : ''}`}>
       <div className="flex items-center justify-between text-sm text-campus-text-tertiary mb-2 font-body">
-        <span className="font-medium text-campus-text-secondary">{comment.author_name}</span>
-        {comment.author_role && <RoleBadge role={comment.author_role} />}
-        <span className="text-xs">{new Date(comment.created_at).toLocaleString()}</span>
+        <span className="font-medium text-campus-text-secondary">{comment.authorName}</span>
+        {comment.authorRole && <RoleBadge role={comment.authorRole} />}
+        <span className="text-xs">{new Date(comment.createdAt).toLocaleString()}</span>
       </div>
       {editing ? (
         <div className="space-y-2">
@@ -80,15 +80,15 @@ function CommentItem({ comment, childrenMap, user, onReply, onDelete, onReport, 
         <p className="text-campus-text-secondary font-body leading-relaxed text-sm">{comment.content}</p>
       )}
       <div className="flex items-center gap-4 mt-2">
-        <button onClick={() => onReply(comment.id, comment.author_name)}
+        <button onClick={() => onReply(comment.id, comment.authorName)}
           className="text-xs text-campus-text-tertiary hover:text-primary transition-colors font-body">回复</button>
-        {user && user.id === comment.author_id && (
+        {user && user.id === comment.authorId && (
           <button onClick={() => { setEditing(true); setEditText(comment.content); }}
             className="text-xs text-campus-text-tertiary hover:text-primary transition-colors font-body">编辑</button>
         )}
         <button onClick={() => onReport(comment.id)}
           className="text-xs text-campus-text-tertiary hover:text-destructive transition-colors font-body">举报</button>
-        {user && (user.id === comment.author_id || user.isAdmin) && (
+        {user && (user.id === comment.authorId || user.isAdmin) && (
           <button onClick={() => onDelete(comment.id)}
             className="text-xs text-destructive hover:text-destructive-hover transition-colors font-body">删除</button>
         )}
@@ -138,10 +138,10 @@ export default function PostDetailPage() {
   const childrenMap = useMemo(() => {
     const map = new Map<number, Comment[]>();
     for (const c of comments) {
-      if (c.parent_id != null) {
-        const arr = map.get(c.parent_id) || [];
+      if (c.parentId != null) {
+        const arr = map.get(c.parentId) || [];
         arr.push(c);
-        map.set(c.parent_id, arr);
+        map.set(c.parentId, arr);
       }
     }
     return map;
@@ -225,54 +225,54 @@ export default function PostDetailPage() {
       <MetaManager
         title={post.title}
         description={post.content.substring(0, 150).replace(/[#*`]/g, '')}
-        keywords={`${post.board_name},${post.title}`}
+        keywords={`${post.boardName},${post.title}`}
         ogType="article"
         ogTitle={post.title}
         ogDescription={post.content.substring(0, 200).replace(/[#*`]/g, '')}
         canonical={`${window.location.origin}/post/${id}`}
       />
     <div className="max-w-3xl mx-auto">
-      <Link to={`/board/${post.board_id}`} className="inline-flex items-center gap-1 text-sm text-campus-text-tertiary hover:text-primary transition-colors font-body">
-        <ArrowLeft className="w-4 h-4" /> 返回 {post.board_name}
+      <Link to={`/board/${post.boardId}`} className="inline-flex items-center gap-1 text-sm text-campus-text-tertiary hover:text-primary transition-colors font-body">
+        <ArrowLeft className="w-4 h-4" /> 返回 {post.boardName}
       </Link>
 
       {/* Author info with follow */}
       <div className="flex items-center gap-3 mt-4 mb-2">
-        <Link to={`/user/${post.author_id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
+        <Link to={`/user/${post.authorId}`} className="flex items-center gap-2 hover:text-primary transition-colors">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white text-sm font-bold">
-            {post.is_anonymous ? '匿' : post.author_name[0]}
+            {post.isAnonymous ? '匿' : post.authorName[0]}
           </div>
-          <span className="text-sm font-medium font-body">{post.is_anonymous ? '匿名用户' : post.author_name}</span>
-          {!post.is_anonymous && post.author_role && <RoleBadge role={post.author_role} />}
+          <span className="text-sm font-medium font-body">{post.isAnonymous ? '匿名用户' : post.authorName}</span>
+          {!post.isAnonymous && post.authorRole && <RoleBadge role={post.authorRole} />}
         </Link>
-        {!post.is_anonymous && user && user.id !== post.author_id && <FollowButton userId={post.author_id} />}
+        {!post.isAnonymous && user && user.id !== post.authorId && <FollowButton userId={post.authorId} />}
       </div>
 
       <article className="card mt-2">
         <h1 className="font-handwrite text-2xl font-bold text-campus-text-primary mb-4">
-          {post.is_pinned === 1 && <span className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full mr-2 align-middle font-body"><Pin className="w-3 h-3" />置顶</span>}
+          {post.isPinned === 1 && <span className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full mr-2 align-middle font-body"><Pin className="w-3 h-3" />置顶</span>}
           {post.title}
         </h1>
         <div className="flex items-center gap-4 text-sm text-campus-text-tertiary mb-6 flex-wrap font-body">
-          <span>{new Date(post.created_at).toLocaleDateString()}</span>
-          <span className="flex items-center gap-1"><Eye className="w-4 h-4" />{stats?.view_count ?? post.view_count}</span>
-          <span className="flex items-center gap-1"><ThumbsUp className="w-4 h-4" />{stats?.like_count ?? post.like_count}</span>
-          <span className="flex items-center gap-1"><MessageCircle className="w-4 h-4" />{stats?.comment_count ?? post.comment_count}</span>
-          <span className="flex items-center gap-1"><Heart className="w-4 h-4" />{stats?.favorite_count ?? 0} 收藏</span>
-          {post.is_private === 1 && <span className="flex items-center gap-1 text-warning"><Lock className="w-3 h-3" />私密</span>}
-          {user && (user.id === post.author_id || user.isAdmin) && (
+          <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+          <span className="flex items-center gap-1"><Eye className="w-4 h-4" />{stats?.viewCount ?? post.viewCount}</span>
+          <span className="flex items-center gap-1"><ThumbsUp className="w-4 h-4" />{stats?.likeCount ?? post.likeCount}</span>
+          <span className="flex items-center gap-1"><MessageCircle className="w-4 h-4" />{stats?.commentCount ?? post.commentCount}</span>
+          <span className="flex items-center gap-1"><Heart className="w-4 h-4" />{stats?.favoriteCount ?? 0} 收藏</span>
+          {post.isPrivate === 1 && <span className="flex items-center gap-1 text-warning"><Lock className="w-3 h-3" />私密</span>}
+          {user && (user.id === post.authorId || user.isAdmin) && (
             <>
               <Link to={`/edit-post/${post.id}`} className="text-primary hover:text-primary-hover flex items-center gap-1"><Edit3 className="w-4 h-4" />编辑</Link>
-              {user.id === post.author_id && (
+              {user.id === post.authorId && (
                 <button onClick={handleTogglePrivacy} className="text-warning hover:text-warning/80 flex items-center gap-1">
-                  {post.is_private === 1 ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                  {post.is_private === 1 ? '取消私密' : '设私密'}
+                  {post.isPrivate === 1 ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                  {post.isPrivate === 1 ? '取消私密' : '设私密'}
                 </button>
               )}
               {user.isAdmin && (
                 <button onClick={handleTogglePin} className="text-primary hover:text-primary-hover flex items-center gap-1">
-                  {post.is_pinned === 1 ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
-                  {post.is_pinned === 1 ? '取消置顶' : '置顶'}
+                  {post.isPinned === 1 ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+                  {post.isPinned === 1 ? '取消置顶' : '置顶'}
                 </button>
               )}
               <button onClick={handleDelete} className="text-destructive hover:text-destructive-hover flex items-center gap-1"><Trash2 className="w-4 h-4" />删除</button>
@@ -289,15 +289,15 @@ export default function PostDetailPage() {
         )}
 
         <div className="flex items-center gap-6 mt-6 pt-6 border-t border-border">
-          <button onClick={() => handleVote(post.my_vote === 1 ? 0 : 1)}
-            className={`flex items-center gap-2 text-sm font-medium transition-colors ${post.my_vote === 1 ? 'text-primary' : 'text-campus-text-tertiary'} hover:text-primary`}>
-            <ThumbsUp className={`w-5 h-5 ${post.my_vote === 1 ? 'fill-current' : ''}`} />{stats?.like_count ?? post.like_count}
+          <button onClick={() => handleVote(post.myVote === 1 ? 0 : 1)}
+            className={`flex items-center gap-2 text-sm font-medium transition-colors ${post.myVote === 1 ? 'text-primary' : 'text-campus-text-tertiary'} hover:text-primary`}>
+            <ThumbsUp className={`w-5 h-5 ${post.myVote === 1 ? 'fill-current' : ''}`} />{stats?.likeCount ?? post.likeCount}
           </button>
           <button onClick={handleFavorite}
-            className={`flex items-center gap-2 text-sm font-medium transition-colors ${post.is_favorited ? 'text-warning' : 'text-campus-text-tertiary'} hover:text-warning`}>
-            <Heart className={`w-5 h-5 ${post.is_favorited ? 'fill-current' : ''}`} />{stats?.favorite_count ? `${stats.favorite_count} 收藏` : '收藏'}
+            className={`flex items-center gap-2 text-sm font-medium transition-colors ${post.isFavorited ? 'text-warning' : 'text-campus-text-tertiary'} hover:text-warning`}>
+            <Heart className={`w-5 h-5 ${post.isFavorited ? 'fill-current' : ''}`} />{stats?.favoriteCount ? `${stats.favoriteCount} 收藏` : '收藏'}
           </button>
-          <span className="flex items-center gap-2 text-sm text-campus-text-tertiary"><MessageCircle className="w-5 h-5" />{stats?.comment_count ?? post.comment_count}</span>
+          <span className="flex items-center gap-2 text-sm text-campus-text-tertiary"><MessageCircle className="w-5 h-5" />{stats?.commentCount ?? post.commentCount}</span>
           <button onClick={() => setShowReport({ type: 'post', id: post.id })} className="flex items-center gap-2 text-sm text-campus-text-tertiary hover:text-destructive transition-colors"><Flag className="w-4 h-4" />举报</button>
           <button onClick={() => setShowShare(true)} className="flex items-center gap-2 text-sm text-campus-text-tertiary hover:text-primary transition-colors ml-auto"><Share2 className="w-4 h-4" />分享</button>
           <button onClick={fetchVersions} className="flex items-center gap-2 text-sm text-campus-text-tertiary hover:text-primary transition-colors"><History className="w-4 h-4" />历史</button>
@@ -309,10 +309,10 @@ export default function PostDetailPage() {
         <div className="card mt-4 p-4">
           <h3 className="text-sm font-semibold font-display mb-3">帖子统计</h3>
           <div className="grid grid-cols-4 gap-4 text-center">
-            <div><div className="text-lg font-bold font-display">{stats.view_count}</div><div className="text-xs text-campus-text-tertiary font-body">浏览</div></div>
-            <div><div className="text-lg font-bold font-display">{stats.like_count}</div><div className="text-xs text-campus-text-tertiary font-body">点赞</div></div>
-            <div><div className="text-lg font-bold font-display">{stats.comment_count}</div><div className="text-xs text-campus-text-tertiary font-body">评论</div></div>
-            <div><div className="text-lg font-bold font-display">{stats.favorite_count}</div><div className="text-xs text-campus-text-tertiary font-body">收藏</div></div>
+            <div><div className="text-lg font-bold font-display">{stats.viewCount}</div><div className="text-xs text-campus-text-tertiary font-body">浏览</div></div>
+            <div><div className="text-lg font-bold font-display">{stats.likeCount}</div><div className="text-xs text-campus-text-tertiary font-body">点赞</div></div>
+            <div><div className="text-lg font-bold font-display">{stats.commentCount}</div><div className="text-xs text-campus-text-tertiary font-body">评论</div></div>
+            <div><div className="text-lg font-bold font-display">{stats.favoriteCount}</div><div className="text-xs text-campus-text-tertiary font-body">收藏</div></div>
           </div>
         </div>
       )}
@@ -329,8 +329,8 @@ export default function PostDetailPage() {
             {versions.map(v => (
               <div key={v.id} className="p-3 mb-2 rounded-lg bg-surface-hover">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium font-body">{v.editor_name}</span>
-                  <span className="text-xs text-campus-text-tertiary">{new Date(v.created_at).toLocaleString()}</span>
+                  <span className="font-medium font-body">{v.editorName}</span>
+                  <span className="text-xs text-campus-text-tertiary">{new Date(v.createdAt).toLocaleString()}</span>
                 </div>
                 <p className="text-xs text-campus-text-secondary mt-1 line-clamp-2 font-body">{v.content}</p>
               </div>
@@ -343,7 +343,7 @@ export default function PostDetailPage() {
       <div className="mt-8">
         <h2 className="font-handwrite text-xl font-semibold text-campus-text-primary mb-6">评论 ({comments.length})</h2>
         <div className="space-y-4">
-          {comments.filter(c => c.parent_id === null).map(c => (
+          {comments.filter(c => c.parentId === null).map(c => (
             <CommentItem key={c.id} comment={c} childrenMap={childrenMap} user={user}
               onReply={(id, name) => setReplyTo({ id, name })}
               onDelete={handleDeleteComment}

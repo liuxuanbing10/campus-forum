@@ -60,7 +60,7 @@ export default function StringsFeed({ posts }: Props) {
                     {p.title}
                   </div>
                   <div className="text-[10px] text-[var(--soft)] mt-0.5">
-                    {p.author_name} · 赞 {p.like_count}
+                    {p.authorName} · 赞 {p.likeCount}
                   </div>
                 </div>
               </div>

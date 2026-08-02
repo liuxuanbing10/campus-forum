@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 import { userApi, followApi } from '../lib/api';
-import type { UserProfile as UserProfileType, UserPost, UserComment } from '@campus-forum/core';
+import type { UserPost, UserComment } from '../types/api'
+import type { UserProfile as UserProfileType } from '../types/api';
 import { toastStore } from '../App';
 import { ArrowLeft, Calendar, Edit3, MessageCircle, Eye, ThumbsUp, Users, Award, ChevronRight } from 'lucide-react';
 import FollowButton from '../components/FollowButton';
@@ -71,7 +72,7 @@ export default function UserProfilePage() {
       <div className="card p-6 mb-6">
         <div className="flex items-start gap-5">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white text-2xl font-bold shrink-0">
-            {profile.avatar_url ? <img src={profile.avatar_url} className="w-full h-full rounded-full object-cover" alt="" /> : profile.displayName?.[0] || '?'}
+            {profile.avatarUrl ? <img src={profile.avatarUrl} className="w-full h-full rounded-full object-cover" alt="" /> : profile.displayName?.[0] || '?'}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
@@ -86,9 +87,9 @@ export default function UserProfilePage() {
         {/* Stats */}
         <div className="grid grid-cols-4 gap-4 mt-6 pt-4 border-t border-border">
           {[
-            { icon: Edit3, label: '帖子', value: profile.post_count || 0 },
-            { icon: MessageCircle, label: '评论', value: profile.comment_count || 0 },
-            { icon: Users, label: '粉丝', value: profile.follower_count || 0 },
+            { icon: Edit3, label: '帖子', value: profile.postCount || 0 },
+            { icon: MessageCircle, label: '评论', value: profile.commentCount || 0 },
+            { icon: Users, label: '粉丝', value: profile.followerCount || 0 },
             { icon: Award, label: '积分', value: points.points || 0 },
           ].map((s, i) => (
             <div key={i} className="text-center">
@@ -105,7 +106,7 @@ export default function UserProfilePage() {
           </div>
         )}
         <div className="text-xs text-campus-text-tertiary mt-3 font-body flex items-center gap-1">
-          <Calendar className="w-3 h-3" /> {new Date(profile.created_at).toLocaleDateString('zh-CN')} 加入
+          <Calendar className="w-3 h-3" /> {new Date(profile.createdAt).toLocaleDateString('zh-CN')} 加入
         </div>
       </div>
 
@@ -122,10 +123,10 @@ export default function UserProfilePage() {
             <Link key={p.id} to={`/post/${p.id}`} className="card p-4 block hover:bg-surface-hover transition-colors">
               <h3 className="font-medium font-display mb-1">{p.title}</h3>
               <div className="flex items-center gap-4 text-xs text-campus-text-tertiary font-body">
-                <span>{p.board_name}</span>
-                <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{p.view_count}</span>
-                <span className="flex items-center gap-1"><ThumbsUp className="w-3 h-3" />{p.like_count}</span>
-                <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" />{p.comment_count}</span>
+                <span>{p.boardName}</span>
+                <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{p.viewCount}</span>
+                <span className="flex items-center gap-1"><ThumbsUp className="w-3 h-3" />{p.likeCount}</span>
+                <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" />{p.commentCount}</span>
               </div>
             </Link>
           ))}
@@ -136,10 +137,10 @@ export default function UserProfilePage() {
         <div className="space-y-3">
           {comments.length === 0 && <p className="text-center text-campus-text-tertiary py-8 font-body">暂无评论</p>}
           {comments.map(c => (
-            <Link key={c.id} to={`/post/${c.post_id}`} className="card p-4 block hover:bg-surface-hover transition-colors">
+            <Link key={c.id} to={`/post/${c.postId}`} className="card p-4 block hover:bg-surface-hover transition-colors">
               <p className="text-sm text-campus-text-secondary mb-1 line-clamp-2 font-body">{c.content}</p>
               <div className="flex items-center gap-2 text-xs text-campus-text-tertiary font-body">
-                <span>回复了 {c.post_title}</span>
+                <span>回复了 {c.postTitle}</span>
                 <ChevronRight className="w-3 h-3" />
               </div>
             </Link>

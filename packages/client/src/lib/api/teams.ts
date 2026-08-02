@@ -1,5 +1,5 @@
 import api from './client';
-import type { TeamCategory, Team, TeamMember, TeamAnnouncement, TeamPost, TeamContentPost, TeamFile, TeamContentComment, MyTeamsResponse, CreateTeamData, UpdateTeamData } from '@campus-forum/core';
+import type { TeamCategory, Team, TeamMember, TeamAnnouncement, TeamPost, TeamContentPost, TeamFile, TeamContentComment, MyTeamsResponse, CreateTeamData, UpdateTeamData } from '../../types/api';
 
 export const teamsApi = {
   getCategories: () => api.get<{ categories: TeamCategory[] }>('/team-categories'),
