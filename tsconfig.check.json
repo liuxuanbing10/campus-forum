@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@campus-forum/core": ["./packages/core/src/index.ts"],
+      "@campus-forum/database": ["./packages/database/src/index.ts"]
+    }
+  },
+  "include": ["packages/database/src/**/*.ts", "packages/core/src/**/*.ts"]
+}

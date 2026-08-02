@@ -19,6 +19,7 @@
     "build:vercel": "npm run build:server && npm run build:client",
     "start:server": "node packages/server/dist/index.js",
     "test": "vitest run",
+    "test:client": "npm run test --workspace @campus-forum/client",
     "test:watch": "vitest",
     "lint": "eslint .",
     "format": "prettier --write \"packages/**/*.{ts,tsx}\""
@@ -29,6 +30,7 @@
     "concurrently": "^9.1.0",
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^10.1.8",
+    "jsdom": "^30.0.1",
     "playwright": "^1.61.1",
     "prettier": "^3.4.0",
     "typescript": "^6.0.3",

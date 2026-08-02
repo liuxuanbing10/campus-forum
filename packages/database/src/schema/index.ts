@@ -5,4 +5,4 @@ export async function initializeSchema(db: DatabaseAdapter): Promise<void> {
   await db.exec(TABLES_SQL);
 }
 
-export { migrateSchema } from './migrations.js';
+export { migrateSchema, migrations } from './migrations.js';

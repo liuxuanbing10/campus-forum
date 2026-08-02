@@ -1,4 +1,4 @@
-import type { Plugin, BoardRow } from '@campus-forum/core';
+import { Plugin, BoardRow, parseIdParam, errors, clampPage } from '@campus-forum/core';
 import { kyselyQuery } from '@campus-forum/database';
 
 export const boardsPlugin: Plugin = {
@@ -22,29 +22,31 @@ export const boardsPlugin: Plugin = {
 
     // Get single board
     app.get<{ Params: { id: string } }>('/api/boards/:id', async (request, reply) => {
-      const id = Number(request.params.id);
+      const id = parseIdParam(request);
+      if (!id) return errors.badRequest(reply, '无效的板块 ID');
       const board = await q()!.selectFrom('boards')
         .selectAll()
         .where('id', '=', id)
         .executeTakeFirst() as BoardRow | undefined;
       if (!board) {
-        return reply.status(404).send({ error: '板块不存在' });
+        return errors.notFound(reply, '板块');
       }
       return board;
     });
 
     // Get posts in a board
     app.get<{ Params: { id: string } }>('/api/boards/:id/posts', async (request, reply) => {
-      const boardId = Number(request.params.id);
+      const boardId = parseIdParam(request);
+      if (!boardId) return errors.badRequest(reply, '无效的板块 ID');
       const board = await q()!.selectFrom('boards')
         .select('id')
         .where('id', '=', boardId)
         .executeTakeFirst() as BoardRow | undefined;
       if (!board) {
-        return reply.status(404).send({ error: '板块不存在' });
+        return errors.notFound(reply, '板块');
       }
 
-      const page = Math.min(100, Math.max(1, Number((request.query as Record<string, string>).page) || 1));
+      const page = clampPage((request.query as Record<string, string>).page);
       const limit = 20;
       const offset = (page - 1) * limit;
       const posts = await kdb.sql<{

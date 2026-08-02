@@ -110,6 +110,70 @@ export function paginate<T>(items: T[], page: number, pageSize: number): { data:
   };
 }
 
+// 把页码参数夹逼到 [1, max]（消除各插件重复的 Math.max(1, Math.min(100, ...))）
+export function clampPage(value: unknown, max = 100): number {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.min(max, Math.floor(n));
+}
+
+// 解析路由路径参数 id（消除各插件重复的 Number((req.params as ...).id)）
+export function parseIdParam(req: FastifyRequest, paramName = 'id'): number | null {
+  const raw = (req.params as Record<string, string>)[paramName];
+  if (raw === undefined) return null;
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+// 统一错误响应助手（消除各插件重复的 404/403/401 文案）
+export const errors = {
+  notFound(reply: FastifyReply, entity = '资源'): FastifyReply {
+    return reply.code(404).send({ error: `${entity}不存在` });
+  },
+  badRequest(reply: FastifyReply, message = '请求参数错误'): FastifyReply {
+    return reply.code(400).send({ error: message });
+  },
+  unauthorized(reply: FastifyReply, message = '请先登录'): FastifyReply {
+    return reply.code(401).send({ error: message });
+  },
+  forbidden(reply: FastifyReply, message = '没有权限'): FastifyReply {
+    return reply.code(403).send({ error: message });
+  },
+};
+
+// 管理员守卫（preHandler 工厂，复用 core 的 uid + 角色判断，替代各插件本地 any 版守卫）
+export function requireAdminFactory(db: DatabaseAdapter) {
+  return async function (req: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const userId = uid(req);
+    if (!userId) {
+      reply.code(401).send({ error: '请先登录' });
+      return;
+    }
+    const user = await db.get<{ role: string; is_admin: number }>(
+      'SELECT role, is_admin FROM users WHERE id = ?',
+      userId,
+    );
+    if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+      reply.code(403).send({ error: '需要管理员权限' });
+    }
+  };
+}
+
+// 超级管理员守卫
+export function requireSuperAdminFactory(db: DatabaseAdapter) {
+  return async function (req: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const userId = uid(req);
+    if (!userId) {
+      reply.code(401).send({ error: '请先登录' });
+      return;
+    }
+    const user = await db.get<{ role: string }>('SELECT role FROM users WHERE id = ?', userId);
+    if (!user || user.role !== 'superadmin') {
+      reply.code(403).send({ error: '需要超级管理员权限' });
+    }
+  };
+}
+
 // ── 公共业务工具函数 ──────────────────────────────
 
 // 积分操作

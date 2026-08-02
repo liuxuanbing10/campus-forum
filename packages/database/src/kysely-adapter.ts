@@ -22,7 +22,9 @@
 import { Kysely, sql, SqliteDialect } from 'kysely';
 import type { DatabaseAdapter, PreparedStatement, RunResult } from '@campus-forum/core';
 import { createClient } from '@libsql/client';
+import type { Client, InArgs } from '@libsql/client';
 import BetterSqlite3 from 'better-sqlite3';
+import type { Database as BetterSqlite3Database } from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -34,14 +36,19 @@ try {
   __dirname = process.cwd();
 }
 
-// 任意表结构（schema 动态，用 any 兜底以跳过 Kysely 的严格类型检查）
+// 任意表结构（schema 动态）。此处刻意使用 `any`：Kysely 针对「未提供完整
+// 表结构接口」的数据库时，`Kysely<any>` 是官方推荐的「非类型安全」用法——
+// 在缺少完整 DB 接口（本项目表结构由运行时 SQL 决定）的前提下，强约束为
+// Record 类型反而会让 .select('col') / .where('col', ...) / .set(eb => ...) /
+// .get<T>() 等链式 API 大面积报类型错误，得不偿失。真正的类型安全收益来自
+// 下方 LibSQLAdapter 的 Client/Row/InArgs 显式类型与 query() 调用处的泛型约束。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDB = any;
 
 // 将行中的 BigInt 转 number（与 LibSQLAdapter 一致）
-function normalizeRow(row: Record<string, unknown> | undefined): any {
+function normalizeRow(row: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
   if (!row) return undefined;
-  const result: any = {};
+  const result: Record<string, unknown> = {};
   for (const key of Object.keys(row)) {
     const val = row[key];
     result[key] = typeof val === 'bigint' ? Number(val) : val;
@@ -49,8 +56,8 @@ function normalizeRow(row: Record<string, unknown> | undefined): any {
   return result;
 }
 
-function normalizeRows(rows: Record<string, unknown>[]): any[] {
-  return rows.map(normalizeRow);
+function normalizeRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
+  return rows.map(normalizeRow) as Record<string, unknown>[];
 }
 
 // 多语句 SQL 拆分（与 LibSQLAdapter 一致逻辑）
@@ -76,10 +83,10 @@ function splitSql(sqlText: string): string[] {
 
 export class KyselyAdapter implements DatabaseAdapter {
   private kysely: Kysely<AnyDB>;
-  private libsqlClient: any;
-  private bs3: any;
+  private libsqlClient: Client;
+  private bs3?: BetterSqlite3Database;
 
-  private constructor(kysely: Kysely<AnyDB>, libsqlClient: any, bs3?: any) {
+  private constructor(kysely: Kysely<AnyDB>, libsqlClient: Client, bs3?: BetterSqlite3Database) {
     this.kysely = kysely;
     this.libsqlClient = libsqlClient;
     this.bs3 = bs3;
@@ -112,17 +119,17 @@ export class KyselyAdapter implements DatabaseAdapter {
 
   // ── DatabaseAdapter 兼容接口（走 libsql/client，与 LibSQLAdapter 行为一致） ──
   async get<T>(sqlText: string, ...params: unknown[]): Promise<T | undefined> {
-    const result = await this.libsqlClient.execute({ sql: sqlText, args: params });
+    const result = await this.libsqlClient.execute({ sql: sqlText, args: params as InArgs });
     return normalizeRow(result.rows[0]) as T | undefined;
   }
 
   async all<T>(sqlText: string, ...params: unknown[]): Promise<T[]> {
-    const result = await this.libsqlClient.execute({ sql: sqlText, args: params });
+    const result = await this.libsqlClient.execute({ sql: sqlText, args: params as InArgs });
     return normalizeRows(result.rows) as T[];
   }
 
   async run(sqlText: string, ...params: unknown[]): Promise<RunResult> {
-    const result = await this.libsqlClient.execute({ sql: sqlText, args: params });
+    const result = await this.libsqlClient.execute({ sql: sqlText, args: params as InArgs });
     return {
       lastInsertRowid: result.lastInsertRowid ?? 0,
       changes: result.rowsAffected ?? 0,
@@ -143,15 +150,15 @@ export class KyselyAdapter implements DatabaseAdapter {
     const client = this.libsqlClient;
     return {
       get: async (...params: unknown[]): Promise<T | undefined> => {
-        const result = await client.execute({ sql: sqlText, args: params });
+        const result = await client.execute({ sql: sqlText, args: params as InArgs });
         return normalizeRow(result.rows[0]) as T | undefined;
       },
       all: async (...params: unknown[]): Promise<T[]> => {
-        const result = await client.execute({ sql: sqlText, args: params });
+        const result = await client.execute({ sql: sqlText, args: params as InArgs });
         return normalizeRows(result.rows) as T[];
       },
       run: async (...params: unknown[]): Promise<RunResult> => {
-        const result = await client.execute({ sql: sqlText, args: params });
+        const result = await client.execute({ sql: sqlText, args: params as InArgs });
         return {
           lastInsertRowid: result.lastInsertRowid ?? 0,
           changes: result.rowsAffected ?? 0,
@@ -189,7 +196,7 @@ export class KyselyAdapter implements DatabaseAdapter {
       sqlText += strings[i];
       if (i < values.length) sqlText += '?';
     }
-    const result = await this.libsqlClient.execute({ sql: sqlText, args: values });
+    const result = await this.libsqlClient.execute({ sql: sqlText, args: values as InArgs });
     return normalizeRows(result.rows) as T[];
   }
 

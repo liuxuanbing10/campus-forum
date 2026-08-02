@@ -1,2 +1,2 @@
-// Re-export from schema modules
-export { initializeSchema, migrateSchema } from './schema/index.js';
+// Re-export from schema modules (single public entry for the database package)
+export { initializeSchema, migrateSchema, migrations } from './schema/index.js';

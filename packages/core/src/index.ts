@@ -1,7 +1,10 @@
 export * from './utils.js';
+// 重新导出 Fastify 请求/响应类型，使插件无需直接依赖 fastify 即可复用
+// requireAuth / parseIdParam / requireAdminFactory 等基于这些类型定义的守卫。
+export type { FastifyRequest, FastifyReply } from 'fastify';
 export type { ImageService } from './image-service.js';
 export { PluginManager } from './plugin-manager.js';
-export { SimpleEventBus } from './event-bus.js';
+export { createLogger, logger } from './logger.js';
 export type {
   Plugin,
   PluginManifest,
@@ -10,7 +13,6 @@ export type {
   DatabaseAdapter,
   PreparedStatement,
   RunResult,
-  EventBus,
   Logger,
   ConfigReader,
   User,

@@ -1,14 +1,18 @@
-import { useEffect, lazy, Suspense, useState, useCallback } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuthStore } from './stores/auth';
 import { useThemeStore } from './stores/theme';
+import { useToastStore, toastStore } from './stores/toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Login from './pages/Login';
-import { ToastContainer, ToastProps } from './components/Toast';
+import { ToastContainer } from './components/Toast';
 import { wsService } from './lib/websocket';
 import Skeleton from './components/Skeleton';
+
+// Re-export for backward compatibility — consumers import { toastStore } from '../App'
+export { toastStore };
 
 // ── Lazy-loaded pages ────────────────────────────
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
@@ -46,39 +50,13 @@ const PageSkeleton = () => (
   </div>
 );
 
-let toastList: ToastProps[] = [];
-const listeners = new Set<() => void>();
-
-function notifyListeners() {
-  listeners.forEach(fn => fn());
-}
-
-export const toastStore = {
-  get toasts() { return toastList; },
-  add: (message: string, type: ToastProps['type'] = 'info', duration?: number) => {
-    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    toastList = [...toastList, { id, message, type, duration, onClose: () => toastStore.remove(id) }];
-    notifyListeners();
-    return id;
-  },
-  remove: (id: string) => {
-    toastList = toastList.filter(t => t.id !== id);
-    notifyListeners();
-  },
-  success: (message: string, duration?: number) => toastStore.add(message, 'success', duration),
-  error: (message: string, duration?: number) => toastStore.add(message, 'error', duration),
-  warning: (message: string, duration?: number) => toastStore.add(message, 'warning', duration),
-  info: (message: string, duration?: number) => toastStore.add(message, 'info', duration),
-};
-
 export default function App() {
   const fetchUser = useAuthStore(s => s.fetchUser);
   const initTheme = useThemeStore(s => s.initTheme);
   const user = useAuthStore(s => s.user);
   const navigate = useNavigate();
-  const [, setTick] = useState(0);
-
-  const forceUpdate = useCallback(() => setTick(t => t + 1), []);
+  const toasts = useToastStore(s => s.toasts);
+  const removeToast = useToastStore(s => s.remove);
 
   useEffect(() => {
     initTheme();
@@ -100,11 +78,6 @@ export default function App() {
     }
     return () => { wsService.disconnect(); };
   }, [user]);
-
-  useEffect(() => {
-    listeners.add(forceUpdate);
-    return () => { listeners.delete(forceUpdate); };
-  }, [forceUpdate]);
 
   return (
     <ErrorBoundary>
@@ -143,7 +116,7 @@ export default function App() {
         <Route path="/ostracism" element={<Suspense fallback={<PageSkeleton />}><Ostracism /></Suspense>} />
         <Route path="/oauth/setup" element={<Suspense fallback={<PageSkeleton />}><OAuthSetup /></Suspense>} />
       </Routes>
-      <ToastContainer toasts={toastList} onClose={toastStore.remove} />
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </ErrorBoundary>
   );
 }

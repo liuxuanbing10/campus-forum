@@ -14,8 +14,9 @@ export class PluginManager {
     this.ctx = ctx;
   }
 
-  async register(plugin: Plugin): Promise<void> {
+  async register(plugin: Plugin, ctx?: PluginContext): Promise<void> {
     const { name } = plugin.manifest;
+    const context = ctx ?? this.ctx;
 
     if (this.plugins.has(name)) {
       throw new Error(`Plugin "${name}" is already registered`);
@@ -38,13 +39,13 @@ export class PluginManager {
 
     try {
       this.plugins.get(name)!.state = 'loading';
-      await plugin.apply(this.ctx);
+      await plugin.apply(context);
       this.plugins.get(name)!.state = 'active';
-      this.ctx.logger.info(`Plugin "${name}" loaded successfully`);
+      context.logger.info(`Plugin "${name}" loaded successfully`);
     } catch (error) {
       this.plugins.get(name)!.state = 'failed';
       this.plugins.get(name)!.error = error as Error;
-      this.ctx.logger.error(`Plugin "${name}" failed to load:`, error);
+      context.logger.error(`Plugin "${name}" failed to load:`, error);
       throw error;
     }
   }

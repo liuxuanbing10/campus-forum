@@ -8,7 +8,7 @@ import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import multipart from '@fastify/multipart';
-import { PluginManager, SimpleEventBus, PluginContext, Logger, uid } from '@campus-forum/core';
+import { PluginManager, PluginContext, uid, createLogger } from '@campus-forum/core';
 import { ZodError } from 'zod/v4';
 import 'dotenv/config';
 import { createKyselyDatabase, initializeSchema, migrateSchema, seedData } from '@campus-forum/database';
@@ -24,6 +24,9 @@ try {
 }
 
 import { isSuspiciousUA } from './bot-config.js';
+
+// Structured logger (pino) — replaces ad-hoc console.* across the server.
+const logger = createLogger('server');
 
 // ── 可公开访问的路径（无需验证 UA 或额外限流）────
 const PUBLIC_ASSET_PATHS = ['/uploads/', '/health'];
@@ -44,7 +47,8 @@ export async function buildApp(options?: { plugins?: any[] }) {
   });
 
   // ── CORS ────────────────────────────────────
-  // 支持多个前端来源：本地开发、Netlify 部署、GitHub Pages 部署
+  // 支持多个前端来源：本地开发、服务器部署、GitHub Pages 部署。
+  // 可通过环境变量 CORS_ALLOWLIST（逗号分隔）追加/覆盖允许的来源。
   const allowedOrigins = [
     'http://localhost:5173',
     'http://47.121.137.231',
@@ -52,6 +56,12 @@ export async function buildApp(options?: { plugins?: any[] }) {
     'https://campus-forum.duckdns.org',
     'https://liuxuanbing10.github.io',
   ];
+  // 通过 CORS_ALLOWLIST 注入额外来源（如自定义域名），以逗号分隔
+  if (process.env.CORS_ALLOWLIST) {
+    for (const o of process.env.CORS_ALLOWLIST.split(',').map((s) => s.trim()).filter(Boolean)) {
+      if (!allowedOrigins.includes(o)) allowedOrigins.push(o);
+    }
+  }
   // 额外允许通过 CLIENT_URL 环境变量配置（.env 中设置）
   if (process.env.CLIENT_URL && !allowedOrigins.includes(process.env.CLIENT_URL)) {
     allowedOrigins.push(process.env.CLIENT_URL);
@@ -112,7 +122,7 @@ export async function buildApp(options?: { plugins?: any[] }) {
   const sessionSecret = process.env.SESSION_SECRET || process.env.JWT_SECRET || DEFAULT_SESSION_SECRET;
   const sessionMaxAge = 7 * 24 * 60 * 60 * 1000;
   if (sessionSecret.length < 32) {
-  console.warn('⚠️ SESSION_SECRET 长度不足 32 字符，使用默认值');
+    logger.warn('⚠️ SESSION_SECRET 长度不足 32 字符，使用默认值');
   }
 
   // ── Cookie 安全配置 ─────────────────────────
@@ -148,7 +158,7 @@ export async function buildApp(options?: { plugins?: any[] }) {
       ? '服务器内部错误'
       : err.message || String(error);
     if (statusCode === 500) {
-      console.error(`[ERROR] ${request.method} ${request.url}:`, error);
+      logger.error(`[ERROR] ${request.method} ${request.url}: ${err.message}`);
     }
     return reply.status(statusCode).send({
       error: statusCode >= 500 ? 'Internal Server Error' : err.code || 'Error',
@@ -187,12 +197,19 @@ export async function buildApp(options?: { plugins?: any[] }) {
   const queueService = new QueueService({ redisUrl: process.env.REDIS_URL });
 
   // ── Session with Turso-backed store ─────────────
-  let sessionPlugin: any;
-  try {
-    sessionPlugin = (await import('@fastify/session' as string)).default;
-  } catch {
-    try { sessionPlugin = (await import('@fastify/secure-session' as string)).default; } catch { console.debug('secure-session not available'); }
-  }
+    let sessionPlugin: any;
+    try {
+      sessionPlugin = (await import('@fastify/session' as string)).default;
+    } catch {
+      try {
+        sessionPlugin = (await import('@fastify/secure-session' as string)).default;
+      } catch {
+        throw new Error(
+          'Session 插件不可用：@fastify/session 和 @fastify/secure-session 均未安装。' +
+          '请运行 npm install @fastify/session 后重试。'
+        );
+      }
+    }
   await app.register(sessionPlugin, {
     secret: sessionSecret,
     cookie: {
@@ -205,14 +222,9 @@ export async function buildApp(options?: { plugins?: any[] }) {
     store: new TursoSessionStore(db, sessionMaxAge),
   });
 
-  // Logger
-  const logger: Logger = {
-    info: console.log, warn: console.warn,
-    error: console.error, debug: console.debug,
-  };
+  // Logger — already created at module top-level (structured pino logger)
 
   const config = new Map<string, unknown>();
-  const events = new SimpleEventBus();
 
   // 服务容器：供 plugins 通过 getService<T>('name') 调用
   const services = new Map<string, unknown>();
@@ -225,7 +237,7 @@ export async function buildApp(options?: { plugins?: any[] }) {
   const wsManager = new WsManager(app.server);
 
   const pluginCtx: PluginContext = {
-    app, db, events, logger,
+    app, db, logger,
     config: {
       get: <T>(key: string, defaultValue?: T) => (config.get(key) as T) ?? defaultValue!,
       set: (key: string, value: unknown) => config.set(key, value),
@@ -254,40 +266,54 @@ export async function buildApp(options?: { plugins?: any[] }) {
 
   const pluginManager = new PluginManager(pluginCtx);
 
-  if (options?.plugins && options.plugins.length > 0) {
-    for (const plugin of options.plugins) {
-      if (plugin && plugin.manifest) {
-        await pluginManager.register(plugin);
+    // 插件隔离加载：每个插件在独立的 Fastify 封装上下文中注册。
+    // 若 apply() 抛错，Fastify 自动丢弃该 scope 内已注册的路由，
+    // 不会污染其他插件或主应用。
+    const loadPluginIsolated = async (plugin: any, label: string) => {
+      try {
+        await app.register(async (instance) => {
+          const isolatedCtx: PluginContext = { ...pluginCtx, app: instance };
+          await pluginManager.register(plugin, isolatedCtx);
+        });
+      } catch (err) {
+        logger.warn(`⚠️  插件 ${label} 加载失败（已隔离回滚）: ${(err as Error).message}`);
       }
-    }
-  } else {
-    // 插件自动发现：扫描 plugins/ 目录
-    const pluginsDir = path.resolve(__dirname, '../../../plugins');
-    if (fs.existsSync(pluginsDir)) {
-      const entries = fs.readdirSync(pluginsDir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
-        const pkgPath = path.join(pluginsDir, entry.name, 'package.json');
-        const distPath = path.join(pluginsDir, entry.name, 'dist', 'index.js');
-        if (!fs.existsSync(pkgPath) || !fs.existsSync(distPath)) continue;
-        try {
-          const fileUrl = 'file:///' + distPath.replace(/\\/g, '/');
-          const mod = await import(fileUrl);
-          // 查找 export 的 Plugin 对象
-          const exportKeys = Object.keys(mod);
-          const pluginKey = exportKeys.find(k => k.endsWith('Plugin') || k === 'default');
-          if (pluginKey) {
-            const plugin = mod[pluginKey];
-            if (plugin && plugin.manifest) {
-              await pluginManager.register(plugin);
+    };
+
+    if (options?.plugins && options.plugins.length > 0) {
+      for (const plugin of options.plugins) {
+        if (plugin && plugin.manifest) {
+          await loadPluginIsolated(plugin, plugin.manifest.name);
+        }
+      }
+    } else {
+      // 插件自动发现：扫描 plugins/ 目录
+      const pluginsDir = path.resolve(__dirname, '../../../plugins');
+      if (fs.existsSync(pluginsDir)) {
+        const entries = fs.readdirSync(pluginsDir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (!entry.isDirectory()) continue;
+          const pkgPath = path.join(pluginsDir, entry.name, 'package.json');
+          const distPath = path.join(pluginsDir, entry.name, 'dist', 'index.js');
+          if (!fs.existsSync(pkgPath) || !fs.existsSync(distPath)) continue;
+          try {
+            const fileUrl = 'file:///' + distPath.replace(/\\/g, '/');
+            const mod = await import(fileUrl);
+            // 查找 export 的 Plugin 对象
+            const exportKeys = Object.keys(mod);
+            const pluginKey = exportKeys.find(k => k.endsWith('Plugin') || k === 'default');
+            if (pluginKey) {
+              const plugin = mod[pluginKey];
+              if (plugin && plugin.manifest) {
+                await loadPluginIsolated(plugin, entry.name);
+              }
             }
+          } catch (err) {
+            logger.warn(`⚠️  插件 ${entry.name} 加载失败: ${(err as Error).message}`);
           }
-        } catch (err) {
-          console.warn(`⚠️  插件 ${entry.name} 加载失败:`, (err as Error).message);
         }
       }
     }
-  }
 
   // Health check
   app.get('/api/health', async () => {

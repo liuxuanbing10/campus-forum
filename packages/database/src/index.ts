@@ -10,16 +10,13 @@ try {
   __dirname = process.cwd();
 }
 
-type Client = any;
-type Row = any;
-type InArgs = any;
-
 import { createClient as createHttpClient } from '@libsql/client/http';
+import type { Client, Row, InArgs } from '@libsql/client';
 
 // 将 libsql 返回行中的 BigInt 转为 number（避免 JSON 序列化报错）
-function normalizeRow(row: Row | undefined): any {
+function normalizeRow(row: Row | undefined): Record<string, unknown> | undefined {
   if (!row) return undefined;
-  const result: any = {};
+  const result: Record<string, unknown> = {};
   for (const key of Object.keys(row)) {
     const val = row[key];
     result[key] = typeof val === 'bigint' ? Number(val) : val;
@@ -27,11 +24,12 @@ function normalizeRow(row: Row | undefined): any {
   return result;
 }
 
-function normalizeRows(rows: Row[]): any[] {
-  return rows.map(normalizeRow);
+function normalizeRows(rows: Row[]): Record<string, unknown>[] {
+  return rows.map(normalRow => normalizeRow(normalRow) as Record<string, unknown>);
 }
 
-// 将多语句 SQL 拆分成单条语句（去掉 -- 注释，按 ; 分割，忽略字符串内的 ;）
+// 将多语句 SQL 拆分成单条语句
+// 处理：-- 行注释、'' 转义引号、字符串内分号
 function splitSql(sql: string): string[] {
   const lines = sql.split('\n').filter(l => !l.trim().startsWith('--'));
   const cleaned = lines.join('\n');
@@ -40,7 +38,15 @@ function splitSql(sql: string): string[] {
   let inString = false;
   for (let i = 0; i < cleaned.length; i++) {
     const ch = cleaned[i];
-    if (ch === "'") inString = !inString;
+    if (ch === "'") {
+      // '' 是 SQL 转义引号，不切换字符串状态
+      if (inString && cleaned[i + 1] === "'") {
+        current += "''";
+        i++; // skip next quote
+        continue;
+      }
+      inString = !inString;
+    }
     if (ch === ';' && !inString) {
       if (current.trim()) stmts.push(current.trim());
       current = '';
@@ -54,6 +60,8 @@ function splitSql(sql: string): string[] {
 
 export class LibSQLAdapter implements DatabaseAdapter {
   private client: Client;
+  /** 按 SQL 字符串缓存 PreparedStatement 对象，避免重复创建 */
+  private stmtCache = new Map<string, PreparedStatement<any>>();
 
   private constructor(client: Client) {
     this.client = client;
@@ -109,26 +117,32 @@ export class LibSQLAdapter implements DatabaseAdapter {
   }
 
   // @libsql/client 的 Client 没有 prepare 方法，用 execute 模拟 PreparedStatement
-  prepare<T>(sql: string): PreparedStatement<T> {
-    const client = this.client;
-    return {
-      get: async (...params: unknown[]): Promise<T | undefined> => {
-        const result = await client.execute({ sql, args: params as InArgs });
-        return normalizeRow(result.rows[0]) as T | undefined;
-      },
-      all: async (...params: unknown[]): Promise<T[]> => {
-        const result = await client.execute({ sql, args: params as InArgs });
-        return normalizeRows(result.rows) as T[];
-      },
-      run: async (...params: unknown[]): Promise<RunResult> => {
-        const result = await client.execute({ sql, args: params as InArgs });
-        return {
-          lastInsertRowid: result.lastInsertRowid ?? 0,
-          changes: result.rowsAffected ?? 0,
-        };
-      },
-    };
-  }
+    // 按 SQL 字符串缓存实例，同一 SQL 多次 prepare() 返回同一对象
+    prepare<T>(sql: string): PreparedStatement<T> {
+      const cached = this.stmtCache.get(sql);
+      if (cached) return cached as PreparedStatement<T>;
+
+      const client = this.client;
+      const stmt: PreparedStatement<T> = {
+        get: async (...params: unknown[]): Promise<T | undefined> => {
+          const result = await client.execute({ sql, args: params as InArgs });
+          return normalizeRow(result.rows[0]) as T | undefined;
+        },
+        all: async (...params: unknown[]): Promise<T[]> => {
+          const result = await client.execute({ sql, args: params as InArgs });
+          return normalizeRows(result.rows) as T[];
+        },
+        run: async (...params: unknown[]): Promise<RunResult> => {
+          const result = await client.execute({ sql, args: params as InArgs });
+          return {
+            lastInsertRowid: result.lastInsertRowid ?? 0,
+            changes: result.rowsAffected ?? 0,
+          };
+        },
+      };
+      this.stmtCache.set(sql, stmt);
+      return stmt;
+    }
 
   close(): void {
     this.client.close();
@@ -141,5 +155,5 @@ export async function createDatabase(dbPath?: string): Promise<LibSQLAdapter> {
 
 export { initializeSchema } from './schema.js';
 export { seedData } from './seed.js';
-export { migrateSchema } from './schema.js';
+export { migrateSchema, migrations } from './schema.js';
 export { KyselyAdapter, createKyselyDatabase, kyselyQuery } from './kysely-adapter.js';

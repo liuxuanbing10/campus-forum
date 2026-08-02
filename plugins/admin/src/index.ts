@@ -1,4 +1,4 @@
-import { Plugin, PluginContext } from '@campus-forum/core';
+import { Plugin, PluginContext, requireAdminFactory, requireSuperAdminFactory } from '@campus-forum/core';
 import { kyselyQuery } from '@campus-forum/database';
 import { z } from 'zod/v4';
 
@@ -58,35 +58,9 @@ export const adminPlugin: Plugin = {
     const { app, db } = ctx;
     const { kdb, q } = kyselyQuery(db);
 
-    const requireAdmin = async (request: any, reply: any, done: any) => {
-      const userId = request.userId as number | undefined;
-      if (!userId) {
-        return reply.status(401).send({ error: '未登录' });
-      }
-      const user = await q()!.selectFrom('users')
-        .select(['role', 'is_admin'])
-        .where('id', '=', userId)
-        .executeTakeFirst() as { role: string; is_admin: number } | undefined;
-      if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
-        return reply.status(403).send({ error: '需要管理员权限' });
-      }
-      done();
-    };
-
-    const requireSuperAdmin = async (request: any, reply: any, done: any) => {
-      const userId = request.userId as number | undefined;
-      if (!userId) {
-        return reply.status(401).send({ error: '未登录' });
-      }
-      const user = await q()!.selectFrom('users')
-        .select(['role', 'is_admin'])
-        .where('id', '=', userId)
-        .executeTakeFirst() as { role: string; is_admin: number } | undefined;
-      if (!user || user.role !== 'superadmin') {
-        return reply.status(403).send({ error: '需要超级管理员权限' });
-      }
-      done();
-    };
+    // 使用 core 提供的类型安全守卫工厂（复用 uid + 角色判断，替代本地 any 版守卫）
+    const requireAdmin = requireAdminFactory(db);
+    const requireSuperAdmin = requireSuperAdminFactory(db);
 
     // ========================================
     // 用户列表

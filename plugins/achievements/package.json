@@ -1,6 +1,6 @@
 {
-  "name": "campus-forum-achievements",
-  "version": "1.0.0",
+  "name": "@campus-forum/plugin-achievements",
+  "version": "0.1.0",
   "type": "module",
   "private": true,
   "main": "dist/index.js",
