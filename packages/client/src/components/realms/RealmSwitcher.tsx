@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { useRealm } from './RealmProvider';
 import { REALMS, type RealmId } from '../../stores/theme';
 

@@ -3,6 +3,7 @@ import { teamsApi } from '../lib/api';
 import type { Team } from '../types/api';
 import { useState } from 'react';
 import { toastStore } from '../App';
+import { formatDate } from '../lib/date';
 
 interface TeamCardProps {
   team: Team;
@@ -79,7 +80,7 @@ export default function TeamCard({ team, onClick, showFavorite = true, onFavorit
             </span>
             <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
-              {new Date(team.createdAt).toLocaleDateString('zh-CN')}
+              {formatDate(team.createdAt)}
             </span>
           </div>
           {team.role && team.role !== 'member' && (

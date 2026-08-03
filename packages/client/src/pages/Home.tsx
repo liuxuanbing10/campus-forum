@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as Tabs from '@radix-ui/react-tabs';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { toastStore } from '../App';
 import { Users, UserPlus, BookOpen, Download, Loader2 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
@@ -17,6 +18,9 @@ import BoardsPanel from '../components/realms/sidebars/BoardsPanel';
 import StatsPanel from '../components/realms/sidebars/StatsPanel';
 import PhotoPanel from '../components/realms/sidebars/PhotoPanel';
 import WoodenFish from '../components/realms/sidebars/WoodenFish';
+import { JoyrideGuide } from '../components/JoyrideGuide';
+import type { Step } from 'react-joyride';
+import { QK } from '../lib/query-client';
 
 interface Board {
   id: number;
@@ -36,85 +40,87 @@ export default function Home() {
   const { user, loading } = useAuthStore();
   const { realm } = useRealm();
 
-  // 板块数据
-  const [boards, setBoards] = useState<Board[]>([]);
-  const [boardsLoading, setBoardsLoading] = useState(true);
+  // 板块数据（react-query）
+  const { data: boards = [], isLoading: boardsLoading } = useQuery({
+    queryKey: QK.boards.list(),
+    queryFn: async () => {
+      const res = await api.get('/boards');
+      return res.data as Board[];
+    },
+    enabled: !!user,
+  });
 
-  // 帖子数据（无限滚动）
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [postsPage, setPostsPage] = useState(1);
-  const [postsLoading, setPostsLoading] = useState(false);
-  const [postsLoadingMore, setPostsLoadingMore] = useState(false);
-  const [postsHasMore, setPostsHasMore] = useState(true);
+  // 帖子数据（无限滚动 + react-query）
+  const [tab, setTab] = useState('latest');
   const postsSentinelRef = useRef<HTMLDivElement | null>(null);
 
-  // 当前 tab
-  const [tab, setTab] = useState('latest');
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: postsLoading,
+    refetch,
+  } = useInfiniteQuery<{ posts: Post[]; nextPage: number }>({
+    queryKey: QK.posts.list(tab, 0),
+    queryFn: async ({ pageParam }) => {
+      const page = (pageParam as number) ?? 1;
+      const res = await api.get('/posts', { params: { page, sort: tab } });
+      return { posts: (res.data.posts || []) as Post[], nextPage: page + 1 };
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.posts.length >= POST_LIMIT ? lastPage.nextPage : undefined),
+    enabled: !!user,
+  });
 
-  // ── 拉取板块 ──
-  useEffect(() => {
-    api.get('/boards')
-      .then((res) => setBoards(res.data))
-      .catch(() => console.debug('Failed to load boards'))
-      .finally(() => setBoardsLoading(false));
-  }, []);
-
-  // 页面加载时滚动到顶部
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  // ── 拉取帖子 ──
-  const fetchPosts = useCallback(async (pageNum: number, append = false, sort: string = 'latest') => {
-    if (pageNum === 1) setPostsLoading(true);
-    else setPostsLoadingMore(true);
-    try {
-      const res = await api.get('/posts', { params: { page: pageNum, sort } });
-      const newPosts: Post[] = res.data.posts || [];
-      setPosts(prev => append ? [...prev, ...newPosts] : newPosts);
-      if (newPosts.length < POST_LIMIT) setPostsHasMore(false);
-      setPostsPage(pageNum + 1);
-    } catch {
-      // 静默
-    } finally {
-      setPostsLoading(false);
-      setPostsLoadingMore(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      fetchPosts(1, false, tab);
-    }
-  }, [user, tab, fetchPosts]);
+  const posts = data?.pages.flatMap(p => p.posts) ?? [];
 
   // 无限滚动
   useEffect(() => {
-    if (!postsSentinelRef.current || !postsHasMore || postsLoadingMore) return;
+    if (!postsSentinelRef.current || !hasNextPage || isFetchingNextPage) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && postsHasMore && !postsLoadingMore) {
-          fetchPosts(postsPage, true, tab);
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
         }
       },
       { rootMargin: '200px' }
     );
     observer.observe(postsSentinelRef.current);
     return () => observer.disconnect();
-  }, [postsSentinelRef.current, postsHasMore, postsLoadingMore, postsPage, fetchPosts, tab]);
+  }, [postsSentinelRef.current, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // 页面加载时滚动到顶部
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  // 新手引导步骤
+  const tourSteps: Step[] = [
+    {
+      target: '[data-joyride="masthead"]',
+      content: '欢迎来到十三境！这里是主题站头，可以切换不同风格。',
+    },
+    {
+      target: '[data-joyride="tabs"]',
+      content: '在这里切换最新、热门、精选帖子。',
+    },
+    {
+      target: '[data-joyride="boards-panel"]',
+      content: '这是版块列表，点击可进入对应板块。',
+    },
+    {
+      target: '[data-joyride="realm-switcher"]',
+      content: '点击这里切换十三境主题风格。',
+    },
+  ];
 
   // 下拉刷新
   const { pullDistance, pulling, refreshing, pullProps, containerRef } = usePullToRefresh({
     threshold: 80,
     resistance: 0.5,
     onRefresh: async () => {
-      setPostsPage(1);
-      setPostsHasMore(true);
-      await fetchPosts(1, false, tab);
-      try {
-        const res = await api.get('/boards');
-        setBoards(res.data);
-      } catch { console.debug('Failed to refresh boards'); }
+      await refetch();
       toastStore.success('已刷新', 1500);
     },
   });
@@ -146,11 +152,18 @@ export default function Home() {
         ogType="website"
       />
 
+      {/* 新手引导 */}
+      <JoyrideGuide steps={tourSteps} enabled={!!user} continuous />
+
       {/* 公告跑马灯 */}
       <Broadcast />
 
       {/* 站头（品牌 + 标语 + 罗盘/山景/藻井）- r1/r3 由沉浸场景覆盖 */}
-      {realm.id !== 'r1' && realm.id !== 'r3' && <Masthead />}
+      {realm.id !== 'r1' && realm.id !== 'r3' && (
+        <div data-joyride="masthead">
+          <Masthead />
+        </div>
+      )}
 
       {/* 主体内容 */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8">
@@ -165,7 +178,7 @@ export default function Home() {
                 transition={{ duration: 0.5 }}
               >
               <Tabs.Root value={tab} onValueChange={setTab}>
-                <Tabs.List className="flex items-center gap-1 p-1 rounded-lg bg-[var(--card)] border border-[var(--line)] mb-4 w-fit">
+                <Tabs.List className="flex items-center gap-1 p-1 rounded-lg bg-[var(--card)] border border-[var(--line)] mb-4 w-fit" data-joyride="tabs">
                   {[
                     { v: 'latest', label: '最新' },
                     { v: 'hot', label: '热门' },
@@ -213,12 +226,12 @@ export default function Home() {
                         <PostFeeds type={realm.feed} posts={posts} />
 
                         {/* 无限滚动哨兵 */}
-                        {postsHasMore && (
+                        {hasNextPage && (
                           <div
                             ref={postsSentinelRef}
                             className="flex items-center justify-center py-4"
                           >
-                            {postsLoadingMore ? (
+                            {isFetchingNextPage ? (
                               <Loader2 className="w-5 h-5 text-[var(--acc)] animate-spin" />
                             ) : (
                               <span className="text-xs text-[var(--soft)]">
@@ -228,7 +241,7 @@ export default function Home() {
                           </div>
                         )}
 
-                        {!postsHasMore && posts.length > 0 && (
+                        {!hasNextPage && posts.length > 0 && (
                           <div
                             className="text-center py-6 text-xs text-[var(--soft)] italic"
                             style={{ fontFamily: 'var(--disp)' }}
@@ -322,6 +335,7 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 0.5, delay: 0.2 }}
+                data-joyride="boards-panel"
               >
                 <BoardsPanel boards={boards} loading={boardsLoading} />
               </motion.div>

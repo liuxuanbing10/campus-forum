@@ -1,5 +1,6 @@
 import { User, Crown, Shield, UserCircle } from 'lucide-react';
 import type { TeamMember } from '../types/api';
+import { formatDate } from '../lib/date';
 
 interface TeamMemberListProps {
   members: TeamMember[];
@@ -50,7 +51,7 @@ export default function TeamMemberList({ members, onRemove, showActions = false 
                   {getRoleIcon(member.role)}
                   <span>{getRoleLabel(member.role)}</span>
                   <span>•</span>
-                  <span>{new Date(member.joinedAt).toLocaleDateString('zh-CN')}</span>
+                  <span>{formatDate(member.joinedAt)}</span>
                 </div>
               </div>
             </div>

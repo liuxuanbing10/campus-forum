@@ -14,6 +14,8 @@ import api, { authApi, oauthApi, exportApi, avatarApi, userDeviceApi } from '../
 import type { User, OAuthAccount, UserDevice } from '../types/api';
 import Skeleton from '../components/Skeleton';
 import MetaManager from '../components/MetaManager';
+import { DragSort } from '../components/DragSort';
+import { formatDate } from '../lib/date';
 
 type TabKey = 'profile' | 'password' | 'oauth' | 'export' | 'appearance' | 'devices';
 
@@ -447,7 +449,7 @@ function OAuthTab() {
                   <p className="text-[12px] font-medium text-[var(--ink)]">{p.name}</p>
                   {bound && (
                     <p className="text-[10px] text-[var(--soft)]">
-                      已绑定 · {new Date(bound.bindedAt).toLocaleDateString()}
+                      已绑定 · {formatDate(bound.bindedAt)}
                     </p>
                   )}
                 </div>
@@ -478,77 +480,98 @@ function OAuthTab() {
 
 // ── 界面风格（十三境选择器） ──────────────────────
 function AppearanceTab() {
-  const { currentTheme, setTheme } = useThemeStore();
+  const { currentTheme, setTheme, realmOrder, setRealmOrder } = useThemeStore();
+  const [dragMode, setDragMode] = useState(false);
 
   return (
     <Card>
       <CardHeader icon={<Palette className="w-4 h-4" />} title="十三境主题" />
-      <p className="text-[12px] text-[var(--soft)] mb-4">
-        选择一个境，整站配色、字体、粒子、版式将随之切换
-      </p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {REALMS.map(r => {
-          const active = currentTheme === r.id;
-          return (
-            <motion.button
-              key={r.id}
-              onClick={() => setTheme(r.id as RealmId)}
-              whileHover={{ y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl text-center transition-all border ${
-                active
-                  ? 'border-[var(--acc)] ring-2 ring-[var(--acc)]/30 bg-[var(--acc)]/5'
-                  : 'border-[var(--line)] hover:border-[var(--acc)]/50'
-              }`}
-            >
-              {active && (
-                <span
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[var(--g1)] text-[10px] flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg, var(--acc), var(--acc2))' }}
-                >
-                  ✓
-                </span>
-              )}
-              {/* 配色预览 */}
-              <div
-                className="w-full h-12 rounded-md mb-1 relative overflow-hidden border border-[var(--line)]"
-                data-theme-preview={r.id}
-                style={{
-                  background: `linear-gradient(135deg, var(--g2, #f5f5f5), var(--g1, #fff))`,
-                }}
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-[12px] text-[var(--soft)]">
+          选择一个境，整站配色、字体、粒子、版式将随之切换
+        </p>
+        <button
+          onClick={() => setDragMode(v => !v)}
+          className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-body transition-colors ${dragMode ? 'bg-[var(--acc)] text-white' : 'bg-[var(--line)] text-[var(--soft)] hover:text-[var(--ink)]'}`}
+        >
+          {dragMode ? '完成排序' : '调整顺序'}
+        </button>
+      </div>
+
+      {dragMode ? (
+        <DragSort
+          items={realmOrder}
+          getItemId={r => r.id}
+          onSort={(newOrder) => setRealmOrder(newOrder.map(r => r.id))}
+          renderItem={(r) => (
+            <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-colors ${currentTheme === r.id ? 'border-[var(--acc)] bg-[var(--acc)]/5' : 'border-[var(--line)]'}`}>
+              <span className="text-lg">{r.emoji}</span>
+              <div className="min-w-0">
+                <span className="text-[13px] font-medium text-[var(--ink)]" style={{ fontFamily: 'var(--disp)' }}>{r.name}</span>
+                <span className="text-[10px] text-[var(--soft)] ml-2">{r.cat}</span>
+              </div>
+            </div>
+          )}
+        />
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {realmOrder.map(r => {
+            const active = currentTheme === r.id;
+            return (
+              <motion.button
+                key={r.id}
+                onClick={() => setTheme(r.id as RealmId)}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl text-center transition-all border ${
+                  active
+                    ? 'border-[var(--acc)] ring-2 ring-[var(--acc)]/30 bg-[var(--acc)]/5'
+                    : 'border-[var(--line)] hover:border-[var(--acc)]/50'
+                }`}
               >
+                {active && (
+                  <span
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[var(--g1)] text-[10px] flex items-center justify-center"
+                    style={{ background: 'linear-gradient(135deg, var(--acc), var(--acc2))' }}
+                  >
+                    ✓
+                  </span>
+                )}
+                {/* 配色预览 */}
                 <div
-                  className="absolute top-1 left-1 right-1 h-1 rounded-full"
-                  style={{ background: 'linear-gradient(90deg, var(--acc, #888), var(--acc2, #aaa))' }}
-                />
-                <div className="absolute bottom-1.5 left-1.5 flex gap-0.5">
-                  <span
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: 'var(--acc, #888)' }}
+                  className="w-full h-12 rounded-md mb-1 relative overflow-hidden border border-[var(--line)]"
+                  data-theme-preview={r.id}
+                  style={{
+                    background: `linear-gradient(135deg, var(--g2, #f5f5f5), var(--g1, #fff))`,
+                  }}
+                >
+                  <div
+                    className="absolute top-1 left-1 right-1 h-1 rounded-full"
+                    style={{ background: 'linear-gradient(90deg, var(--acc, #888), var(--acc2, #aaa))' }}
                   />
-                  <span
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ backgroundColor: 'var(--acc2, #aaa)' }}
-                  />
+                  <div className="absolute bottom-1.5 left-1.5 flex gap-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--acc, #888)' }} />
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--acc2, #aaa)' }} />
+                  </div>
+                  <div
+                    className="absolute bottom-1.5 right-1.5 text-[8px] text-[var(--soft)]"
+                    style={{ fontFamily: 'var(--disp)' }}
+                  >
+                    {r.seal}
+                  </div>
                 </div>
-                <div
-                  className="absolute bottom-1.5 right-1.5 text-[8px] text-[var(--soft)]"
+                <span
+                  className="text-[13px] font-medium text-[var(--ink)]"
                   style={{ fontFamily: 'var(--disp)' }}
                 >
-                  {r.seal}
-                </div>
-              </div>
-              <span
-                className="text-[13px] font-medium text-[var(--ink)]"
-                style={{ fontFamily: 'var(--disp)' }}
-              >
-                {r.name}
-              </span>
-              <span className="text-[10px] text-[var(--soft)] leading-tight">{r.desc}</span>
-            </motion.button>
-          );
-        })}
-      </div>
+                  {r.name}
+                </span>
+                <span className="text-[10px] text-[var(--soft)] leading-tight">{r.desc}</span>
+              </motion.button>
+            );
+          })}
+        </div>
+      )}
     </Card>
   );
 }
@@ -621,7 +644,7 @@ function DevicesTab() {
                   <p className="text-[10px] text-[var(--soft)] mt-1">{d.deviceInfo}</p>
                 )}
                 <p className="text-[10px] text-[var(--soft)] mt-0.5">
-                  最后登录: {d.lastLoginAt ? new Date(d.lastLoginAt).toLocaleString() : '-'}
+                  最后登录: {d.lastLoginAt ? formatDate(d.lastLoginAt) : '-'}
                 </p>
               </div>
               {!d.isCurrent && d.isActive !== 0 && (

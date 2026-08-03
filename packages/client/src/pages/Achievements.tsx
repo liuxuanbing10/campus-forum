@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Trophy, Medal, Star, TrendingUp, Sparkles, Lock, CheckCircle, Loader2, RefreshCw, BookOpen } from 'lucide-react';
 import api from '../lib/api';
 import type { Achievement } from '../types/api';
+import { formatDate } from '../lib/date';
 
 interface AchievementWithStatus extends Achievement {
   unlocked: boolean;
@@ -242,7 +243,7 @@ export default function Achievements() {
                   </div>
                   {ach.unlocked && ach.unlockedAt && (
                     <p className="text-[10px] text-campus-text-tertiary mt-1.5">
-                      达成于 {new Date(ach.unlockedAt + 'Z').toLocaleDateString('zh-CN')}
+                      达成于 {formatDate(ach.unlockedAt + 'Z')}
                     </p>
                   )}
                 </div>

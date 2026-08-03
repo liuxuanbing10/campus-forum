@@ -2,6 +2,7 @@ import { Megaphone, Pin, Trash2 } from 'lucide-react';
 import { teamsApi } from '../../lib/api';
 import type { TeamAnnouncement } from '../../types/api';
 import { toastStore } from '../../App';
+import { formatDate } from '../../lib/date';
 
 interface Props {
   announcements: TeamAnnouncement[];
@@ -53,7 +54,7 @@ export default function AnnouncementsTab({ announcements, isAdmin, teamId, loadD
             </div>
             <p className="text-campus-text-secondary text-sm whitespace-pre-wrap mb-3">{ann.content}</p>
             <div className="text-xs text-campus-text-tertiary">
-              {ann.displayName || ann.username} · {new Date(ann.createdAt).toLocaleString('zh-CN')}
+              {ann.displayName || ann.username} · {formatDate(ann.createdAt)}
             </div>
           </div>
         ))

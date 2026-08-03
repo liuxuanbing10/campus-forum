@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useDropzone } from 'react-dropzone';
 import api from '../lib/api';
 import { toastStore } from '../App';
-import { ArrowLeft, Lock, ImagePlus, X } from 'lucide-react';
+import { ArrowLeft, Lock, ImagePlus, X, Upload } from 'lucide-react';
 import MarkdownEditor from '../components/MarkdownEditor';
 
 interface Board {
@@ -26,20 +27,11 @@ export default function NewPostPage() {
     api.get('/boards').then(res => setBoards(res.data));
   }, []);
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (images.length >= 9) {
-      toastStore.warning('最多上传9张图片');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toastStore.warning('图片不能超过5MB');
-      return;
-    }
+  const uploadFile = useCallback(async (file: File) => {
+    if (images.length >= 9) { toastStore.warning('最多上传9张图片'); return; }
+    if (file.size > 5 * 1024 * 1024) { toastStore.warning('图片不能超过5MB'); return; }
     setUploading(true);
     try {
-      // 改用 FormData 文件流上传（避免 base64 编码 33% 体积膨胀）
       const form = new FormData();
       form.append('file', file);
       const res = await api.post('/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } });
@@ -50,7 +42,18 @@ export default function NewPostPage() {
     } finally {
       setUploading(false);
     }
-  };
+  }, [images.length]);
+
+  const onDrop = useCallback((accepted: File[]) => {
+    accepted.forEach(f => uploadFile(f));
+  }, [uploadFile]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'image/*': [] },
+    multiple: true,
+    disabled: uploading,
+  });
 
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
@@ -159,11 +162,18 @@ export default function NewPostPage() {
                 </div>
               ))}
               {images.length < 9 && (
-                <label className="w-20 h-20 flex flex-col items-center justify-center border border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors">
-                  <ImagePlus className="w-6 h-6 text-campus-text-tertiary" />
-                  <span className="text-xs text-campus-text-tertiary mt-1">{uploading ? '上传中...' : '添加'}</span>
-                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
-                </label>
+                <div
+                  {...getRootProps()}
+                  className={`w-20 h-20 flex flex-col items-center justify-center border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                    isDragActive ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50 hover:bg-primary/5'
+                  }`}
+                >
+                  <input {...getInputProps()} />
+                  {isDragActive
+                    ? <Upload className="w-6 h-6 text-primary animate-bounce" />
+                    : <><ImagePlus className="w-6 h-6 text-campus-text-tertiary" /><span className="text-xs text-campus-text-tertiary mt-1">{uploading ? '上传中...' : '拖拽/点击'}</span></>
+                  }
+                </div>
               )}
             </div>
           </div>

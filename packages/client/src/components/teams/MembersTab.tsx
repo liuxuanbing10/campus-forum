@@ -2,6 +2,7 @@ import { Lock, Crown, Shield } from 'lucide-react';
 import { teamsApi } from '../../lib/api';
 import type { TeamMember } from '../../types/api';
 import { toastStore } from '../../App';
+import { formatDate } from '../../lib/date';
 
 interface Props {
   members: TeamMember[];
@@ -65,7 +66,7 @@ export default function MembersTab({ members, membersHidden, isOwner, isAdmin, t
                     {member.role === 'admin' && <Shield className="w-4 h-4 text-accent" />}
                   </div>
                   <span className="text-xs text-campus-text-tertiary">
-                    {new Date(member.joinedAt).toLocaleDateString('zh-CN')} 加入
+                    {formatDate(member.joinedAt)} 加入
                   </span>
                 </div>
               </div>

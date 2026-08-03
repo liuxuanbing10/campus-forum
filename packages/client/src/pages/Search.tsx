@@ -4,6 +4,7 @@ import { Search, ArrowLeft, MessageCircle, Eye, ThumbsUp, Clock, Hash } from 'lu
 import api, { searchApi } from '../lib/api';
 import type { SearchResult } from '../types/api';
 import { toastStore } from '../App';
+import { formatDate } from '../lib/date';
 
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -136,7 +137,7 @@ export default function SearchPage() {
               </span>
               <span className="flex items-center gap-1 ml-auto">
                 <Clock className="w-3 h-3" />
-                {new Date(post.createdAt).toLocaleDateString()}
+                {formatDate(post.createdAt)}
               </span>
             </div>
           </Link>

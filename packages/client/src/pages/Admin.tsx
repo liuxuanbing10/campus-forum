@@ -1,6 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Shield, ArrowLeft, Search, Ban, UserCog, MoreVertical, UserX, UserCheck, FileText, Flag, History, AlertTriangle, Loader2, Trash2, Check, X, BarChart3, TrendingUp, Users, MessageSquare, Folder, Trophy, Smartphone, Key } from 'lucide-react';
+import {
+  useReactTable, getCoreRowModel, getSortedRowModel, flexRender,
+  createColumnHelper, type SortingState,
+} from '@tanstack/react-table';
+import { Shield, ArrowLeft, Search, Ban, UserCog, MoreVertical, UserX, UserCheck, FileText, Flag, History, AlertTriangle, Loader2, Trash2, Check, X, BarChart3, TrendingUp, Users, MessageSquare, Folder, Trophy, Smartphone, Key, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { adminApi, adminExtendedApi, adminDeviceApi } from '../lib/api';
 import api from '../lib/api';
 import type { AdminUser, PendingPost, SensitiveWord, AdminReport, AuditLog, AdminStats, DeviceBlacklistEntry, UserDevice } from '../types/api';
@@ -11,6 +16,9 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/dialog';
 import Skeleton from '../components/Skeleton';
+import { DayPicker } from '../components/DayPicker';
+import { formatDate, dayjs } from '../lib/date';
+import { QK } from '../lib/query-client';
 
 type AdminTab = 'stats' | 'users' | 'pending' | 'words' | 'reports' | 'logs' | 'devices';
 
@@ -71,17 +79,15 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
 }
 
 function StatsTab() {
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: stats, isLoading } = useQuery({
+    queryKey: QK.admin.stats(),
+    queryFn: async () => {
+      const r = await adminExtendedApi.getStats();
+      return r.data as AdminStats;
+    },
+  });
 
-  useEffect(() => {
-    adminExtendedApi.getStats()
-      .then(r => setStats(r.data))
-      .catch(() => toastStore.error('加载统计数据失败'))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return (
+  if (isLoading) return (
     <div className="space-y-3">
       <Skeleton variant="list" count={5} />
     </div>
@@ -382,6 +388,93 @@ function UsersTab({ currentUser }: { currentUser: { role: string } | null }) {
     finally { setCreating(false); }
   };
 
+  // ── react-table 列定义 ──
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const colHelper = createColumnHelper<AdminUser>();
+
+  const columns = useMemo(() => [
+    colHelper.display({
+      id: 'select',
+      header: () => (
+        <input type="checkbox" checked={selected.size === users.length && users.length > 0} onChange={toggleSelectAll}
+          className="w-4 h-4 rounded border-border text-primary focus:ring-primary" />
+      ),
+      cell: ({ row }) => (
+        <input type="checkbox" checked={selected.has(row.original.id)} onChange={() => toggleSelect(row.original.id)}
+          className="w-4 h-4 rounded border-border text-primary focus:ring-primary" />
+      ),
+    }),
+    colHelper.accessor('displayName', {
+      header: '用户',
+      cell: ({ row }) => {
+        const u = row.original;
+        return (
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white text-xs font-bold shrink-0">
+              {u.displayName?.[0] || '?'}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium font-body truncate">
+                {u.displayName} <span className="text-xs text-campus-text-tertiary">@{u.username}</span>
+                {u.isBanned ? <span className="ml-1.5 px-1.5 py-0.5 rounded bg-red-50 text-red-500 text-[10px]">封禁</span> : null}
+              </p>
+              <p className="text-xs text-campus-text-tertiary font-body truncate">{u.email || '无邮箱'}</p>
+            </div>
+          </div>
+        );
+      },
+    }),
+    colHelper.accessor('role', {
+      header: '角色',
+      cell: ({ row }) => {
+        const u = row.original;
+        return (
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+            u.role === 'superadmin' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400' :
+            u.role === 'admin' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' :
+            u.role === 'banned' ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400' :
+            'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400'
+          }`}>
+            {ROLE_NAMES[u.role as keyof typeof ROLE_NAMES] || u.role}
+          </span>
+        );
+      },
+    }),
+    colHelper.accessor('postCount', { header: '帖子', cell: ({ getValue }) => <span className="text-sm tabular-nums">{getValue()}</span> }),
+    colHelper.display({
+      id: 'actions',
+      header: '操作',
+      cell: ({ row }) => {
+        const u = row.original;
+        if (currentUser?.role !== 'superadmin' || u.role === 'superadmin') return null;
+        return (
+          <div className="flex items-center gap-1">
+            {u.role === 'admin' ? (
+              <button onClick={() => requireVerify(() => handleRole(u.id, 'user'))} className="p-1.5 hover:bg-surface-hover rounded-lg transition-colors" title="降为一般用户"><UserX className="w-4 h-4 text-orange-500" /></button>
+            ) : u.role === 'banned' ? (
+              <button onClick={() => requireVerify(() => handleRole(u.id, 'user'))} className="p-1.5 hover:bg-surface-hover rounded-lg transition-colors" title="解封"><UserCheck className="w-4 h-4 text-green-500" /></button>
+            ) : (
+              <>
+                <button onClick={() => requireVerify(() => handleRole(u.id, 'admin'))} className="p-1.5 hover:bg-surface-hover rounded-lg transition-colors" title="设为共创者"><UserCog className="w-4 h-4 text-blue-500" /></button>
+                <button onClick={() => handleBan(u.id, false)} className="p-1.5 hover:bg-destructive/10 rounded-lg transition-colors" title="封禁"><Ban className="w-4 h-4 text-destructive" /></button>
+                <button onClick={() => handleResetPassword(u.id)} className="p-1.5 hover:bg-surface-hover rounded-lg transition-colors" title="重置密码"><Key className="w-4 h-4 text-amber-500" /></button>
+              </>
+            )}
+          </div>
+        );
+      },
+    }),
+  ], [selected, users.length, currentUser]);
+
+  const table = useReactTable({
+    data: users,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
+
   return (
     <div>
       {/* 搜索栏 + 创建按钮 */}
@@ -433,61 +526,52 @@ function UsersTab({ currentUser }: { currentUser: { role: string } | null }) {
         </div>
       )}
 
-      {/* 用户列表 */}
-      <div className="space-y-2">
-        {users.length > 0 && (
-          <label className="card p-2 flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" checked={selected.size === users.length && users.length > 0} onChange={toggleSelectAll}
-              className="w-4 h-4 rounded border-border text-primary focus:ring-primary" />
-            <span className="text-xs text-campus-text-tertiary font-body">全选（共 {total} 个用户）</span>
-          </label>
+      {/* 用户表格 (react-table) */}
+      <div className="card overflow-hidden">
+        <table className="w-full">
+          <thead>
+            {table.getHeaderGroups().map(hg => (
+              <tr key={hg.id} className="border-b border-border bg-surface-hover/50">
+                {hg.headers.map(header => (
+                  <th key={header.id} className="px-4 py-3 text-left">
+                    {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                      <button onClick={header.column.getToggleSortingHandler()}
+                        className="inline-flex items-center gap-1 text-xs font-semibold font-body text-campus-text-tertiary hover:text-campus-text-secondary uppercase tracking-wide transition-colors">
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {header.column.getIsSorted() === 'asc' ? <ChevronUp className="w-3 h-3" /> :
+                         header.column.getIsSorted() === 'desc' ? <ChevronDown className="w-3 h-3" /> :
+                         <ChevronsUpDown className="w-3 h-3 opacity-40" />}
+                      </button>
+                    ) : (
+                      <span className="text-xs font-semibold font-body text-campus-text-tertiary uppercase tracking-wide">
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                      </span>
+                    )}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows.map(row => (
+              <tr key={row.id} className={`border-b border-border/50 transition-colors hover:bg-surface-hover/30 ${selected.has(row.original.id) ? 'bg-primary/5' : ''}`}>
+                {row.getVisibleCells().map(cell => (
+                  <td key={cell.id} className="px-4 py-3">
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {users.length === 0 && !loading && (
+          <p className="text-center py-8 text-campus-text-tertiary font-body text-sm">暂无用户</p>
         )}
-        {users.map(u => (
-          <div key={u.id} className="card p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleSelect(u.id)}
-                className="w-4 h-4 rounded border-border text-primary focus:ring-primary" />
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white font-bold">
-                {u.displayName?.[0] || '?'}
-              </div>
-              <div>
-                <p className="text-sm font-medium font-body">
-                  {u.displayName} <span className="text-xs text-campus-text-tertiary">@{u.username}</span>
-                  {u.isBanned ? <span className="ml-2 px-1.5 py-0.5 rounded bg-red-50 text-red-500 text-xs">已封禁</span> : null}
-                </p>
-                <p className="text-xs text-campus-text-tertiary font-body">{u.email || '无邮箱'} · {u.postCount} 帖子 ·{' '}
-                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
-                    u.role === 'superadmin' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400' :
-                    u.role === 'admin' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' :
-                    u.role === 'banned' ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400' :
-                    'bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400'
-                  }`}>
-                    {ROLE_NAMES[u.role as keyof typeof ROLE_NAMES] || u.role}
-                  </span>
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {(currentUser?.role === 'superadmin') && u.role !== 'superadmin' && (
-                <>
-                  {u.role === 'admin' ? (
-                    <button onClick={() => requireVerify(() => handleRole(u.id, 'user'))} className="p-2 hover:bg-surface-hover rounded-lg transition-colors" title="降为一般用户"><UserX className="w-4 h-4 text-orange-500" /></button>
-                  ) : u.role === 'banned' ? (
-                    <button onClick={() => requireVerify(() => handleRole(u.id, 'user'))} className="p-2 hover:bg-surface-hover rounded-lg transition-colors" title="解封"><UserCheck className="w-4 h-4 text-green-500" /></button>
-                  ) : (
-                    <>
-                      <button onClick={() => requireVerify(() => handleRole(u.id, 'admin'))} className="p-2 hover:bg-surface-hover rounded-lg transition-colors" title="设为共创者"><UserCog className="w-4 h-4 text-blue-500" /></button>
-                      <button onClick={() => requireVerify(() => handleRole(u.id, 'banned'))} className="p-2 hover:bg-destructive/10 rounded-lg transition-colors" title="封禁"><Ban className="w-4 h-4 text-destructive" /></button>
-                    <button onClick={() => handleResetPassword(u.id)} className="p-2 hover:bg-surface-hover rounded-lg transition-colors" title="重置密码"><Key className="w-4 h-4 text-amber-500" /></button>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        ))}
       </div>
-      {hasMore && <button onClick={() => setPage(p => p + 1)} className="w-full py-3 text-sm text-primary hover:text-primary-hover font-body mt-4">加载更多</button>}
+      <div className="flex items-center justify-between mt-3 text-xs text-campus-text-tertiary font-body">
+        <span>共 {total} 个用户 · 已加载 {users.length} 个</span>
+        {hasMore && <button onClick={() => setPage(p => p + 1)} className="text-primary hover:text-primary-hover font-body text-sm transition-colors">加载更多</button>}
+      </div>
 
       {/* 封禁弹窗 */}
       <Dialog open={banModal.open} onOpenChange={(o) => !o && setBanModal(p => ({ ...p, open: false }))}>
@@ -570,7 +654,7 @@ function PendingTab() {
           <div className="flex items-start justify-between">
             <div>
               <p className="font-medium font-body text-sm">{p.title}</p>
-              <p className="text-xs text-campus-text-tertiary mt-1 font-body">{p.authorName} · {new Date(p.createdAt).toLocaleDateString()}</p>
+              <p className="text-xs text-campus-text-tertiary mt-1 font-body">{p.authorName} · {formatDate(p.createdAt)}</p>
             </div>
             <div className="flex gap-2">
               <button onClick={() => handleReview(p.id, 'approve')} className="px-3 py-1.5 rounded-lg bg-green-500 text-white text-xs font-body hover:bg-green-600"><Check className="w-3 h-3 inline mr-1" />通过</button>
@@ -674,7 +758,7 @@ function ReportsTab() {
                 <span className="text-sm font-medium font-body">#{r.targetId}</span>
               </div>
               <p className="text-sm text-campus-text-secondary mt-1 font-body">{r.reason}</p>
-              <p className="text-xs text-campus-text-tertiary mt-1 font-body">举报者: {r.reporterName} · {new Date(r.createdAt).toLocaleDateString()}</p>
+              <p className="text-xs text-campus-text-tertiary mt-1 font-body">举报者: {r.reporterName} · {formatDate(r.createdAt)}</p>
             </div>
             <div className="flex gap-2">
               <button onClick={() => handleResolve(r.id, 'dismiss')} className="px-3 py-1.5 rounded-lg bg-surface-hover text-xs font-body hover:bg-border">驳回</button>
@@ -828,7 +912,7 @@ function DevicesTab() {
               <div key={d.id} className="flex items-center justify-between p-2 rounded-lg bg-surface-hover text-sm font-body">
                 <span className="text-campus-text-primary">{d.username || '未知用户'} · {parseDevice(d.deviceName || d.deviceInfo)} · {parseBrowser(d.deviceName || d.deviceInfo)}</span>
                 <span className="text-campus-text-tertiary shrink-0 text-xs">
-                  {d.lastLoginAt ? new Date(d.lastLoginAt).toLocaleString() : '-'}
+                  {d.lastLoginAt ? formatDate(d.lastLoginAt) : '-'}
                 </span>
               </div>
             ))}
@@ -842,11 +926,17 @@ function DevicesTab() {
 function LogsTab() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dateFilter, setDateFilter] = useState<string | undefined>(undefined);
+  const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
     adminExtendedApi.getAuditLogs().then(r => setLogs(r.data.logs || []))
       .catch(() => console.debug('Failed to load audit logs')).finally(() => setLoading(false));
   }, []);
+
+  const filteredLogs = dateFilter
+    ? logs.filter(l => dayjs(l.createdAt).isSame(dayjs(dateFilter), 'day'))
+    : logs;
 
   if (loading) return (
     <div className="space-y-3">
@@ -856,23 +946,56 @@ function LogsTab() {
   if (logs.length === 0) return <div className="text-center py-12 text-campus-text-tertiary font-body">暂无操作日志</div>;
 
   return (
-    <div className="space-y-2">
-      {logs.map(l => (
-        <div key={l.id} className="card p-3 flex items-start gap-3">
-          <div className="w-8 h-8 rounded-full bg-surface-hover flex items-center justify-center shrink-0">
-            <History className="w-4 h-4 text-campus-text-tertiary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-body">
-              <span className="font-medium">{l.adminName}</span>
-              <span className="text-campus-text-secondary"> {l.action} </span>
-              <span className="text-xs text-campus-text-tertiary">{l.targetType} #{l.targetId}</span>
-            </p>
-            {l.details && <p className="text-xs text-campus-text-tertiary mt-0.5 font-body">{l.details}</p>}
-            <p className="text-xs text-campus-text-tertiary mt-0.5 font-body">{new Date(l.createdAt).toLocaleString()}</p>
-          </div>
+    <div className="space-y-3">
+      {/* 日期筛选 */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setShowPicker(v => !v)}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-body transition-colors ${dateFilter ? 'bg-primary text-white' : 'bg-secondary text-secondary-foreground hover:bg-border'}`}
+        >
+          <History className="w-3.5 h-3.5" />
+          {dateFilter ? dayjs(dateFilter).format('YYYY-MM-DD') : '按日期筛选'}
+        </button>
+        {dateFilter && (
+          <button onClick={() => { setDateFilter(undefined); setShowPicker(false); }}
+            className="text-xs text-campus-text-tertiary hover:text-destructive font-body transition-colors">
+            清除筛选
+          </button>
+        )}
+        <span className="text-xs text-campus-text-tertiary font-body ml-auto">
+          {dateFilter ? `${filteredLogs.length} / ${logs.length} 条` : `共 ${logs.length} 条`}
+        </span>
+      </div>
+      {showPicker && (
+        <div className="card p-3">
+          <DayPicker
+            selected={dateFilter}
+            onChange={(d) => { setDateFilter(d); setShowPicker(false); }}
+          />
         </div>
-      ))}
+      )}
+
+      <div className="space-y-2">
+        {filteredLogs.map(l => (
+          <div key={l.id} className="card p-3 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-surface-hover flex items-center justify-center shrink-0">
+              <History className="w-4 h-4 text-campus-text-tertiary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-body">
+                <span className="font-medium">{l.adminName}</span>
+                <span className="text-campus-text-secondary"> {l.action} </span>
+                <span className="text-xs text-campus-text-tertiary">{l.targetType} #{l.targetId}</span>
+              </p>
+              {l.details && <p className="text-xs text-campus-text-tertiary mt-0.5 font-body">{l.details}</p>}
+              <p className="text-xs text-campus-text-tertiary mt-0.5 font-body">{formatDate(l.createdAt)}</p>
+            </div>
+          </div>
+        ))}
+        {filteredLogs.length === 0 && (
+          <p className="text-center py-8 text-campus-text-tertiary font-body text-sm">该日期无操作记录</p>
+        )}
+      </div>
     </div>
   );
 }

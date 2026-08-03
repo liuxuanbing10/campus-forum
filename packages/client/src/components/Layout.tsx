@@ -320,7 +320,7 @@ function LayoutInner() {
       <BottomNav />
 
       {/* 桌面端渡船导航（13境切换） - 仅在桌面显示 */}
-      <div className="hidden md:block">
+      <div className="hidden md:block" data-joyride="realm-switcher">
         <RealmSwitcher />
       </div>
 

@@ -1,6 +1,8 @@
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Heart, Star } from 'lucide-react';
+import Fuse from 'fuse.js';
+import { MessageCircle, BookOpen, Music, Users, GraduationCap, Trophy, Heart, Star, Search } from 'lucide-react';
 
 interface Board {
   id: number;
@@ -29,15 +31,40 @@ const iconMap: Record<string, React.ReactNode> = {
 const defaultIcon = <MessageCircle className="w-5 h-5" />;
 
 /**
- * 版块侧栏
+ * 版块侧栏 — 带 Fuse.js 模糊搜索
  */
 export default function BoardsPanel({ boards, loading }: Props) {
+  const [query, setQuery] = useState('');
+
+  const fuse = useMemo(
+    () => new Fuse(boards, { keys: ['name', 'description'], threshold: 0.35 }),
+    [boards],
+  );
+
+  const filtered = query.trim()
+    ? fuse.search(query.trim()).map(r => r.item)
+    : boards;
+
   return (
     <div className="rounded-xl border border-[var(--line)] bg-[var(--card)] backdrop-blur-md p-5">
       <h3 className="text-xl font-bold text-[var(--ink)] mb-4 flex items-center gap-2" style={{ fontFamily: 'var(--disp)' }}>
         <span className="w-1.5 h-6 bg-[var(--acc)] rounded-full" />
         诸版列阵
       </h3>
+
+      {/* 模糊搜索 */}
+      {!loading && boards.length > 0 && (
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--soft)]" />
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="搜索版块…"
+            className="w-full pl-9 pr-3 py-2 rounded-lg bg-[var(--g2)] border border-[var(--line)] text-sm text-[var(--ink)] placeholder:text-[var(--soft)] focus:outline-none focus:border-[var(--acc)] transition-colors"
+          />
+        </div>
+      )}
+
       {loading ? (
         <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -49,7 +76,7 @@ export default function BoardsPanel({ boards, loading }: Props) {
         </div>
       ) : (
         <div className="space-y-1">
-          {boards.map((b, i) => (
+          {filtered.map((b, i) => (
             <motion.div
               key={b.id}
               initial={{ opacity: 0, x: -8 }}
@@ -77,6 +104,9 @@ export default function BoardsPanel({ boards, loading }: Props) {
               </Link>
             </motion.div>
           ))}
+          {filtered.length === 0 && (
+            <p className="text-center py-6 text-[var(--soft)] text-sm">未找到匹配版块</p>
+          )}
         </div>
       )}
     </div>

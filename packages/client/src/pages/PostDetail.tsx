@@ -12,6 +12,7 @@ import Skeleton from '../components/Skeleton';
 import ShareModal from '../components/ShareModal';
 import MetaManager from '../components/MetaManager';
 import DOMPurify from 'dompurify';
+import { formatDate } from '../lib/date';
 
 interface PostDetail {
   id: number; title: string; content: string; boardId: number; boardName: string;
@@ -63,7 +64,7 @@ function CommentItem({ comment, childrenMap, user, onReply, onDelete, onReport, 
       <div className="flex items-center justify-between text-sm text-campus-text-tertiary mb-2 font-body">
         <span className="font-medium text-campus-text-secondary">{comment.authorName}</span>
         {comment.authorRole && <RoleBadge role={comment.authorRole} />}
-        <span className="text-xs">{new Date(comment.createdAt).toLocaleString()}</span>
+        <span className="text-xs">{formatDate(comment.createdAt)}</span>
       </div>
       {editing ? (
         <div className="space-y-2">
@@ -254,7 +255,7 @@ export default function PostDetailPage() {
           {post.title}
         </h1>
         <div className="flex items-center gap-4 text-sm text-campus-text-tertiary mb-6 flex-wrap font-body">
-          <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+          <span>{formatDate(post.createdAt)}</span>
           <span className="flex items-center gap-1"><Eye className="w-4 h-4" />{stats?.viewCount ?? post.viewCount}</span>
           <span className="flex items-center gap-1"><ThumbsUp className="w-4 h-4" />{stats?.likeCount ?? post.likeCount}</span>
           <span className="flex items-center gap-1"><MessageCircle className="w-4 h-4" />{stats?.commentCount ?? post.commentCount}</span>
@@ -330,7 +331,7 @@ export default function PostDetailPage() {
               <div key={v.id} className="p-3 mb-2 rounded-lg bg-surface-hover">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium font-body">{v.editorName}</span>
-                  <span className="text-xs text-campus-text-tertiary">{new Date(v.createdAt).toLocaleString()}</span>
+                  <span className="text-xs text-campus-text-tertiary">{formatDate(v.createdAt)}</span>
                 </div>
                 <p className="text-xs text-campus-text-secondary mt-1 line-clamp-2 font-body">{v.content}</p>
               </div>

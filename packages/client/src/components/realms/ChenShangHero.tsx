@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { motion } from 'framer-motion';
 import { TAU, C, NC, CLASH, RIVER_COL, AMB_COL, FIELD_MIX, FLOW_MIX, SPARK_MIX, NEB_KEYS, SPH_POOL, BG_MIX } from './chenShangConstants';
 import { rnd, gauss, easeIO, easeO, clamp, darkOf } from './chenShangUtils';
@@ -55,98 +56,98 @@ export default function ChenShangHero() {
   // loadedRef 与 loaded 同步，但供 Canvas 主循环闭包读取，避免 setLoaded 触发 useEffect 重运行
   const loadedRef = useRef(false);
 
-  // ── GSAP 无限循环动画（useEffect + gsap.context，兼容 React 19）──
-  useEffect(() => {
+  // ── GSAP 无限循环动画（useGSAP hook，自动 cleanup + 响应 loaded 依赖）──
+  useGSAP(() => {
     if (!loaded) return;
-    const ctx = gsap.context(() => {
-      // halo 脉动 - 参星（4.2s 周期，min→max 用 2.1s）
-      if (haloShenRef.current) {
-        gsap.set(haloShenRef.current, { xPercent: -50, yPercent: -50, scale: 1, opacity: 0.85 });
-        gsap.to(haloShenRef.current, {
-          scale: 1.18, opacity: 1,
-          duration: 2.1, ease: 'sine.inOut',
-          yoyo: true, repeat: -1,
-        });
-      }
-      // halo 脉动 - 商星（反相：从 max 开始）
-      if (haloShangRef.current) {
-        gsap.set(haloShangRef.current, { xPercent: -50, yPercent: -50, scale: 1.18, opacity: 1 });
-        gsap.to(haloShangRef.current, {
-          scale: 1, opacity: 0.85,
-          duration: 2.1, ease: 'sine.inOut',
-          yoyo: true, repeat: -1,
-        });
-      }
 
-      // flare 闪烁（5.5s 周期，min→max 用 2.75s）
-      const flareMin = 0.5, flareMax = 0.9;
-      [
-        { ref: flareShenHRef, start: flareMin },
-        { ref: flareShenVRef, start: flareMin },
-        { ref: flareShangHRef, start: flareMin },
-        { ref: flareShangVRef, start: flareMax }, // 商星垂直 flare 反相（-2.7s）
-      ].forEach(({ ref, start }) => {
-        const el = ref.current;
-        if (!el) return;
-        gsap.set(el, { xPercent: -50, yPercent: -50, opacity: start });
-        gsap.to(el, {
-          opacity: start === flareMin ? flareMax : flareMin,
-          duration: 2.75, ease: 'sine.inOut',
-          yoyo: true, repeat: -1,
-        });
+    // halo 脉动 - 参星（4.2s 周期，min→max 用 2.1s）
+    if (haloShenRef.current) {
+      gsap.set(haloShenRef.current, { xPercent: -50, yPercent: -50, scale: 1, opacity: 0.85 });
+      gsap.to(haloShenRef.current, {
+        scale: 1.18, opacity: 1,
+        duration: 2.1, ease: 'sine.inOut',
+        yoyo: true, repeat: -1,
       });
+    }
+    // halo 脉动 - 商星（反相：从 max 开始）
+    if (haloShangRef.current) {
+      gsap.set(haloShangRef.current, { xPercent: -50, yPercent: -50, scale: 1.18, opacity: 1 });
+      gsap.to(haloShangRef.current, {
+        scale: 1, opacity: 0.85,
+        duration: 2.1, ease: 'sine.inOut',
+        yoyo: true, repeat: -1,
+      });
+    }
 
-      // bring 旋转（90s 一圈）
-      if (bringRef.current) {
-        gsap.set(bringRef.current, { xPercent: -50, yPercent: -50, rotation: 0 });
-        gsap.to(bringRef.current, {
-          rotation: 360,
-          duration: 90, ease: 'none',
-          repeat: -1,
-        });
-      }
+    // flare 闪烁（5.5s 周期，min→max 用 2.75s）
+    const flareMin = 0.5, flareMax = 0.9;
+    [
+      { ref: flareShenHRef, start: flareMin },
+      { ref: flareShenVRef, start: flareMin },
+      { ref: flareShangHRef, start: flareMin },
+      { ref: flareShangVRef, start: flareMax }, // 商星垂直 flare 反相（-2.7s）
+    ].forEach(({ ref, start }) => {
+      const el = ref.current;
+      if (!el) return;
+      gsap.set(el, { xPercent: -50, yPercent: -50, opacity: start });
+      gsap.to(el, {
+        opacity: start === flareMin ? flareMax : flareMin,
+        duration: 2.75, ease: 'sine.inOut',
+        yoyo: true, repeat: -1,
+      });
+    });
 
-      // 参字呼吸（入场后接 7s 周期 breathe）
-      if (ziShenRef.current) {
-        const tl = gsap.timeline({ delay: 0.1 });
-        tl.fromTo(ziShenRef.current, { opacity: 0 }, { opacity: 0.9, duration: 1.8, ease: 'power2.out' });
-        tl.to(ziShenRef.current, {
-          opacity: 1,
-          duration: 3.5, ease: 'sine.inOut',
+    // bring 旋转（90s 一圈）
+    if (bringRef.current) {
+      gsap.set(bringRef.current, { xPercent: -50, yPercent: -50, rotation: 0 });
+      gsap.to(bringRef.current, {
+        rotation: 360,
+        duration: 90, ease: 'none',
+        repeat: -1,
+      });
+    }
+
+    // 参字呼吸（入场后接 7s 周期 breathe）
+    if (ziShenRef.current) {
+      const tl = gsap.timeline({ delay: 0.1 });
+      tl.fromTo(ziShenRef.current, { opacity: 0 }, { opacity: 0.9, duration: 1.8, ease: 'power2.out' });
+      tl.to(ziShenRef.current, {
+        opacity: 1,
+        duration: 3.5, ease: 'sine.inOut',
+        yoyo: true, repeat: -1,
+      });
+    }
+    // 商字呼吸（反相，入场 delay 0.6s）
+    if (ziShangRef.current) {
+      const tl = gsap.timeline({ delay: 0.6 });
+      tl.fromTo(ziShangRef.current, { opacity: 0 }, { opacity: 1, duration: 1.8, ease: 'power2.out' });
+      tl.to(ziShangRef.current, {
+        opacity: 0.9,
+        duration: 3.5, ease: 'sine.inOut',
+        yoyo: true, repeat: -1,
+      });
+    }
+
+    // 「距离·一境」呼吸（8s 周期，opacity + letter-spacing）
+    if (jingRef.current) {
+      gsap.fromTo(
+        jingRef.current,
+        { opacity: 0.86, letterSpacing: '0.52em' },
+        {
+          opacity: 1, letterSpacing: '0.6em',
+          duration: 4, ease: 'sine.inOut',
           yoyo: true, repeat: -1,
-        });
-      }
-      // 商字呼吸（反相，入场 delay 0.6s）
-      if (ziShangRef.current) {
-        const tl = gsap.timeline({ delay: 0.6 });
-        tl.fromTo(ziShangRef.current, { opacity: 0 }, { opacity: 1, duration: 1.8, ease: 'power2.out' });
-        tl.to(ziShangRef.current, {
-          opacity: 0.9,
-          duration: 3.5, ease: 'sine.inOut',
-          yoyo: true, repeat: -1,
-        });
-      }
+        }
+      );
+    }
 
-      // 「距离·一境」呼吸（8s 周期，opacity + letter-spacing）
-      if (jingRef.current) {
-        gsap.fromTo(
-          jingRef.current,
-          { opacity: 0.86, letterSpacing: '0.52em' },
-          {
-            opacity: 1, letterSpacing: '0.6em',
-            duration: 4, ease: 'sine.inOut',
-            yoyo: true, repeat: -1,
-          }
-        );
-      }
-
-      // meta 浮动（9s 周期）
-      if (metaRef.current) {
-        gsap.fromTo(
-          metaRef.current,
-          { y: 0 },
-          {
-            y: -5,
+    // meta 浮动（9s 周期）
+    if (metaRef.current) {
+      gsap.fromTo(
+        metaRef.current,
+        { y: 0 },
+        {
+          y: -5,
             duration: 4.5, ease: 'sine.inOut',
             yoyo: true, repeat: -1,
           }
@@ -179,9 +180,7 @@ export default function ChenShangHero() {
           }
         );
       });
-    }, containerRef);
-    return () => ctx.revert();
-  }, [loaded]);
+  }, { dependencies: [loaded] });
 
   // ── Canvas 主循环 ──
   useEffect(() => {

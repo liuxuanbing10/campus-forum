@@ -10,6 +10,7 @@ import FollowButton from '../components/FollowButton';
 import LevelBadge from '../components/LevelBadge';
 import MetaManager from '../components/MetaManager';
 import Skeleton from '../components/Skeleton';
+import { formatDate } from '../lib/date';
 
 export default function UserProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -106,7 +107,7 @@ export default function UserProfilePage() {
           </div>
         )}
         <div className="text-xs text-campus-text-tertiary mt-3 font-body flex items-center gap-1">
-          <Calendar className="w-3 h-3" /> {new Date(profile.createdAt).toLocaleDateString('zh-CN')} 加入
+          <Calendar className="w-3 h-3" /> {formatDate(profile.createdAt)} 加入
         </div>
       </div>
 

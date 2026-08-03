@@ -5,6 +5,7 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { ArrowLeft, Eye, ThumbsUp, MessageSquare, Rss, Loader2, RefreshCw } from 'lucide-react';
 import MetaManager from '../components/MetaManager';
 import Skeleton from '../components/Skeleton';
+import { formatDate } from '../lib/date';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -190,7 +191,7 @@ export default function BoardPage() {
                   <ThumbsUp className="w-3.5 h-3.5" />
                   {post.voteCount || 0}
                 </span>
-                <span className="whitespace-nowrap ml-auto">{new Date(post.createdAt).toLocaleDateString()}</span>
+                <span className="whitespace-nowrap ml-auto">{formatDate(post.createdAt)}</span>
               </div>
             </Link>
           ))

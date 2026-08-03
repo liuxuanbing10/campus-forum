@@ -7,6 +7,7 @@ import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 import Skeleton from '../components/Skeleton';
 import DOMPurify from 'dompurify';
+import { formatDate } from '../lib/date';
 
 export default function TeamContentPostDetail() {
   const { id, postId } = useParams();
@@ -145,7 +146,7 @@ export default function TeamContentPostDetail() {
           </span>
           <span className="flex items-center gap-1.5">
             <Clock className="w-4 h-4" />
-            {new Date(post.createdAt).toLocaleString('zh-CN')}
+            {formatDate(post.createdAt)}
           </span>
           <span className="flex items-center gap-1.5">
             <MessageSquare className="w-4 h-4" />
@@ -190,7 +191,7 @@ export default function TeamContentPostDetail() {
                       {comment.displayName || comment.username}
                     </span>
                     <span className="text-xs text-campus-text-tertiary">
-                      {new Date(comment.createdAt).toLocaleString('zh-CN')}
+                      {formatDate(comment.createdAt)}
                     </span>
                     {(isAdmin || user?.id === comment.authorId) && (
                       <button

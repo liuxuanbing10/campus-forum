@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
 import api from '../lib/api';
 import Skeleton from '../components/Skeleton';
+import { formatDate } from '../lib/date';
 
 interface OstracismInfo {
   banned: boolean;
@@ -101,7 +102,7 @@ export default function Ostracism() {
                 {countdown}
               </div>
               <p className="text-xs text-gray-400">
-                解封时间: {new Date(info.bannedUntil! + 'Z').toLocaleString('zh-CN')}
+                解封时间: {formatDate(info.bannedUntil! + 'Z')}
               </p>
             </>
           ) : (

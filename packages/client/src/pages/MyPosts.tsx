@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../lib/api';
 import { Lock, ThumbsUp, MessageCircle } from 'lucide-react';
 import Skeleton from '../components/Skeleton';
+import { formatDate } from '../lib/date';
 
 interface Post {
   id: number; title: string; boardName: string;
@@ -47,7 +48,7 @@ export default function MyPostsPage() {
                 <div className="flex items-center gap-3 text-xs text-campus-text-tertiary mt-2 font-body">
                   <span>{p.boardName}</span>
                   <span>·</span>
-                  <span>{new Date(p.createdAt).toLocaleDateString()}</span>
+                  <span>{formatDate(p.createdAt)}</span>
                   <span>·</span>
                   <span className="flex items-center gap-1">
                     <ThumbsUp className="w-3 h-3" />

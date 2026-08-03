@@ -39,6 +39,7 @@
   "dependencies": {
     "@fastify/helmet": "^13.1.0",
     "@fastify/rate-limit": "^11.1.0",
+    "daisyui": "^5.7.14",
     "lucide-react": "^1.23.0",
     "zod": "^4.4.3"
   }

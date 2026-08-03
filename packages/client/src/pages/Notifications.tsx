@@ -6,6 +6,7 @@ import type { Notification } from '../types/api';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 import Skeleton from '../components/Skeleton';
+import { formatDate } from '../lib/date';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -181,7 +182,7 @@ export default function NotificationsPage() {
                     )}
                   </h4>
                   <span className="text-xs text-campus-text-tertiary flex-shrink-0">
-                    {new Date(notification.createdAt).toLocaleDateString()}
+                    {formatDate(notification.createdAt)}
                   </span>
                 </div>
                 <p className="text-sm text-campus-text-secondary mt-1 line-clamp-2">

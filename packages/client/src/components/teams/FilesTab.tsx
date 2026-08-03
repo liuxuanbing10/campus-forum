@@ -4,6 +4,7 @@ import type { TeamFile } from '../../types/api';
 import type { User } from '../../stores/auth';
 import { toastStore } from '../../App';
 import { useState } from 'react';
+import { formatDate } from '../../lib/date';
 
 interface Props {
   files: TeamFile[];
@@ -66,7 +67,7 @@ export default function FilesTab({ files, isMember, isAdmin, user, teamId, loadD
               <div className="flex items-center gap-3 text-xs text-campus-text-tertiary mt-0.5">
                 <span>{file.displayName || file.username}</span>
                 <span>{formatFileSize(file.size)}</span>
-                <span>{new Date(file.createdAt).toLocaleDateString('zh-CN')}</span>
+                <span>{formatDate(file.createdAt)}</span>
               </div>
             </div>
             <div className="flex gap-1 flex-shrink-0">

@@ -2,6 +2,7 @@ import { FileText, Pin, Trash2, Plus } from 'lucide-react';
 import { teamsApi } from '../../lib/api';
 import type { TeamContentPost } from '../../types/api';
 import { toastStore } from '../../App';
+import { formatDate } from '../../lib/date';
 
 interface Props {
   posts: TeamContentPost[];
@@ -99,7 +100,7 @@ export default function PostsTab({ posts, postSearch, postSort, setPostSearch, s
             <p className="text-sm text-campus-text-secondary line-clamp-2 mb-2">{post.content}</p>
             <div className="flex items-center gap-3 text-xs text-campus-text-tertiary">
               <span>{post.displayName || post.username}</span>
-              <span>{new Date(post.createdAt).toLocaleDateString('zh-CN')}</span>
+              <span>{formatDate(post.createdAt)}</span>
             </div>
           </div>
         ))

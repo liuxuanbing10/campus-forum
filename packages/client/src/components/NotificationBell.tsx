@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell } from 'lucide-react';
 import api from '../lib/api';
+import { formatDate } from '../lib/date';
 
 interface Notification {
   id: number;
@@ -112,7 +113,7 @@ export default function NotificationBell() {
                           {n.content}
                         </p>
                         <p className="text-xs text-campus-text-tertiary mt-1">
-                          {new Date(n.createdAt).toLocaleDateString()}
+                          {formatDate(n.createdAt)}
                         </p>
                       </div>
                       {!n.isRead && (

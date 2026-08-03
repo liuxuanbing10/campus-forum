@@ -6,6 +6,7 @@ import type { Post } from '../types/api';
 import { toastStore } from '../App';
 import { useAuthStore } from '../stores/auth';
 import Skeleton from '../components/Skeleton';
+import { formatDate } from '../lib/date';
 
 export default function FavoritesPage() {
   const navigate = useNavigate();
@@ -117,7 +118,7 @@ export default function FavoritesPage() {
               </span>
               <span className="flex items-center gap-1 ml-auto">
                 <Clock className="w-3 h-3" />
-                {new Date(post.createdAt).toLocaleDateString()}
+                {formatDate(post.createdAt)}
               </span>
             </div>
           </Link>

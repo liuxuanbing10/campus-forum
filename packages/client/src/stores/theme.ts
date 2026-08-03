@@ -130,21 +130,40 @@ export const THEMES = REALMS.map(r => ({
 interface ThemeState {
   currentTheme: RealmId;
   realm: RealmInfo;          // 当前境信息
+  realmOrder: RealmInfo[];   // 用户自定义排序后的境列表
   setTheme: (id: RealmId) => void;
   initTheme: () => void;
   nextRealm: () => void;     // 切换到下一境
   prevRealm: () => void;     // 切换到上一境
+  setRealmOrder: (ids: RealmId[]) => void;  // 拖拽排序持久化
 }
 
 const STORAGE_KEY = 'campus-forum-realm';
+const ORDER_KEY = 'campus-forum-realm-order';
 const DEFAULT_REALM: RealmId = 'r1';
 
 const getRealm = (id: RealmId): RealmInfo =>
   REALMS.find(r => r.id === id) ?? REALMS[0];
 
+/** 从 localStorage 恢复自定义境排序，无效则回退默认序 */
+const loadRealmOrder = (): RealmInfo[] => {
+  if (typeof localStorage === 'undefined') return REALMS;
+  try {
+    const raw = localStorage.getItem(ORDER_KEY);
+    if (!raw) return REALMS;
+    const ids = JSON.parse(raw) as RealmId[];
+    const valid = ids.filter(id => REALMS.some(r => r.id === id));
+    if (valid.length !== REALMS.length) return REALMS;
+    // 去重校验
+    if (new Set(valid).size !== valid.length) return REALMS;
+    return valid.map(getRealm);
+  } catch { return REALMS; }
+};
+
 export const useThemeStore = create<ThemeState>((set, get) => ({
   currentTheme: DEFAULT_REALM,
   realm: getRealm(DEFAULT_REALM),
+  realmOrder: REALMS,
 
   setTheme: (id: RealmId) => {
     if (typeof document !== 'undefined') {
@@ -165,7 +184,14 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     if (typeof document !== 'undefined') {
       document.documentElement.setAttribute('data-theme', id);
     }
-    set({ currentTheme: id, realm: getRealm(id) });
+    set({ currentTheme: id, realm: getRealm(id), realmOrder: loadRealmOrder() });
+  },
+
+  setRealmOrder: (ids: RealmId[]) => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(ORDER_KEY, JSON.stringify(ids));
+    }
+    set({ realmOrder: ids.map(getRealm) });
   },
 
   nextRealm: () => {
